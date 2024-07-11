@@ -104,6 +104,10 @@ unlinked_spec.ds
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/Podfile
+**/ios/Podfile.lock
+**/ios/Flutter/Debug.xcconfig
+**/ios/Flutter/Release.xcconfig
 
 # macOS related
 **/Flutter/ephemeral/
@@ -111,6 +115,10 @@ unlinked_spec.ds
 **/macos/Flutter/GeneratedPluginRegistrant.swift
 **/macos/Flutter/ephemeral
 **/xcuserdata/
+**/macos/Podfile
+**/macos/Podfile.lock
+**/macos/Flutter/Flutter-Debug.xcconfig
+**/macos/Flutter/Flutter-Release.xcconfig
 
 # Windows related
 **/windows/flutter/generated_plugin_registrant.cc
