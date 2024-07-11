@@ -1,7 +1,6 @@
 import 'package:t3aisat/model/environment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'dart:io';
 import 'package:logging/logging.dart';
 import 'screens/take_photo_screen.dart';
 
