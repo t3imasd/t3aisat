@@ -9,7 +9,7 @@ Future<void> main() async {
   _setupLogging();
 
   try {
-    // Not Run flutter_dotenv, but it's correct according to the documentation https://pub.dev/packages/flutter_dotenv and YouTube video https://www.youtube.com/watch?v=jMgrNw3_rZ0
+    // Code from YouTube video https://www.youtube.com/watch?v=jMgrNw3_rZ0
     await dotenv.load(fileName: Environment.fileName);
     Logger.root.info('Loaded ${Environment.fileName} file successfully');
   } catch (e) {
