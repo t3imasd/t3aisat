@@ -7,6 +7,9 @@ import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:logging/logging.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class TakePhotoScreen extends StatefulWidget {
   const TakePhotoScreen({super.key});
@@ -18,6 +21,7 @@ class TakePhotoScreen extends StatefulWidget {
 class TakePhotoScreenState extends State<TakePhotoScreen> {
   XFile? _imageFile;
   Position? _currentPosition;
+  String? _address;
   final ImagePicker _picker = ImagePicker();
   final Logger log = Logger('TakePhotoScreen');
 
@@ -33,6 +37,11 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
 
       // Get the current location
       await _getCurrentLocation();
+      if (_currentPosition != null) {
+        // Get the address from the coordinates
+        await _getAddressFromCoordinates(
+            _currentPosition!.latitude, _currentPosition!.longitude);
+      }
     }
   }
 
@@ -94,6 +103,27 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
     setState(() {});
   }
 
+  // Function to get the address from the coordinates
+  Future<void> _getAddressFromCoordinates(double lat, double lon) async {
+    final apiKey = dotenv.env['MAPBOX_API_KEY'];
+    final url =
+        'https://api.mapbox.com/geocoding/v5/mapbox.places/$lon,$lat.json?access_token=$apiKey';
+
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data['features'].isNotEmpty) {
+        setState(() {
+          _address = data['features'][0]['place_name'];
+        });
+        log.info('Address: $_address');
+      }
+    } else {
+      log.severe('Failed to get address from coordinates');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -104,7 +134,10 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (_imageFile != null) Image.file(File(_imageFile!.path)),
+            if (_imageFile != null)
+              Expanded(
+                child: Image.file(File(_imageFile!.path)),
+              ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _takePhoto,
@@ -118,6 +151,15 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
                   textAlign: TextAlign.center,
                 ),
               ),
+            if (_address != null)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  'Address: $_address',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
