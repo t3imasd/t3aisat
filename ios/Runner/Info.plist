@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need your permission to access your location while the app is in use.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>We need your permission to access your location even when the app is in the background.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We need your permission to access your location both while the app is in use and in the background.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>We need your permission to save photos to your library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
