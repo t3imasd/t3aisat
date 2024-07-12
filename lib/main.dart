@@ -1,5 +1,6 @@
 import 'package:t3aisat/model/environment.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logging/logging.dart';
 import 'screens/take_photo_screen.dart';
@@ -13,7 +14,8 @@ Future<void> main() async {
     await dotenv.load(fileName: Environment.fileName);
     Logger.root.info('Loaded ${Environment.fileName} file successfully');
   } catch (e) {
-    Logger.root.severe('Could not load ${Environment.fileName} file. ERROR: $e');
+    Logger.root
+        .severe('Could not load ${Environment.fileName} file. ERROR: $e');
   }
 
   runApp(const MyApp());
@@ -22,7 +24,9 @@ Future<void> main() async {
 void _setupLogging() {
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) {
-    print('${record.level.name}: ${record.time}: ${record.message}');
+    if (kDebugMode) {
+      print('${record.level.name}: ${record.time}: ${record.message}');
+    }
   });
 }
 

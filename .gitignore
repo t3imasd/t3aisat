@@ -147,6 +147,8 @@ app.*.symbols
 
 # dotenv environment variables file
 .env*
+# but keep the .env.example file
+!.env.example
 
 # Avoid committing generated Javascript files:
 *.dart.js
