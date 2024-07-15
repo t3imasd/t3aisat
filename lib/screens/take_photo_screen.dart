@@ -10,6 +10,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:image/image.dart' as img;
+import 'package:flutter/services.dart' show rootBundle;
 
 class TakePhotoScreen extends StatefulWidget {
   const TakePhotoScreen({super.key});
@@ -29,8 +31,6 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
   Future<void> _takePhoto() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.camera);
     if (image != null) {
-      // Save the photo
-      await _savePhoto(image);
       setState(() {
         _imageFile = image;
       });
@@ -41,18 +41,45 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
         // Get the address from the coordinates
         await _getAddressFromCoordinates(
             _currentPosition!.latitude, _currentPosition!.longitude);
+
+        // Write text on the image and save it to gallery
+        await _writeTextOnImageAndSaveToGallery(image);
       }
     }
   }
 
   // Function to save the photo to the device and gallery
-  Future<void> _savePhoto(XFile image) async {
-    // Save to application directory
-    final Directory appDir = await getApplicationDocumentsDirectory();
-    final String appDirPath = appDir.path;
-    final String fileName = path.basename(image.path);
-    final String savedImagePath = path.join(appDirPath, fileName);
-    await image.saveTo(savedImagePath);
+  Future<void> _writeTextOnImageAndSaveToGallery(XFile image) async {
+    final bytes = await image.readAsBytes();
+    final img.Image originalImage = img.decodeImage(bytes)!;
+
+    // Load the font
+    final fontData = await rootBundle.load(
+        'assets/fonts/roboto_black/Roboto-Black_100_size_white_color.ttf.zip');
+    final font = img.BitmapFont.fromZip(fontData.buffer.asUint8List());
+
+    // Split address into multiple lines
+    final formattedAddress = _address?.split(',').join('\n');
+    // Format location with 5 decimal places
+    final formattedLocation =
+        'Lat: ${_currentPosition?.latitude.toStringAsFixed(5)}\nLon: ${_currentPosition?.longitude.toStringAsFixed(5)}';
+
+    // Draw the address and coordinates
+    final updatedImage = img.drawString(
+      originalImage,
+      '$formattedAddress\n$formattedLocation',
+      font: font,
+      x: 20, // x position
+      y: originalImage.height - 750, // y position to move text down
+      color: img.ColorRgba8(255, 255, 255, 255), // white color
+    );
+
+    // Save the updated image
+    final updatedImagePath = path.join(
+        (await getApplicationDocumentsDirectory()).path,
+        'updated_${path.basename(image.path)}');
+    final updatedImageFile = File(updatedImagePath);
+    updatedImageFile.writeAsBytesSync(img.encodeJpg(updatedImage));
 
     // Request permission to save to gallery
     var status = await Permission.photos.status;
@@ -61,12 +88,17 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
     }
 
     if (status.isGranted) {
-      // Save to gallery
-      final result = await ImageGallerySaver.saveFile(savedImagePath);
-      log.info('Image saved to gallery: $result');
+      // Save the updated image to gallery
+      final result = await ImageGallerySaver.saveFile(updatedImagePath);
+      log.info('Updated image saved to gallery: $result');
     } else {
       log.severe('Permission denied to access photos');
     }
+
+    // Update the state to show the updated image
+    setState(() {
+      _imageFile = XFile(updatedImagePath);
+    });
   }
 
   // Function to get the current location

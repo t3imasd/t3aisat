@@ -39,3 +39,4 @@ flutter:
   assets:
     - .env.development
     - .env.production
+    - assets/fonts/roboto_black/Roboto-Black_100_size_white_color.ttf.zip
