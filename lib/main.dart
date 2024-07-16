@@ -38,7 +38,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'T3AISat',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Color.fromRGBO(37, 102, 123, 1)),
+        colorScheme:
+            ColorScheme.fromSeed(seedColor: Color.fromRGBO(37, 102, 123, 1)),
         useMaterial3: true,
       ),
       home: const MyHomePage(),
