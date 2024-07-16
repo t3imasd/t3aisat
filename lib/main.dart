@@ -38,7 +38,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'T3AISat',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Color.fromRGBO(37, 102, 123, 1)),
         useMaterial3: true,
       ),
       home: const MyHomePage(),
@@ -53,14 +53,12 @@ class MyHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('T3AISat Home Page'),
+        title: const Text('T3 AI Sat'),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text('Welcome to T3AISat!'),
-            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -69,7 +67,7 @@ class MyHomePage extends StatelessWidget {
                       builder: (context) => const TakePhotoScreen()),
                 );
               },
-              child: const Text('Take a Photo'),
+              child: const Text('Obtener GeoPosición'),
             ),
           ],
         ),

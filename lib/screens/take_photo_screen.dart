@@ -160,7 +160,7 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Take a Photo'),
+        title: const Text('GeoPosición'),
       ),
       body: Center(
         child: Column(
@@ -173,13 +173,13 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _takePhoto,
-              child: const Text('Take Photo'),
+              child: const Text('Hacer Foto'),
             ),
             if (_currentPosition != null)
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
-                  'Location: \nLatitude: ${_currentPosition?.latitude}\nLongitude: ${_currentPosition?.longitude}',
+                  'Ubicación\nLatitud: ${_currentPosition?.latitude}\nLongitud: ${_currentPosition?.longitude}',
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -187,7 +187,7 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
-                  'Address: $_address',
+                  'Dirección\n$_address',
                   textAlign: TextAlign.center,
                 ),
               ),
