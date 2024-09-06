@@ -10,6 +10,9 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.6
+  mapbox_maps_flutter: ^2.2.1
+  xml: ^6.5.0
+  geotypes: ^0.0.2
   image_picker: ^1.1.2
   flutter_dotenv: ^5.1.0
   logging: ^1.2.0

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logging/logging.dart';
 import 'screens/take_photo_screen.dart';
+import 'screens/parcel_map_screen.dart';
 
 Future<void> main() async {
   // Set the logger
@@ -69,6 +70,16 @@ class MyHomePage extends StatelessWidget {
                 );
               },
               child: const Text('Obtener GeoPosición'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const ParcelMapScreen()),
+                );
+              },
+              child: const Text('Ver Mapa de Parcelas'),
             ),
           ],
         ),
