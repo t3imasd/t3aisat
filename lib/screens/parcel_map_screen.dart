@@ -50,7 +50,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
       _getCurrentLocation();
     } else if (status.isPermanentlyDenied) {
       // Permiso permanentemente denegado
-      log.severe('Permiso de ubicación permanentemente denegado. Necesitas habilitarlo manualmente en la configuración.');
+      log.severe(
+          'Permiso de ubicación permanentemente denegado. Necesitas habilitarlo manualmente en la configuración.');
     }
   }
 
