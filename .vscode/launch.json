@@ -7,7 +7,7 @@
             "type": "dart",
             "program": "lib/main.dart",
             "args": [
-                "--dart-define", "PUBLIC_ACCESS_TOKEN=YOUR_PUBLIC_ACCESS_TOKEN"
+                "--dart-define", "PUBLIC_ACCESS_TOKEN=${env:MAPBOX_ACCESS_TOKEN}"
             ]
         },
         {
@@ -17,7 +17,7 @@
             "program": "lib/main.dart",
             "deviceId": "iPhone 15 Pro Max",
             "args": [
-                "--dart-define", "PUBLIC_ACCESS_TOKEN=YOUR_PUBLIC_ACCESS_TOKEN"
+                "--dart-define", "PUBLIC_ACCESS_TOKEN=${env:MAPBOX_ACCESS_TOKEN}"
             ]
         },
         {
@@ -26,7 +26,7 @@
             "type": "dart",
             "flutterMode": "profile",
             "args": [
-                "--dart-define", "PUBLIC_ACCESS_TOKEN=YOUR_PUBLIC_ACCESS_TOKEN"
+                "--dart-define", "PUBLIC_ACCESS_TOKEN=${env:MAPBOX_ACCESS_TOKEN}"
             ]
         },
         {
@@ -35,7 +35,7 @@
             "type": "dart",
             "flutterMode": "release",
             "args": [
-                "--dart-define", "PUBLIC_ACCESS_TOKEN=YOUR_PUBLIC_ACCESS_TOKEN"
+                "--dart-define", "PUBLIC_ACCESS_TOKEN=${env:MAPBOX_ACCESS_TOKEN}"
             ]
         }
     ]
