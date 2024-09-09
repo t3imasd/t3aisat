@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:xml/xml.dart';
 import 'package:geotypes/geotypes.dart' as geojson;
 import 'package:logging/logging.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:convert'; // Import required for jsonEncode
 
 class ParcelMapScreen extends StatefulWidget {
@@ -20,10 +22,36 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
   String _selectedParcelCode = '';
   final log = Logger('ParcelMapScreen');
 
+  // Retrieve the Mapbox Access Token from environment variables
+  final String accessToken = dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
+
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation();
+    // Set Mapbox Access Token
+    MapboxOptions.setAccessToken(accessToken);
+    _requestLocationPermission();
+  }
+
+  // Function to request location permission
+  Future<void> _requestLocationPermission() async {
+    var status = await Permission.locationWhenInUse.status;
+    if (status.isDenied) {
+      // Solicitar permisos de ubicación
+      status = await Permission.locationWhenInUse.request();
+      if (status.isGranted) {
+        // Permiso concedido, obtener ubicación actual
+        _getCurrentLocation();
+      } else {
+        log.severe('Permiso de ubicación denegado.');
+      }
+    } else if (status.isGranted) {
+      // Permiso ya concedido, obtener ubicación actual
+      _getCurrentLocation();
+    } else if (status.isPermanentlyDenied) {
+      // Permiso permanentemente denegado
+      log.severe('Permiso de ubicación permanentemente denegado. Necesitas habilitarlo manualmente en la configuración.');
+    }
   }
 
   // Initialize Map

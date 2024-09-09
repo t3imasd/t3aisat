@@ -137,9 +137,9 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
 
   // Function to get the address from the coordinates
   Future<void> _getAddressFromCoordinates(double lat, double lon) async {
-    final apiKey = dotenv.env['MAPBOX_API_KEY'];
+    final accessToken = dotenv.env['MAPBOX_ACCESS_TOKEN'];
     final url =
-        'https://api.mapbox.com/geocoding/v5/mapbox.places/$lon,$lat.json?access_token=$apiKey';
+        'https://api.mapbox.com/geocoding/v5/mapbox.places/$lon,$lat.json?access_token=$accessToken';
 
     final response = await http.get(Uri.parse(url));
 

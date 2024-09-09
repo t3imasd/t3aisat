@@ -5,26 +5,38 @@
             "name": "Run Device",
             "request": "launch",
             "type": "dart",
-            "program": "lib/main.dart"
+            "program": "lib/main.dart",
+            "args": [
+                "--dart-define", "PUBLIC_ACCESS_TOKEN=YOUR_PUBLIC_ACCESS_TOKEN"
+            ]
         },
         {
             "name": "App in iPhone 15 Pro Max",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
-            "deviceId": "iPhone 15 Pro Max"
+            "deviceId": "iPhone 15 Pro Max",
+            "args": [
+                "--dart-define", "PUBLIC_ACCESS_TOKEN=YOUR_PUBLIC_ACCESS_TOKEN"
+            ]
         },
         {
             "name": "T3AISat (profile mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "profile"
+            "flutterMode": "profile",
+            "args": [
+                "--dart-define", "PUBLIC_ACCESS_TOKEN=YOUR_PUBLIC_ACCESS_TOKEN"
+            ]
         },
         {
             "name": "T3AISat (release mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "release"
+            "flutterMode": "release",
+            "args": [
+                "--dart-define", "PUBLIC_ACCESS_TOKEN=YOUR_PUBLIC_ACCESS_TOKEN"
+            ]
         }
     ]
 }
