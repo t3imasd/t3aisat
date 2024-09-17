@@ -361,7 +361,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
     final source = await sourceFuture;
     if (source is mapbox.GeoJsonSource) {
       final data = await source.data;
-      
+
       if (data != null) {
         // Verificar si `data` no es nulo
         final features = jsonDecode(data)['features'] as List<dynamic>;
