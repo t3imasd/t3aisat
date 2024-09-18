@@ -455,31 +455,6 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
     }
   }
 
-  // Helper function to check if a point is inside a polygon
-  bool _isPointInPolygon(geojson.Point point, List<dynamic> polygon) {
-    final x = point.coordinates[0]; // Access longitude from coordinates array
-    final y = point.coordinates[1]; // Access latitude from coordinates array
-
-    if (x == null || y == null) return false; // Check for null values
-
-    bool inside = false;
-    for (int i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-      final xi = polygon[i][0], yi = polygon[i][1];
-      final xj = polygon[j][0], yj = polygon[j][1];
-
-      // Check for null values in polygon coordinates
-      if (xi == null || yi == null || xj == null || yj == null) continue;
-
-      // Calculate the intersection
-      final intersect =
-          ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-
-      if (intersect) inside = !inside;
-    }
-
-    return inside;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
