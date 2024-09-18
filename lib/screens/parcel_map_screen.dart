@@ -375,8 +375,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
       mapbox.LineLayer(
         id: 'selected-parcel-line',
         sourceId: 'source-id',
-        lineColor: const Color.fromARGB(150, 0, 255, 0)
-            .value, // Green with transparency
+        lineColor: const Color.fromARGB(255, 0, 255, 0).value,
         lineWidth: 2.0,
         filter: ['==', 'id', parcelId],
       ),
