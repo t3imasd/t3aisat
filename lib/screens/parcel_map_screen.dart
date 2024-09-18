@@ -21,7 +21,9 @@ class ParcelMapScreen extends StatefulWidget {
 class ParcelMapScreenState extends State<ParcelMapScreen> {
   late mapbox.MapboxMap _mapboxMap;
   geo.Position? _currentPosition;
-  String _selectedParcelCode = '';
+  String _selectedParcelId = '';
+  String _selectedParcelCadastralRef = '';
+  String _selectedParcelArea = '';
   final log = Logger('ParcelMapScreen');
 
   // Retrieve the Mapbox Access Token from environment variables
@@ -330,7 +332,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
         filter: [
           '==',
           'id',
-          _selectedParcelCode,
+          _selectedParcelId, // Initially, _selectedParcelId is empty
         ], // Initially, _selectedParcelCode is empty
       ),
     );
@@ -350,34 +352,59 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
     return [centroidX / numPoints, centroidY / numPoints];
   }
 
-  // Show information of the selected parcel in a bottom panel
-  void _showParcelInfo(Map<String, dynamic> properties) {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Referencia Catastral: ${properties['cadastralReference']}'),
-              Text('Área: ${properties['areaValue']} m²'),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   // Function to highlight the selected parcel
-  void _highlightSelectedParcel(String parcelId) {
-    _mapboxMap.style.updateLayer(
-      mapbox.LineLayer(
-        id: 'selected-parcel-line',
+  void _highlightSelectedParcel(String parcelId) async {
+    // Ensure the style is fully loaded before making changes
+    bool isStyleLoaded = await _mapboxMap.style.isStyleLoaded();
+
+    if (!isStyleLoaded) {
+      log.warning('Style is not fully loaded yet.');
+      return;
+    }
+
+    // Check if the line layer exists
+    bool lineLayerExists =
+        await _mapboxMap.style.styleLayerExists('selected-parcel-line');
+    bool fillLayerExists =
+        await _mapboxMap.style.styleLayerExists('selected-parcel-fill');
+
+    if (lineLayerExists) {
+      // If the line layer exists, update it
+      _mapboxMap.style.updateLayer(
+        mapbox.LineLayer(
+          id: 'selected-parcel-line',
+          sourceId: 'source-id',
+          lineColor: const Color.fromARGB(255, 0, 255, 0).value,
+          lineWidth: 2.0,
+          filter: ['==', 'id', parcelId],
+        ),
+      );
+    } else {
+      // If the line layer does not exist, add it
+      await _mapboxMap.style.addLayer(
+        mapbox.LineLayer(
+          id: 'selected-parcel-line',
+          sourceId: 'source-id',
+          lineColor: const Color.fromARGB(255, 0, 255, 0).value,
+          lineWidth: 2.0,
+          filter: ['==', 'id', parcelId],
+        ),
+      );
+    }
+
+    // Check if the fill layer exists and remove it if necessary
+    if (fillLayerExists) {
+      await _mapboxMap.style.removeStyleLayer('selected-parcel-fill');
+    }
+
+    // Add a new fill layer to color the inside of the selected parcel
+    await _mapboxMap.style.addLayer(
+      mapbox.FillLayer(
+        id: 'selected-parcel-fill',
         sourceId: 'source-id',
-        lineColor: const Color.fromARGB(255, 0, 255, 0).value,
-        lineWidth: 2.0,
-        filter: ['==', 'id', parcelId],
+        fillColor: const Color.fromARGB(255, 0, 255, 0).value,
+        fillOpacity: 0.3, // Adjust opacity for transparency
+        filter: ['==', 'id', parcelId], // Filter for the selected parcel
       ),
     );
   }
@@ -427,17 +454,13 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
               areaValue != null &&
               parcelId != null) {
             setState(() {
-              _selectedParcelCode = parcelId as String;
+              _selectedParcelId = parcelId;
+              _selectedParcelCadastralRef = cadastralReference;
+              _selectedParcelArea = areaValue;
             });
 
             // Highlight the selected parcel
-            _highlightSelectedParcel(_selectedParcelCode);
-
-            // Show parcel information
-            _showParcelInfo({
-              'cadastralReference': cadastralReference,
-              'areaValue': areaValue,
-            });
+            _highlightSelectedParcel(parcelId);
 
             log.info(
                 'Selected Parcel: $cadastralReference, Area: $areaValue m²');
@@ -459,7 +482,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Parcel Map'),
+        title: const Text('Mapa Parcelas'),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_location),
@@ -483,10 +506,12 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
               onTapListener: _onMapClick, // Handle map click
             ),
           ),
-          if (_selectedParcelCode.isNotEmpty)
+          if (_selectedParcelCadastralRef.isNotEmpty &&
+              _selectedParcelArea.isNotEmpty) // Show selected parcel info
             Container(
               padding: const EdgeInsets.all(8.0),
-              child: Text('Selected Parcel Code: $_selectedParcelCode'),
+              child: Text(
+                  'Reg.Catastral: $_selectedParcelCadastralRef Área: $_selectedParcelArea m²'),
             ),
         ],
       ),
