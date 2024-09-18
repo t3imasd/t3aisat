@@ -60,8 +60,13 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
   void _onMapCreated(mapbox.MapboxMap mapboxMap) {
     _mapboxMap = mapboxMap;
 
-    // Load satellite view map style
-    _mapboxMap.loadStyleURI(mapbox.MapboxStyles.SATELLITE);
+    // Load satellite view map style and wait for it to be fully loaded
+    _mapboxMap.loadStyleURI(mapbox.MapboxStyles.SATELLITE).then((_) {
+      log.info('Mapbox style fully loaded and ready.');
+      // Here you can enable the click listener or perform other necessary operations
+    }).catchError((e) {
+      log.severe('Failed to load style: $e');
+    });
 
     // Set the initial camera position
     _setInitialCameraPosition();
@@ -120,7 +125,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
     }
   }
 
-// Update Map Location
+  // Update Map Location
   void _updateMapLocation(double latitude, double longitude) {
     _mapboxMap.flyTo(
       mapbox.CameraOptions(
@@ -199,15 +204,14 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
 
   // Parse and Draw Parcels, but only show information on interaction
   void _parseAndDrawParcels(XmlDocument xml) {
-    // Obtener todos los elementos de parcela usando <member>
+    // Get all plot elements using <member>
     final List<XmlElement> parcelElements =
         xml.findAllElements('member').toList();
 
-    // Crear una instancia de proyección para convertir de EPSG:25830 (UTM Zona 30N) a WGS84
+    // Create a projection instance to convert from EPSG:25830 (UTM Zone 30N) to WGS84
     final adapter = Proj4d.init(
-      CoordRefSys.normalized(
-          'EPSG:25830'), // Sistema de coordenadas de origen (UTM)
-      CoordRefSys.CRS84, // Sistema de coordenadas de destino (WGS84)
+      CoordRefSys.normalized('EPSG:25830'), // Source coordinate system (UTM)
+      CoordRefSys.CRS84, // Target coordinate system (WGS84)
       sourceDef:
           '+proj=utm +zone=30 +ellps=GRS80 +units=m +no_defs', // EPSG:25830
       targetDef: '+proj=longlat +datum=WGS84 +no_defs', // EPSG:4326
@@ -217,31 +221,31 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
     final geoJsonData = jsonEncode({
       'type': 'FeatureCollection',
       'features': parcelElements.map((parcel) {
-        // Obtener las coordenadas de la parcela
+        // Get the coordinates of the plot
         final String coordinatesString =
             parcel.findAllElements('gml:posList').first.innerText;
 
         final List<String> coordinates = coordinatesString.split(' ');
 
-        // Convertir coordenadas al formato GeoJSON
+        // Convert coordinates to GeoJSON format
         final List<List<double>> geometryCoordinates = [];
         for (var i = 0; i < coordinates.length; i += 2) {
           final double x = double.parse(coordinates[i]);
           final double y = double.parse(coordinates[i + 1]);
 
-          // Crear un objeto Point con las coordenadas UTM
+          // Create a Point object with UTM coordinates
           final pointUTM = Projected(x: x, y: y);
 
           try {
-            // Convertir las coordenadas UTM Zona 30N a WGS84
+            // Convert UTM Zone 30N coordinates to WGS84
             final Geographic pointWGS84 = pointUTM.project(adapter.forward);
             geometryCoordinates.add([pointWGS84.lon, pointWGS84.lat]);
           } catch (e) {
-            log.severe('Error al convertir UTM Zona 30N a WGS84: $e');
+            log.severe('Error converting UTM Zone 30N to WGS84: $e');
           }
         }
 
-        // Extraer la referencia catastral y el valor de área del XML
+        // Extract the cadastral reference and area value from the XML
         final String cadastralReference = parcel
             .findAllElements('cp:nationalCadastralReference')
             .first
@@ -249,10 +253,10 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
         final String areaValue =
             parcel.findAllElements('cp:areaValue').first.innerText;
 
-        // Calcular el centroide de la parcela para el etiquetado
+        // Calculate the centroid of the plot for labeling
         final centroid = _calculateCentroid(geometryCoordinates);
 
-        // Retornar el objeto GeoJSON
+        // Return the GeoJSON object
         return {
           'type': 'Feature',
           'geometry': {
@@ -273,19 +277,19 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
       }).toList(),
     });
 
-    // Depuración: Imprimir los datos GeoJSON
-    print('Generated GeoJSON: $geoJsonData');
+    // Log the generated GeoJSON data
+    log.info('Generated GeoJSON: $geoJsonData');
 
-    // Crear una instancia de GeoJsonSource usando los datos GeoJSON
+    // Create a GeoJsonSource instance using GeoJSON data
     final geoJsonSource = mapbox.GeoJsonSource(
       id: 'source-id',
       data: geoJsonData,
     );
 
-    // Añadir la fuente al mapa
+    // Add source to map
     _mapboxMap.style.addSource(geoJsonSource);
 
-    // Añadir la capa de líneas para dibujar los límites de las parcelas
+    // Add the line layer to draw the boundaries of the parcels
     _mapboxMap.style.addLayer(
       mapbox.LineLayer(
         id: 'parcel-lines',
@@ -295,7 +299,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
       ),
     );
 
-    // Añadir capa de símbolos para mostrar etiquetas de texto
+    // Add symbol layer to display text labels
     _mapboxMap.style.addLayer(
       mapbox.SymbolLayer(
         id: 'parcel-labels',
@@ -316,23 +320,23 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
       ),
     );
 
-    // Añadir capa de línea para resaltar la parcela seleccionada
+    // Add line layer to highlight the selected plot
     _mapboxMap.style.addLayer(
       mapbox.LineLayer(
         id: 'selected-parcel-line',
         sourceId: 'source-id',
-        lineColor: const Color.fromARGB(255, 0, 255, 0).value, // Color verde
+        lineColor: const Color.fromARGB(255, 0, 255, 0).value,
         lineWidth: 2.0,
         filter: [
           '==',
           'id',
           _selectedParcelCode,
-        ], // Inicialmente, _selectedParcelCode está vacío
+        ], // Initially, _selectedParcelCode is empty
       ),
     );
   }
 
-// Helper function to calculate the centroid of a polygon
+  // Helper function to calculate the centroid of a polygon
   List<double> _calculateCentroid(List<List<double>> coordinates) {
     double centroidX = 0;
     double centroidY = 0;
@@ -346,41 +350,109 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
     return [centroidX / numPoints, centroidY / numPoints];
   }
 
+  // Show information of the selected parcel in a bottom panel
+  void _showParcelInfo(Map<String, dynamic> properties) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Referencia Catastral: ${properties['cadastralReference']}'),
+              Text('Área: ${properties['areaValue']} m²'),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Function to highlight the selected parcel
+  void _highlightSelectedParcel(String parcelId) {
+    _mapboxMap.style.updateLayer(
+      mapbox.LineLayer(
+        id: 'selected-parcel-line',
+        sourceId: 'source-id',
+        lineColor: const Color.fromARGB(150, 0, 255, 0)
+            .value, // Green with transparency
+        lineWidth: 2.0,
+        filter: ['==', 'id', parcelId],
+      ),
+    );
+  }
+
   // Handle Map Click to Select Parcel
   void _onMapClick(mapbox.MapContentGestureContext clickContext) async {
-    // Obtain coordinates of the click point on the screen
     final screenCoordinate = clickContext.touchPosition;
 
-    // Convert screen coordinates to geographic coordinates
-    final clickPoint = await _mapboxMap.coordinateForPixel(
-      screenCoordinate,
-    );
+    try {
+      // Create RenderedQueryGeometry with properly formatted ScreenCoordinate
+      final renderedQueryGeometry = mapbox.RenderedQueryGeometry(
+        value: jsonEncode([
+          screenCoordinate.x,
+          screenCoordinate.y,
+        ]), // A list of doubles for x and y coordinates
+        type: mapbox.Type.SCREEN_COORDINATE,
+      );
 
-    // Obtener el GeoJsonSource (no es necesario verificar si es null)
-    final sourceFuture = _mapboxMap.style.getSource('source-id');
-    final source = await sourceFuture;
-    if (source is mapbox.GeoJsonSource) {
-      final data = await source.data;
+      // Query rendered features at the clicked point to find the parcel
+      final features = await _mapboxMap.queryRenderedFeatures(
+        renderedQueryGeometry,
+        mapbox.RenderedQueryOptions(
+          layerIds: ['parcel-lines', 'parcel-labels'], // Layer IDs to query
+        ),
+      );
 
-      if (data != null) {
-        // Verificar si `data` no es nulo
-        final features = jsonDecode(data)['features'] as List<dynamic>;
+      if (features.isNotEmpty) {
+        // Get the first feature (parcel) from the list
+        final feature = features.first;
 
-        for (final feature in features) {
-          final List<dynamic> coordinates =
-              feature['geometry']['coordinates'][0];
-          if (_isPointInPolygon(clickPoint, coordinates)) {
+        // Check if feature is not null
+        if (feature != null) {
+          // Extract the properties of the parcel
+          final rawProperties = feature.queriedFeature.feature['properties'];
+
+          // Safely cast the properties map to Map<String, dynamic>
+          final properties = Map<String, dynamic>.from(
+            rawProperties as Map<Object?, Object?>,
+          );
+
+          // Extract specific properties needed
+          final cadastralReference = properties['cadastralReference'];
+          final areaValue = properties['areaValue'];
+          final parcelId = properties['id'];
+
+          if (cadastralReference != null &&
+              areaValue != null &&
+              parcelId != null) {
             setState(() {
-              _selectedParcelCode = feature['properties']['id'];
-              _showParcelInfo(feature['properties']);
+              _selectedParcelCode = parcelId as String;
             });
-            log.info('Selected Parcel ID: $_selectedParcelCode');
-            break;
+
+            // Highlight the selected parcel
+            _highlightSelectedParcel(_selectedParcelCode);
+
+            // Show parcel information
+            _showParcelInfo({
+              'cadastralReference': cadastralReference,
+              'areaValue': areaValue,
+            });
+
+            log.info(
+                'Selected Parcel: $cadastralReference, Area: $areaValue m²');
+          } else {
+            log.warning('Parcel properties are incomplete.');
           }
+        } else {
+          log.warning('No valid parcel found at clicked location.');
         }
       } else {
-        log.warning('El dato del GeoJsonSource es nulo.');
+        log.warning('No parcel found at clicked location.');
       }
+    } catch (e, stacktrace) {
+      log.severe('Error querying features: $e', e, stacktrace);
     }
   }
 
@@ -407,25 +479,6 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
     }
 
     return inside;
-  }
-
-  // Show information of the selected parcel in a bottom panel
-  void _showParcelInfo(Map<String, dynamic> properties) {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Referencia Catastral: ${properties['cadastralReference']}'),
-              Text('Área: ${properties['areaValue']} m²'),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   @override
