@@ -604,8 +604,15 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
               _selectedParcelArea.isNotEmpty) // Show selected parcel info
             Container(
               padding: const EdgeInsets.all(8.0),
-              child: Text(
-                  'Reg.Catastral: $_selectedParcelCadastralRef Área: $_selectedParcelArea m²'),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Reg.Catastral: $_selectedParcelCadastralRef Área: $_selectedParcelArea m²',
+                  style: const TextStyle(
+                    fontSize: 16, // You can adjust the base size here
+                  ),
+                ),
+              ),
             ),
         ],
       ),
