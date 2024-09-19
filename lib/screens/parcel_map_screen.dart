@@ -10,6 +10,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:geobase/geobase.dart';
 import 'package:geobase/projections_proj4d.dart'; // Import for EPSG:25830 projections
 import 'dart:convert'; // Import required for jsonEncode
+import 'dart:async'; // Import for Timer
 
 class ParcelMapScreen extends StatefulWidget {
   const ParcelMapScreen({super.key});
@@ -25,16 +26,46 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
   String _selectedParcelCadastralRef = '';
   String _selectedParcelArea = '';
   final log = Logger('ParcelMapScreen');
+  Timer? _debounce; // Timer to handle user inactivity after scrolling
+  bool _isFetching = false;
 
   // Retrieve the Mapbox Access Token from environment variables
   final String accessToken = dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
 
+  // Declare the projections as global variables
+  late Proj4d epsg25830;
+  late Proj4d epsg4326;
+
   @override
   void initState() {
     super.initState();
+    // Register the projections once
+    _registerProjections();
+
     // Set Mapbox Access Token
     mapbox.MapboxOptions.setAccessToken(accessToken);
     _requestLocationPermission();
+  }
+
+// Function to register the projections only once
+  void _registerProjections() {
+    // EPSG:4326 (WGS84) to EPSG:25830 (UTM Zone 30N)
+    epsg25830 = Proj4d.init(
+      CoordRefSys.CRS84, // EPSG:4326
+      CoordRefSys.normalized('EPSG:25830'), // EPSG:25830
+      sourceDef: '+proj=longlat +datum=WGS84 +no_defs', // EPSG:4326 definition
+      targetDef:
+          '+proj=utm +zone=30 +ellps=GRS80 +units=m +no_defs', // EPSG:25830 definition
+    );
+
+    // EPSG:25830 (UTM Zone 30N) to EPSG:4326 (WGS84)
+    epsg4326 = Proj4d.init(
+      CoordRefSys.normalized('EPSG:25830'), // EPSG:25830
+      CoordRefSys.CRS84, // WGS84
+      sourceDef:
+          '+proj=utm +zone=30 +ellps=GRS80 +units=m +no_defs', // EPSG:25830 definition
+      targetDef: '+proj=longlat +datum=WGS84 +no_defs', // EPSG:4326 definition
+    );
   }
 
   // Function to request location permission
@@ -72,6 +103,9 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
 
     // Set the initial camera position
     _setInitialCameraPosition();
+
+    // Add scroll listener to detect when user scrolls the map
+    _mapboxMap.setOnMapMoveListener(_onMapMove);
   }
 
   // Set Initial Camera Position after Map is Created
@@ -134,7 +168,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
         center: mapbox.Point(
           coordinates: geojson.Position(longitude, latitude),
         ),
-        zoom: 15.0,
+        zoom: 17.0,
         bearing: 0.0,
         pitch: 0.0,
       ),
@@ -145,101 +179,36 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
     _fetchParcelData(latitude, longitude);
   }
 
-  // Fetch Parcel Data from WFS Service
-  Future<void> _fetchParcelData(double latitude, double longitude) async {
-    final bbox = _calculateBBox(latitude, longitude, 500); // 0.5km radius
-    final url =
-        'http://ovc.catastro.meh.es/INSPIRE/wfsCP.aspx?service=WFS&version=2.0.0&request=GetFeature&typeNames=CP:CadastralParcel&srsName=EPSG:25830&bbox=$bbox';
-
-    try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final xmlDocument = XmlDocument.parse(response.body);
-        _parseAndDrawParcels(xmlDocument);
-      } else {
-        log.warning(
-            'Failed to load parcel data: Status code ${response.statusCode}');
-      }
-    } catch (e) {
-      log.severe('Error fetching parcel data', e);
-    }
-  }
-
-  // Calculate BBOX for WFS Request
-  String _calculateBBox(double lat, double lon, double radius) {
-    // Create a projection instance for EPSG:4326 (WGS84) to EPSG:25830 (UTM Zone 30N)
-    final adapter = Proj4d.init(
-      CoordRefSys.CRS84, // EPSG:4326
-      CoordRefSys.normalized('EPSG:25830'), // EPSG:25830
-      sourceDef:
-          '+proj=longlat +datum=WGS84 +no_defs', // Definition of EPSG:4326
-      targetDef:
-          '+proj=utm +zone=30 +ellps=GRS80 +units=m +no_defs', // EPSG:25830
-    );
-
-    // Convert a geographic point (lon, lat) to UTM (EPSG:25830)
-    final projected = Geographic(lon: lon, lat: lat).project(adapter.forward);
-    final x = projected.x;
-    final y = projected.y;
-
-    // Define valid limits for EPSG:25830
-    const minXLimit = 166021;
-    const maxXLimit = 833978;
-    const minYLimit = 0;
-    const maxYLimit = 9329005;
-
-    // Calculate BBox limits based on radius
-    var minX = (x - radius).round();
-    var minY = (y - radius).round();
-    var maxX = (x + radius).round();
-    var maxY = (y + radius).round();
-
-    // Limit the BBox range within the allowed limits
-    minX = minX < minXLimit ? minXLimit : minX;
-    maxX = maxX > maxXLimit ? maxXLimit : maxX;
-    minY = minY < minYLimit ? minYLimit : minY;
-    maxY = maxY > maxYLimit ? maxYLimit : maxY;
-
-    // Return the BBox in the expected format
-    return '$minX,$minY,$maxX,$maxY';
-  }
-
-  // Parse and Draw Parcels, but only show information on interaction
-  void _parseAndDrawParcels(XmlDocument xml) {
-    // Get all plot elements using <member>
+  // Genera datos GeoJSON a partir del XML
+  String _generateGeoJsonData(XmlDocument xml) {
+    // Obtener todos los elementos de parcelas usando <member>
     final List<XmlElement> parcelElements =
         xml.findAllElements('member').toList();
 
-    // Create a projection instance to convert from EPSG:25830 (UTM Zone 30N) to WGS84
-    final adapter = Proj4d.init(
-      CoordRefSys.normalized('EPSG:25830'), // Source coordinate system (UTM)
-      CoordRefSys.CRS84, // Target coordinate system (WGS84)
-      sourceDef:
-          '+proj=utm +zone=30 +ellps=GRS80 +units=m +no_defs', // EPSG:25830
-      targetDef: '+proj=longlat +datum=WGS84 +no_defs', // EPSG:4326
-    );
+    // Reutilizar la proyección registrada para EPSG:4326
+    final adapter = epsg4326;
 
     // Crear datos GeoJSON
     final geoJsonData = jsonEncode({
       'type': 'FeatureCollection',
       'features': parcelElements.map((parcel) {
-        // Get the coordinates of the plot
+        // Obtener las coordenadas de la parcela
         final String coordinatesString =
             parcel.findAllElements('gml:posList').first.innerText;
 
         final List<String> coordinates = coordinatesString.split(' ');
 
-        // Convert coordinates to GeoJSON format
+        // Convertir coordenadas a formato GeoJSON
         final List<List<double>> geometryCoordinates = [];
         for (var i = 0; i < coordinates.length; i += 2) {
           final double x = double.parse(coordinates[i]);
           final double y = double.parse(coordinates[i + 1]);
 
-          // Create a Point object with UTM coordinates
+          // Crear un objeto Point con coordenadas UTM
           final pointUTM = Projected(x: x, y: y);
 
           try {
-            // Convert UTM Zone 30N coordinates to WGS84
+            // Convertir coordenadas UTM Zone 30N a WGS84
             final Geographic pointWGS84 = pointUTM.project(adapter.forward);
             geometryCoordinates.add([pointWGS84.lon, pointWGS84.lat]);
           } catch (e) {
@@ -247,7 +216,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
           }
         }
 
-        // Extract the cadastral reference and area value from the XML
+        // Extraer la referencia catastral y el valor del área del XML
         final String cadastralReference = parcel
             .findAllElements('cp:nationalCadastralReference')
             .first
@@ -255,10 +224,10 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
         final String areaValue =
             parcel.findAllElements('cp:areaValue').first.innerText;
 
-        // Calculate the centroid of the plot for labeling
+        // Calcular el centroide de la parcela para el etiquetado
         final centroid = _calculateCentroid(geometryCoordinates);
 
-        // Return the GeoJSON object
+        // Retornar el objeto GeoJSON
         return {
           'type': 'Feature',
           'geometry': {
@@ -279,18 +248,11 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
       }).toList(),
     });
 
-    // Log the generated GeoJSON data
-    log.info('Generated GeoJSON: $geoJsonData');
+    return geoJsonData;
+  }
 
-    // Create a GeoJsonSource instance using GeoJSON data
-    final geoJsonSource = mapbox.GeoJsonSource(
-      id: 'source-id',
-      data: geoJsonData,
-    );
-
-    // Add source to map
-    _mapboxMap.style.addSource(geoJsonSource);
-
+  // Add layers to show the plots
+  void _addParcelLayers() {
     // Add the line layer to draw the boundaries of the parcels
     _mapboxMap.style.addLayer(
       mapbox.LineLayer(
@@ -333,9 +295,123 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
           '==',
           'id',
           _selectedParcelId, // Initially, _selectedParcelId is empty
-        ], // Initially, _selectedParcelCode is empty
+        ],
       ),
     );
+  }
+
+  // Fetch Parcel Data from WFS Service
+  Future<void> _fetchParcelData(double latitude, double longitude) async {
+    if (_isFetching) return; // Prevent multiple requests at the same time
+
+    _isFetching = true; // Set flag to true to indicate a request is ongoing
+
+    // Obtain the current state of the camera, including zoom
+    mapbox.CameraState cameraState = await _mapboxMap.getCameraState();
+
+    // Use the camera status to calculate the bbox
+    final bbox = _calculateBBox(latitude, longitude, cameraState);
+    final url =
+        'http://ovc.catastro.meh.es/INSPIRE/wfsCP.aspx?service=WFS&version=2.0.0&request=GetFeature&typeNames=CP:CadastralParcel&srsName=EPSG:25830&bbox=$bbox';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final xmlDocument = XmlDocument.parse(response.body);
+
+        // Generate the new Geojson data
+        final newGeoJsonData = _generateGeoJsonData(xmlDocument);
+
+        final isSourceIdExists =
+            await _mapboxMap.style.styleSourceExists('source-id');
+        if (isSourceIdExists) {
+          // If the source already exists, we update the property `data` with the new data
+          await _mapboxMap.style.setStyleSourceProperty(
+            'source-id',
+            'data',
+            newGeoJsonData,
+          );
+          log.info("Source 'source-id' updated with new parcel data.");
+        } else {
+          // If there is no source, we create it and add the necessary layers
+          final geoJsonSource = mapbox.GeoJsonSource(
+            id: 'source-id',
+            data: newGeoJsonData,
+          );
+
+          _mapboxMap.style.addSource(geoJsonSource);
+
+          // Add the layers again if the source did not exist
+          _addParcelLayers();
+        }
+      } else {
+        log.warning(
+            'Failed to load parcel data: Status code ${response.statusCode}');
+      }
+    } catch (e) {
+      log.severe('Error fetching parcel data: $e');
+    } finally {
+      _isFetching = false; // Reset the flag after the request is complete
+    }
+  }
+
+  // Calculate BBOX for WFS Request
+  String _calculateBBox(
+      double lat, double lon, mapbox.CameraState cameraState) {
+    // Get the zoom level from the camera state
+    double zoomLevel = cameraState.zoom;
+
+    // Calculate the radius based on zoom level. As zoom increases, the radius decreases.
+    double radius = _radiusForZoomLevel(zoomLevel);
+
+    // Reuse the registered projection for EPSG:25830
+    final projected = Geographic(lon: lon, lat: lat).project(epsg25830.forward);
+    double x = projected.x;
+    double y = projected.y;
+
+    // EPSG:25830 limits
+    const double minXLimit = 166021;
+    const double maxXLimit = 833978;
+    const double minYLimit = 0;
+    const double maxYLimit = 9329005;
+
+    // FIXME: This is a temporary fix to avoid exceeding the limits
+    // radius = 100;
+
+    log.info('RAW VALUES');
+    log.info((x - radius));
+    log.info((x + radius));
+    log.info((y - radius));
+    log.info((y + radius));
+
+    log.info('CLAMPED VALUES');
+    log.info((x - radius).clamp(minXLimit, maxXLimit));
+    log.info((x + radius).clamp(minXLimit, maxXLimit));
+    log.info((y - radius).clamp(minYLimit, maxYLimit));
+    log.info((y + radius).clamp(minYLimit, maxYLimit));
+
+    // Calculate bbox, but limit it to the valid range for EPSG:25830
+    int minX = (x - radius).clamp(minXLimit, maxXLimit).round();
+    int maxX = (x + radius).clamp(minXLimit, maxXLimit).round();
+    int minY = (y - radius).clamp(minYLimit, maxYLimit).round();
+    int maxY = (y + radius).clamp(minYLimit, maxYLimit).round();
+
+    log.info('ROUNDED VALUES');
+    log.info((x - radius).clamp(minXLimit, maxXLimit).round());
+    log.info((x + radius).clamp(minXLimit, maxXLimit).round());
+    log.info((y - radius).clamp(minYLimit, maxYLimit).round());
+    log.info((y + radius).clamp(minYLimit, maxYLimit).round());
+
+    // Return the BBox in the expected format
+    return '$minX,$minY,$maxX,$maxY';
+  }
+
+  // Helper function to calculate radius based on zoom level
+  double _radiusForZoomLevel(double zoomLevel) {
+    // Adjust radius dynamically based on zoom level
+    if (zoomLevel > 15) return 100; // 100 meters for high zoom
+    if (zoomLevel > 12) return 500; // 500 meters for medium zoom
+    return 100; // 1km for lower zoom
   }
 
   // Helper function to calculate the centroid of a polygon
@@ -476,6 +552,24 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
     } catch (e, stacktrace) {
       log.severe('Error querying features: $e', e, stacktrace);
     }
+  }
+
+  // Handle Map Move events
+  void _onMapMove(mapbox.MapContentGestureContext context) {
+    // Cancel any pending requests while the user is moving the map
+    if (_debounce?.isActive ?? false) {
+      _debounce?.cancel();
+    }
+
+    // Wait for 1 second after the last scroll event before fetching new data
+    _debounce = Timer(const Duration(seconds: 1), () async {
+      log.info('User stopped interacting, fetching new data...');
+      mapbox.CameraState currentCamera = await _mapboxMap.getCameraState();
+      _fetchParcelData(
+          (currentCamera.center.coordinates[1] as double), // Latitude
+          (currentCamera.center.coordinates[0] as double) // Longitude
+          );
+    });
   }
 
   @override
