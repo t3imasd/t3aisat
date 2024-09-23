@@ -375,9 +375,6 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
     const double minYLimit = 0;
     const double maxYLimit = 9329005;
 
-    // FIXME: This is a temporary fix to avoid exceeding the limits
-    // radius = 100;
-
     log.info('RAW VALUES');
     log.info((x - radius));
     log.info((x + radius));
