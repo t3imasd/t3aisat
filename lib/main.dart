@@ -69,7 +69,7 @@ class MyHomePage extends StatelessWidget {
                       builder: (context) => const TakePhotoScreen()),
                 );
               },
-              child: const Text('Obtener GeoPosición'),
+              child: const Text('Foto con Ubicación'),
             ),
             ElevatedButton(
               onPressed: () {
@@ -79,7 +79,7 @@ class MyHomePage extends StatelessWidget {
                       builder: (context) => const ParcelMapScreen()),
                 );
               },
-              child: const Text('Ver Mapa de Parcelas'),
+              child: const Text('Mapa de Parcelas'),
             ),
           ],
         ),
