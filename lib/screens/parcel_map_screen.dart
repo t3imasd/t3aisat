@@ -270,8 +270,6 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
         sourceId: 'source-id',
         textFieldExpression: [
           'format',
-          ['get', 'cadastralReference'],
-          '\n',
           ['get', 'areaValue'],
           ' m²',
         ],
@@ -601,14 +599,30 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
               _selectedParcelArea.isNotEmpty) // Show selected parcel info
             Container(
               padding: const EdgeInsets.all(8.0),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  'Reg.Catastral: $_selectedParcelCadastralRef Área: $_selectedParcelArea m²',
-                  style: const TextStyle(
-                    fontSize: 16, // You can adjust the base size here
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    'Área: $_selectedParcelArea m²',
+                    style: const TextStyle(
+                      fontSize: 24, // Bigger font size for the area
+                      fontWeight: FontWeight.bold, // Bold font for emphasis
+                    ),
+                    textAlign: TextAlign.center, // Center the text
                   ),
-                ),
+                  const SizedBox(
+                      height: 4), // Add some spacing between the texts
+                  Text(
+                    'Reg. Catastral: $_selectedParcelCadastralRef',
+                    style: const TextStyle(
+                      fontSize:
+                          14, // Smaller font size for the cadastral reference
+                      fontWeight:
+                          FontWeight.normal, // Normal weight for secondary info
+                    ),
+                    textAlign: TextAlign.center, // Center the text
+                  ),
+                ],
               ),
             ),
         ],
