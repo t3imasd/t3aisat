@@ -39,9 +39,25 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'T3AISat',
       theme: ThemeData(
-        colorScheme:
-            ColorScheme.fromSeed(seedColor: const Color.fromRGBO(37, 102, 123, 1)),
         useMaterial3: true,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ButtonStyle(
+            backgroundColor: WidgetStateProperty.all(
+                const Color(0xFF388E3C)), // Verde Oscuro
+            foregroundColor:
+                WidgetStateProperty.all(const Color(0xFFFFFFFF)), // Blanco
+            textStyle: WidgetStateProperty.all(
+              const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            shadowColor: WidgetStateProperty.all(
+                Colors.black54), // Sombra más pronunciada
+            elevation: WidgetStateProperty.all(
+                4), // Mayor elevación para un efecto de profundidad
+          ),
+        ),
       ),
       home: const MyHomePage(),
     );
@@ -54,13 +70,27 @@ class MyHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFE0E0E0), // Gris Claro
       appBar: AppBar(
-        title: const Text('T3 AI Sat'),
+        title: const Text(
+          'T3 AI Sat',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1976D2), // Azul Marino
+          ),
+        ),
+        backgroundColor: const Color(0xFFE0E0E0), // Gris Claro
+        elevation: 0, // Sin sombra en la barra de título
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment:
+              CrossAxisAlignment.center, // Centra horizontalmente
           children: <Widget>[
+            const SizedBox(
+                height: 40), // Espaciado entre el título y el primer botón
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -71,6 +101,7 @@ class MyHomePage extends StatelessWidget {
               },
               child: const Text('Foto con Ubicación'),
             ),
+            const SizedBox(height: 20), // Espaciado entre los botones
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -81,6 +112,9 @@ class MyHomePage extends StatelessWidget {
               },
               child: const Text('Mapa de Parcelas'),
             ),
+            const SizedBox(
+                height:
+                    40), // Asegura que el contenido esté centrado verticalmente
           ],
         ),
       ),
