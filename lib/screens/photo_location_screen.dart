@@ -198,17 +198,23 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment
+                            .start, // Align content to the start of the row
                         children: [
                           const Icon(
                             Icons.location_on,
                             color: Color(0xFF388E3C), // Dark green
+                            size: 30, // Increased icon size
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            'Latitud: ${_currentPosition?.latitude}\nLongitud: ${_currentPosition?.longitude}',
-                            textAlign: TextAlign.left,
-                            style: const TextStyle(
-                                color: Color(0xFF424242)), // Dark gray
+                          Expanded(
+                            // Ensures text wraps and aligns properly
+                            child: Text(
+                              'Latitud: ${_currentPosition?.latitude}\nLongitud: ${_currentPosition?.longitude}',
+                              textAlign: TextAlign.left,
+                              style: const TextStyle(
+                                  color: Color(0xFF424242)), // Dark gray
+                            ),
                           ),
                         ],
                       ),
@@ -217,17 +223,23 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment
+                            .start, // Align content to the start of the row
                         children: [
                           const Icon(
                             Icons.home,
                             color: Color(0xFF388E3C), // Dark green
+                            size: 30, // Increased icon size
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            '$_address',
-                            textAlign: TextAlign.left,
-                            style: const TextStyle(
-                                color: Color(0xFF424242)), // Dark gray
+                          Expanded(
+                            // Ensures text wraps and aligns properly
+                            child: Text(
+                              '$_address',
+                              textAlign: TextAlign.left,
+                              style: const TextStyle(
+                                  color: Color(0xFF424242)), // Dark gray
+                            ),
                           ),
                         ],
                       ),

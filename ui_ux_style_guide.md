@@ -75,17 +75,16 @@
   - Texto: "GeoPosición"
   - Tipografía: Roboto, 24px, Negrita, Color: Azul Marino (#1976D2).
 - **Imagen Geolocalizada:**
-  - **Eliminación del Botón "Hacer Foto":** Este botón ya no será necesario, por lo que se debe eliminar de la pantalla.
-  - **Ajuste de Diseño:** Alinear la imagen geolocalizada y la información asociada para ocupar más espacio vertical, dado que el botón ya no estará presente.
-  - **Carga de la Imagen:** Añadir un **spinner de carga** con color Azul Marino (#1976D2) mientras se procesa la imagen y se generan los datos de geolocalización.
+  - **Eliminación del Botón "Hacer Foto":** Este botón ya no es necesario, por lo que se ha eliminado de la pantalla.
+  - **Ajuste de Diseño:** La imagen geolocalizada y la información asociada ahora ocupan más espacio vertical.
+  - **Carga de la Imagen:** Se ha añadido un **spinner de carga** con color Azul Marino (#1976D2) mientras se procesa la imagen y se generan los datos de geolocalización.
 - **Texto de Ubicación y Dirección:**
   - Color: Gris Oscuro (#424242).
   - Tipografía: Roboto, 16px, Regular.
-  - **Posicionamiento:** Centrarse en la pantalla, con mayor espacio entre la imagen geolocalizada y la información textual para una lectura más clara.
   - **Incorporación de Íconos:**
-    - **Latitud y Longitud:** Añadir un ícono de ubicación (un pin) en Verde Oscuro (#388E3C) antes de los valores de latitud y longitud.
-    - **Dirección:** Añadir un ícono de dirección (una casa) en Verde Oscuro (#388E3C) antes de la dirección textual.
-    - **Alineación:** Los íconos deben estar alineados a la izquierda del texto, con un pequeño margen de 8px entre el ícono y el texto.
+    - **Latitud y Longitud:** Ícono de ubicación (un pin) en Verde Oscuro (#388E3C) antes de los valores de latitud y longitud.
+    - **Dirección:** Ícono de dirección (una casa) en Verde Oscuro (#388E3C) antes de la dirección textual.
+    - **Alineación:** Los íconos están alineados a la izquierda del texto. El texto y los íconos se mantienen alineados en una línea vertical para evitar desajustes visuales.
 
 ### 5. Pantalla Mapa de Parcelas
 
@@ -123,5 +122,5 @@
 
 ## Consideraciones Finales
 
-- **Transiciones y Animaciones:** Utilizar transiciones suaves entre pantallas, y animaciones de ripple en los botones para mejorar la interactividad y dar feedback visual al usuario.
+- **Transiciones y Animaciones:** Utilizar transiciones suaves entre pantallas y animaciones de ripple en los botones para mejorar la interactividad y dar feedback visual al usuario.
 - **Pruebas:** Asegurar que todos los cambios se prueben en condiciones reales, incluyendo trabajo en exteriores, para validar la visibilidad y usabilidad de la aplicación en entornos agrícolas.
