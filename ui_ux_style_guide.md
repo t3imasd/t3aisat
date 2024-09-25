@@ -40,7 +40,7 @@
     - Fondo: Verde Oscuro (#388E3C).
     - Texto: Blanco (#FFFFFF), Tipografía: Roboto, 18px, Semi-Negrita.
     - Borde: Sin borde.
-    - Sombra: Sombra sutil, pero ligeramente intensificada para dar más profundidad visual. Usa un `elevation` de 2-4dp en Flutter.
+    - Sombra: Sombra sutil pero ligeramente intensificada para dar más profundidad visual. Usa un `elevation` de 2-4dp en Flutter.
     - Padding interno de 12px en cada dirección y un espaciado entre los botones de 20px.
   - **Efecto de Pulsación:** Ripple con Verde Oscuro más intenso (código de color automático de Flutter).
 - **Espaciado:**
@@ -56,7 +56,7 @@
 ### 3. Cámara de Fotos (Interfaz de Cámara)
 
 - **Apertura Directa:** Al pulsar "Foto con Ubicación", se abrirá directamente la interfaz de la cámara del dispositivo.
-- **Cambios:** Ningún cambio estético, pero asegúrate de que el flujo sea fluido y directo, sin pantallas intermedias innecesarias.
+- **Cambios:** No se requiere cambio estético, pero asegúrate de que el flujo sea fluido y directo, sin pantallas intermedias innecesarias.
 
 ### 4. Pantalla de Confirmación de Foto (nueva)
 
@@ -81,15 +81,17 @@
   - Texto: "GeoPosición"
   - Tipografía: Roboto, 24px, Negrita, Color: Verde Oscuro (#388E3C).
 - **Imagen Geolocalizada:**
-  - Tamaño: Mantener tamaño actual.
-  - Borde de la Imagen: Ninguno, imagen mostrada en formato actual.
+  - **Eliminación del Botón "Hacer Foto":** Este botón ya no será necesario, por lo que se debe eliminar de la pantalla.
+  - **Ajuste de Diseño:** Alinear la imagen geolocalizada y la información asociada para ocupar más espacio vertical, dado que el botón ya no estará presente.
 - **Texto de Ubicación y Dirección:**
   - Color: Gris Oscuro (#424242).
   - Tipografía: Roboto, 16px, Regular.
-- **Botón "Hacer Foto":**
-  - Color de Fondo: Azul Marino (#1976D2).
-  - Texto: Blanco (#FFFFFF), Tipografía: Roboto, 16px, Negrita.
-  - Posición: Centrado debajo de la imagen, con un margen superior de 20px.
+  - **Posicionamiento:** Centrarse en la pantalla, con mayor espacio entre la imagen geolocalizada y la información textual para una lectura más clara.
+  - **Incorporación de Íconos:**
+    - **Latitud y Longitud:** Añadir un ícono de ubicación (e.g., un pin o punto) antes de los valores de latitud y longitud.
+    - **Dirección:** Añadir un ícono de dirección (e.g., una casa o mapa) antes de la dirección textual.
+    - **Colores de Íconos:** Utilizar el color Verde Oscuro (#388E3C) para ambos íconos.
+    - **Alineación:** Los íconos deben estar alineados a la izquierda del texto, con un pequeño margen de 8px entre el ícono y el texto.
 
 ### 6. Pantalla Mapa de Parcelas
 

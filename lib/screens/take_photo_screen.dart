@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -14,94 +13,28 @@ import 'package:image/image.dart' as img;
 import 'package:flutter/services.dart' show rootBundle;
 
 class TakePhotoScreen extends StatefulWidget {
-  const TakePhotoScreen({super.key});
+  final String imagePath;
+
+  const TakePhotoScreen({super.key, required this.imagePath});
 
   @override
   TakePhotoScreenState createState() => TakePhotoScreenState();
 }
 
 class TakePhotoScreenState extends State<TakePhotoScreen> {
-  XFile? _imageFile;
   Position? _currentPosition;
   String? _address;
-  final ImagePicker _picker = ImagePicker();
   final Logger log = Logger('TakePhotoScreen');
+  String?
+      _updatedImagePath; // Variable to store the updated image route
 
-  // Function to take a photo using the camera
-  Future<void> _takePhoto() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
-    if (image != null) {
-      setState(() {
-        _imageFile = image;
-      });
-
-      // Get the current location
-      await _getCurrentLocation();
-      if (_currentPosition != null) {
-        // Get the address from the coordinates
-        await _getAddressFromCoordinates(
-            _currentPosition!.latitude, _currentPosition!.longitude);
-
-        // Write text on the image and save it to gallery
-        await _writeTextOnImageAndSaveToGallery(image);
-      }
-    }
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
   }
 
-  // Function to save the photo to the device and gallery
-  Future<void> _writeTextOnImageAndSaveToGallery(XFile image) async {
-    final bytes = await image.readAsBytes();
-    final img.Image originalImage = img.decodeImage(bytes)!;
-
-    // Load the font
-    final fontData = await rootBundle.load(
-        'assets/fonts/roboto_black/Roboto-Black_100_size_white_color.ttf.zip');
-    final font = img.BitmapFont.fromZip(fontData.buffer.asUint8List());
-
-    // Split address into multiple lines
-    final formattedAddress = _address?.split(',').join('\n');
-    // Format location with 5 decimal places
-    final formattedLocation =
-        'Lat: ${_currentPosition?.latitude.toStringAsFixed(5)}\nLon: ${_currentPosition?.longitude.toStringAsFixed(5)}';
-
-    // Draw the address and coordinates
-    final updatedImage = img.drawString(
-      originalImage,
-      '$formattedAddress\n$formattedLocation',
-      font: font,
-      x: 20, // x position
-      y: originalImage.height - 750, // y position to move text down
-      color: img.ColorRgba8(255, 255, 255, 255), // white color
-    );
-
-    // Save the updated image
-    final updatedImagePath = path.join(
-        (await getApplicationDocumentsDirectory()).path,
-        'updated_${path.basename(image.path)}');
-    final updatedImageFile = File(updatedImagePath);
-    updatedImageFile.writeAsBytesSync(img.encodeJpg(updatedImage));
-
-    // Request permission to save to gallery
-    var status = await Permission.photos.status;
-    if (!status.isGranted) {
-      status = await Permission.photos.request();
-    }
-
-    if (status.isGranted) {
-      // Save the updated image to gallery
-      final result = await ImageGallerySaver.saveFile(updatedImagePath);
-      log.info('Updated image saved to gallery: $result');
-    } else {
-      log.severe('Permission denied to access photos');
-    }
-
-    // Update the state to show the updated image
-    setState(() {
-      _imageFile = XFile(updatedImagePath);
-    });
-  }
-
-  // Function to get the current location
+  // Function to obtain the current location
   Future<void> _getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
@@ -128,8 +61,18 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
     }
 
     _currentPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+      ),
+    );
     log.info('Current position: $_currentPosition');
+
+    // Obtain address from coordinates
+    await _getAddressFromCoordinates(
+        _currentPosition!.latitude, _currentPosition!.longitude);
+
+    // Write the text in the image and save in the gallery
+    await _writeTextOnImageAndSaveToGallery(widget.imagePath);
 
     // Update the state to reflect the new location
     setState(() {});
@@ -156,6 +99,62 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
     }
   }
 
+  // Function to save the photo with the location on the device and the gallery
+  Future<void> _writeTextOnImageAndSaveToGallery(String imagePath) async {
+    try {
+      final bytes = await File(imagePath).readAsBytes();
+      final img.Image originalImage = img.decodeImage(bytes)!;
+
+      // Load the source
+      final fontData = await rootBundle.load(
+          'assets/fonts/roboto_black/Roboto-Black_100_size_white_color.ttf.zip');
+      final font = img.BitmapFont.fromZip(fontData.buffer.asUint8List());
+
+      // Format direction and location
+      final formattedAddress = _address?.split(',').join('\n');
+      final formattedLocation =
+          'Lat: ${_currentPosition?.latitude.toStringAsFixed(5)}\nLon: ${_currentPosition?.longitude.toStringAsFixed(5)}';
+
+      // Draw the address and coordinates in the image
+      final updatedImage = img.drawString(
+        originalImage,
+        '$formattedAddress\n$formattedLocation',
+        font: font,
+        x: 20,
+        y: originalImage.height - 750,
+        color: img.ColorRgba8(255, 255, 255, 255),
+      );
+
+      // Save the updated image
+      final updatedImagePath = path.join(
+          (await getApplicationDocumentsDirectory()).path,
+          'updated_${path.basename(imagePath)}');
+      final updatedImageFile = File(updatedImagePath);
+      updatedImageFile.writeAsBytesSync(img.encodeJpg(updatedImage));
+
+      // Request permission to save in the gallery
+      var status = await Permission.photos.status;
+      if (!status.isGranted) {
+        status = await Permission.photos.request();
+      }
+
+      if (status.isGranted) {
+        // Save the updated image in the gallery
+        final result = await ImageGallerySaver.saveFile(updatedImagePath);
+        log.info('Updated image saved to gallery: $result');
+      } else {
+        log.severe('Permission denied to access photos');
+      }
+
+      setState(() {
+        // Update the image shown in the UI
+        _updatedImagePath = updatedImagePath;
+      });
+    } catch (e) {
+      log.severe('Failed to process image: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -166,15 +165,11 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (_imageFile != null)
+            if (_updatedImagePath != null)
               Expanded(
-                child: Image.file(File(_imageFile!.path)),
+                child: Image.file(File(_updatedImagePath!)),
               ),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _takePhoto,
-              child: const Text('Hacer Foto'),
-            ),
             if (_currentPosition != null)
               Padding(
                 padding: const EdgeInsets.all(8.0),
