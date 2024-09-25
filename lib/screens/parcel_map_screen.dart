@@ -28,6 +28,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
   final log = Logger('ParcelMapScreen');
   Timer? _debounce; // Timer to handle user inactivity after scrolling
   bool _isFetching = false;
+  bool _isBottomSheetVisible = false; // Track bottom sheet visibility
 
   // Retrieve the Mapbox Access Token from environment variables
   final String accessToken = dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
@@ -258,7 +259,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
       mapbox.LineLayer(
         id: 'parcel-lines',
         sourceId: 'source-id',
-        lineColor: const Color.fromARGB(255, 244, 67, 54).value,
+        lineColor: const Color(0xFFD32F2F).value, // Red color for lines
         lineWidth: 1.0,
       ),
     );
@@ -273,11 +274,11 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
           ['get', 'areaValue'],
           ' m²',
         ],
-        textSize: 12.0,
+        textSize: 14.0,
         textOffset: [0, 1],
         textAnchor: mapbox.TextAnchor.CENTER,
-        textColor: Colors.white.value,
-        textHaloColor: Colors.black.value,
+        textColor: const Color(0xFF000000).value, // Black color for text
+        textHaloColor: Colors.white.value,
         textHaloWidth: 1.5,
       ),
     );
@@ -287,7 +288,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
       mapbox.LineLayer(
         id: 'selected-parcel-line',
         sourceId: 'source-id',
-        lineColor: const Color.fromARGB(255, 0, 255, 0).value,
+        lineColor: const Color(0xFFF57C00).value, // Orange color for highlight
         lineWidth: 2.0,
         filter: [
           '==',
@@ -406,7 +407,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
     // Adjust radius dynamically based on zoom level
     if (zoomLevel > 15) return 100; // 100 meters for high zoom
     if (zoomLevel > 12) return 500; // 500 meters for medium zoom
-    return 100; // 1km for lower zoom
+    return 100; // 0.1km for lower zoom
   }
 
   // Helper function to calculate the centroid of a polygon
@@ -445,7 +446,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
         mapbox.LineLayer(
           id: 'selected-parcel-line',
           sourceId: 'source-id',
-          lineColor: const Color.fromARGB(255, 0, 255, 0).value,
+          lineColor:
+              const Color(0xFFF57C00).value, // Orange color for highlight
           lineWidth: 2.0,
           filter: ['==', 'id', parcelId],
         ),
@@ -456,7 +458,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
         mapbox.LineLayer(
           id: 'selected-parcel-line',
           sourceId: 'source-id',
-          lineColor: const Color.fromARGB(255, 0, 255, 0).value,
+          lineColor:
+              const Color(0xFFF57C00).value, // Orange color for highlight
           lineWidth: 2.0,
           filter: ['==', 'id', parcelId],
         ),
@@ -473,7 +476,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
       mapbox.FillLayer(
         id: 'selected-parcel-fill',
         sourceId: 'source-id',
-        fillColor: const Color.fromARGB(255, 0, 255, 0).value,
+        fillColor: const Color(0xFFF57C00)
+            .value, // Orange fill color for the selected parcel
         fillOpacity: 0.3, // Adjust opacity for transparency
         filter: ['==', 'id', parcelId], // Filter for the selected parcel
       ),
@@ -528,6 +532,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
               _selectedParcelId = parcelId;
               _selectedParcelCadastralRef = cadastralReference;
               _selectedParcelArea = areaValue;
+              _isBottomSheetVisible = true; // Show the bottom sheet
             });
 
             // Highlight the selected parcel
@@ -572,6 +577,9 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mapa Parcelas'),
+        backgroundColor: const Color(0xFFE6E6E6), // Light gray background color
+        foregroundColor: const Color(0xFF1976D2), // Navy blue text color
+        elevation: 0, // No shadow in the AppBar
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_location),
@@ -581,48 +589,63 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
           )
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
-            child: mapbox.MapWidget(
-              mapOptions: mapbox.MapOptions(
-                pixelRatio: MediaQuery.of(context).devicePixelRatio,
-              ),
-              onMapCreated: (mapbox.MapboxMap mapboxMap) {
-                _mapboxMap = mapboxMap;
-                _onMapCreated(mapboxMap); // Initialize the map
-              },
-              onTapListener: _onMapClick, // Handle map click
+          mapbox.MapWidget(
+            mapOptions: mapbox.MapOptions(
+              pixelRatio: MediaQuery.of(context).devicePixelRatio,
             ),
+            onMapCreated: (mapbox.MapboxMap mapboxMap) {
+              _mapboxMap = mapboxMap;
+              _onMapCreated(mapboxMap); // Initialize the map
+            },
+            onTapListener: _onMapClick, // Handle map click
           ),
-          if (_selectedParcelCadastralRef.isNotEmpty &&
-              _selectedParcelArea.isNotEmpty) // Show selected parcel info
-            Container(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    'Área: $_selectedParcelArea m²',
-                    style: const TextStyle(
-                      fontSize: 24, // Bigger font size for the area
-                      fontWeight: FontWeight.bold, // Bold font for emphasis
+          if (_isBottomSheetVisible)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 8.0,
+                      offset: Offset(0, -2),
                     ),
-                    textAlign: TextAlign.center, // Center the text
-                  ),
-                  const SizedBox(
-                      height: 4), // Add some spacing between the texts
-                  Text(
-                    'Reg. Catastral: $_selectedParcelCadastralRef',
-                    style: const TextStyle(
-                      fontSize:
-                          14, // Smaller font size for the cadastral reference
-                      fontWeight:
-                          FontWeight.normal, // Normal weight for secondary info
+                  ],
+                ),
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Área: $_selectedParcelArea m²',
+                      style: const TextStyle(
+                        fontSize: 24, // Bigger font size for the area
+                        fontWeight: FontWeight.bold, // Bold font for emphasis
+                        color: Color(0xFF000000), // Black color for text
+                      ),
+                      textAlign: TextAlign.center, // Center the text
                     ),
-                    textAlign: TextAlign.center, // Center the text
-                  ),
-                ],
+                    const SizedBox(
+                        height: 8), // Add some spacing between the texts
+                    Text(
+                      'Reg. Catastral: $_selectedParcelCadastralRef',
+                      style: const TextStyle(
+                        fontSize:
+                            16, // Increased font size for the cadastral reference
+                        fontWeight: FontWeight
+                            .normal, // Normal weight for secondary info
+                        color: Color(0xFF424242), // Dark gray color for text
+                      ),
+                      textAlign: TextAlign.center, // Center the text
+                    ),
+                  ],
+                ),
               ),
             ),
         ],

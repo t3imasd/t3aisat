@@ -35,17 +35,24 @@
   - Texto: "T3 AI Sat"
   - Tipografía: Roboto, 28px, Negrita, Color: Azul Marino (#1976D2).
   - **Posicionamiento:** Centrar verticalmente todo el contenido en la pantalla para mejorar el balance visual.
+  - **Sombra del Título:**
+    - **Color:** #000000 (negro)
+    - **Opacidad:** 20-25%
+    - **Desenfoque:** 3-4px
+    - **Desplazamiento:** 2px hacia abajo y 0px en el eje horizontal.
 - **Botones:**
   - **"Foto con Ubicación" y "Mapa de Parcelas":**
     - Fondo: Verde Oscuro (#388E3C).
     - Texto: Blanco (#FFFFFF), Tipografía: Roboto, 18px, Semi-Negrita.
-    - Borde: Sin borde.
-    - Sombra: Sombra sutil pero ligeramente intensificada para dar más profundidad visual. Usa un `elevation` de 2-4dp en Flutter.
-    - Padding interno de 12px en cada dirección y un espaciado entre los botones de 20px.
-  - **Efecto de Pulsación:** Ripple con Verde Oscuro más intenso (código de color automático de Flutter).
+    - **Padding interno:** Aumentar a 16px en cada dirección.
+    - **Bordes Redondeados:** Radio de borde incrementado a 12px para una apariencia más moderna.
+    - **Sombra:** Sombra sutil pero ligeramente intensificada para dar más profundidad visual. Usa un `elevation` de 4dp en Flutter con ligero desenfoque.
+    - **Efecto de Pulsación:** Ripple con Verde Oscuro más intenso (código de color automático de Flutter), con una animación más suave y ligeramente prolongada.
+  - **Iconografía:** Considerar la incorporación de íconos pequeños a la izquierda del texto en los botones (opcional).
 - **Espaciado:**
-  - Aumentar el espacio entre el título y el primer botón a 40-50px para mejorar la separación y claridad visual.
-  - Alinear horizontalmente los botones y mantener un espaciado uniforme.
+  - **Entre Título y Botones:** Aumentar el espacio entre el título y el primer botón a 60px para mejorar la separación y claridad visual.
+  - **Entre Botones:** Mantener un espaciado uniforme de 20px.
+  - **Alineación:** Alinear los botones horizontalmente y centrar en la pantalla para un balance visual óptimo.
 
 ### 2. Cámara de Fotos (Interfaz de Cámara)
 
@@ -94,18 +101,25 @@
   - Texto: "Mapa Parcelas"
   - Tipografía: Roboto, 24px, Negrita, Color: Azul Marino (#1976D2).
 - **Mapa:**
-  - Colores Predominantes: Mantener el diseño actual del mapa.
-  - Líneas de Parcelas: Rojo (#D32F2F).
+  - **Líneas de Parcelas:** Las líneas de las parcelas están delineadas en rojo (#D32F2F) para mayor visibilidad.
+  - **Área de Parcelas:**
+    - **Color de Texto:** Negro (#000000) para el área en m².
+    - **Fuente:** Roboto, **14px**, Regular.
+    - **Espaciado:** Asegurar un espacio adecuado entre el texto del área y los bordes de la parcela para evitar solapamientos.
 - **Selección de Parcela:**
   - Color de Resaltado: Naranja Tierra (#F57C00) para el borde de la parcela seleccionada.
-  - Efecto: Aumentar la opacidad del borde resaltado para mayor visibilidad.
+  - **Detalles de la Parcela Seleccionada:**
+    - Mostrar un resumen en un "Bottom Sheet" al seleccionar una parcela.
+    - **Texto Principal (Área):** Color: Negro (#000000), Fuente: Roboto, 24px, Negrita.
+    - **Texto Secundario (Registro Catastral):** Color: Gris Oscuro (#424242), Fuente: Roboto, 16px, Regular.
+    - **Bottom Sheet:** Fondo Blanco (#FFFFFF) con sombra sutil para destacarlo sobre el mapa.
 
 ### 6. Pantalla con Bottom Sheet
 
 - **Bottom Sheet:**
   - Color de Fondo: Blanco (#FFFFFF).
   - **Texto Principal (Área de la Parcela):**
-    - Color: Verde Oscuro (#388E3C).
+    - Color: Negro (#000000).
     - Tipografía: Roboto, 24px, Negrita.
     - Alineación: Centrada en la primera línea.
   - **Texto Secundario (Registro Catastral):**

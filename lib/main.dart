@@ -43,14 +43,23 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ButtonStyle(
-            backgroundColor: WidgetStateProperty.all(
-                const Color(0xFF388E3C)), // Dark green
+            backgroundColor:
+                WidgetStateProperty.all(const Color(0xFF388E3C)), // Dark green
             foregroundColor:
                 WidgetStateProperty.all(const Color(0xFFFFFFFF)), // White
             textStyle: WidgetStateProperty.all(
               const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
+              ),
+            ),
+            padding: WidgetStateProperty.all(
+              const EdgeInsets.all(16), // Increased padding to 16px
+            ),
+            shape: WidgetStateProperty.all(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                    12), // Rounded corners with 12px radius
               ),
             ),
             shadowColor: WidgetStateProperty.all(
@@ -73,42 +82,51 @@ class MyHomePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFE6E6E6), // Light gray
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'T3 AI Sat',
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF1976D2), // Navy blue
+            color: const Color(0xFF1976D2), // Navy blue
+            shadows: [
+              Shadow(
+                blurRadius: 3.0,
+                color: Colors.black.withOpacity(0.25), // Light shadow behind the title
+                offset: const Offset(0, 2.0),
+              ),
+            ],
           ),
         ),
+        centerTitle: true,
         backgroundColor: const Color(0xFFE6E6E6), // Light gray
         elevation: 0, // Without shadow in the title bar
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment:
-              CrossAxisAlignment.center, // Focuses horizontally
+          crossAxisAlignment: CrossAxisAlignment.center, // Focuses horizontally
           children: <Widget>[
             const SizedBox(
-                height: 40), // Spacing between the title and the first button
+                height: 60), // Spacing between the title and the first button
             ElevatedButton(
               onPressed: () async {
                 final ImagePicker picker = ImagePicker();
-                final XFile? photo = await picker.pickImage(source: ImageSource.camera);
+                final XFile? photo =
+                    await picker.pickImage(source: ImageSource.camera);
                 if (photo != null && context.mounted) {
                   // Navigate to the PhotoLocationScreen screen with the captured photo route
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => PhotoLocationScreen(imagePath: photo.path),
+                      builder: (context) =>
+                          PhotoLocationScreen(imagePath: photo.path),
                     ),
                   );
                 }
               },
               child: const Text('Foto con Ubicación'),
             ),
-            const SizedBox(height: 20), // Spacing between the buttons
+            const SizedBox(height: 40), // Spacing between the buttons
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -120,8 +138,7 @@ class MyHomePage extends StatelessWidget {
               child: const Text('Mapa de Parcelas'),
             ),
             const SizedBox(
-                height:
-                    40), // Center the content vertically
+                height: 60), // Spacing to center the content vertically
           ],
         ),
       ),
