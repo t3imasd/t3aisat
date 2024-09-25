@@ -6,7 +6,7 @@
 - **Azul Marino:** #1976D2
 - **Cian Claro:** #81D4FA
 - **Naranja Tierra:** #F57C00
-- **Gris Claro:** #E0E0E0
+- **Gris Claro:** #E6E6E6
 - **Gris Oscuro:** #424242
 - **Blanco:** #FFFFFF
 
@@ -22,7 +22,7 @@
 ## Iconografía
 
 - **Estilo:** Minimalista y moderno, siguiendo la paleta de colores.
-- **Color de los Íconos Principales:** Verde Oscuro (#388E3C) o Azul Marino (#1976D2) dependiendo del contexto.
+- **Color de los Íconos Principales:** Verde Oscuro (#388E3C).
 - **Color de los Íconos Secundarios:** Gris Oscuro (#424242).
 
 ## Componentes y Pantallas
@@ -30,7 +30,7 @@
 ### 1. Pantalla Principal (Inicio)
 
 - **Background:**
-  - Color: Gris Claro (#E0E0E0).
+  - Color: Gris Claro (#E6E6E6).
 - **Título:**
   - Texto: "T3 AI Sat"
   - Tipografía: Roboto, 28px, Negrita, Color: Azul Marino (#1976D2).
@@ -47,21 +47,15 @@
   - Aumentar el espacio entre el título y el primer botón a 40-50px para mejorar la separación y claridad visual.
   - Alinear horizontalmente los botones y mantener un espaciado uniforme.
 
-### 2. Pantalla "Hacer Foto" (ELIMINADA)
-
-- **Eliminación Completa:**
-  - **Cambios:** Al pulsar "Foto con Ubicación" en la pantalla principal, abrir directamente la cámara nativa del dispositivo.
-  - **Justificación:** Mejora de la fluidez y eficiencia en la experiencia del usuario.
-
-### 3. Cámara de Fotos (Interfaz de Cámara)
+### 2. Cámara de Fotos (Interfaz de Cámara)
 
 - **Apertura Directa:** Al pulsar "Foto con Ubicación", se abrirá directamente la interfaz de la cámara del dispositivo.
 - **Cambios:** No se requiere cambio estético, pero asegúrate de que el flujo sea fluido y directo, sin pantallas intermedias innecesarias.
 
-### 4. Pantalla de Confirmación de Foto (nueva)
+### 3. Pantalla de Confirmación de Foto (nueva)
 
 - **Background:**
-  - Color: Gris Claro (#E0E0E0).
+  - Color: Gris Claro (#E6E6E6).
 - **Visualización de la Foto:**
   - Imagen a pantalla completa con la opción de confirmarla.
 - **Botones:**
@@ -73,30 +67,30 @@
     - Texto: Azul Marino (#1976D2), Sin fondo, Tipografía: Roboto, 16px, Negrita.
     - Posición: Fijo en la parte inferior izquierda, con un padding de 12px.
 
-### 5. Pantalla de GeoPosición (Pantalla de Foto con Ubicación)
+### 4. Pantalla de GeoPosición (Pantalla de Foto con Ubicación)
 
 - **Background:**
-  - Color: Gris Claro (#E0E0E0).
+  - Color: Gris Claro (#E6E6E6).
 - **Título:**
   - Texto: "GeoPosición"
-  - Tipografía: Roboto, 24px, Negrita, Color: Verde Oscuro (#388E3C).
+  - Tipografía: Roboto, 24px, Negrita, Color: Azul Marino (#1976D2).
 - **Imagen Geolocalizada:**
   - **Eliminación del Botón "Hacer Foto":** Este botón ya no será necesario, por lo que se debe eliminar de la pantalla.
   - **Ajuste de Diseño:** Alinear la imagen geolocalizada y la información asociada para ocupar más espacio vertical, dado que el botón ya no estará presente.
+  - **Carga de la Imagen:** Añadir un **spinner de carga** con color Azul Marino (#1976D2) mientras se procesa la imagen y se generan los datos de geolocalización.
 - **Texto de Ubicación y Dirección:**
   - Color: Gris Oscuro (#424242).
   - Tipografía: Roboto, 16px, Regular.
   - **Posicionamiento:** Centrarse en la pantalla, con mayor espacio entre la imagen geolocalizada y la información textual para una lectura más clara.
   - **Incorporación de Íconos:**
-    - **Latitud y Longitud:** Añadir un ícono de ubicación (e.g., un pin o punto) antes de los valores de latitud y longitud.
-    - **Dirección:** Añadir un ícono de dirección (e.g., una casa o mapa) antes de la dirección textual.
-    - **Colores de Íconos:** Utilizar el color Verde Oscuro (#388E3C) para ambos íconos.
+    - **Latitud y Longitud:** Añadir un ícono de ubicación (un pin) en Verde Oscuro (#388E3C) antes de los valores de latitud y longitud.
+    - **Dirección:** Añadir un ícono de dirección (una casa) en Verde Oscuro (#388E3C) antes de la dirección textual.
     - **Alineación:** Los íconos deben estar alineados a la izquierda del texto, con un pequeño margen de 8px entre el ícono y el texto.
 
-### 6. Pantalla Mapa de Parcelas
+### 5. Pantalla Mapa de Parcelas
 
 - **Background:**
-  - Color: Gris Claro (#E0E0E0).
+  - Color: Gris Claro (#E6E6E6).
 - **Título:**
   - Texto: "Mapa Parcelas"
   - Tipografía: Roboto, 24px, Negrita, Color: Azul Marino (#1976D2).
@@ -107,7 +101,7 @@
   - Color de Resaltado: Naranja Tierra (#F57C00) para el borde de la parcela seleccionada.
   - Efecto: Aumentar la opacidad del borde resaltado para mayor visibilidad.
 
-### 7. Pantalla con Bottom Sheet
+### 6. Pantalla con Bottom Sheet
 
 - **Bottom Sheet:**
   - Color de Fondo: Blanco (#FFFFFF).
@@ -121,7 +115,7 @@
     - Alineación: Centrada en la segunda línea.
   - Sombra: Sombra sutil alrededor del bottom sheet para destacarlo sobre el mapa.
 
-### 8. Pantalla de la Cámara
+### 7. Pantalla de la Cámara
 
 - **No Cambios:** La interfaz de la cámara debe permanecer sin cambios, asegurando que se abra directamente al pulsar "Foto con Ubicación".
 

@@ -71,7 +71,7 @@ class MyHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFE0E0E0), // Light gray
+      backgroundColor: const Color(0xFFE6E6E6), // Light gray
       appBar: AppBar(
         title: const Text(
           'T3 AI Sat',
@@ -81,7 +81,7 @@ class MyHomePage extends StatelessWidget {
             color: Color(0xFF1976D2), // Navy blue
           ),
         ),
-        backgroundColor: const Color(0xFFE0E0E0), // Light gray
+        backgroundColor: const Color(0xFFE6E6E6), // Light gray
         elevation: 0, // Without shadow in the title bar
       ),
       body: Center(

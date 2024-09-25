@@ -26,6 +26,7 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
   String? _address;
   final Logger log = Logger('PhotoLocationScreen');
   String? _updatedImagePath; // Variable to store the updated image path
+  bool _isLoading = true; // Variable to manage the loading spinner
 
   @override
   void initState() {
@@ -59,22 +60,28 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
       return;
     }
 
-    _currentPosition = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-      ),
-    );
-    log.info('Current position: $_currentPosition');
+    try {
+      _currentPosition = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      log.info('Current position: $_currentPosition');
 
-    // Obtain address from coordinates
-    await _getAddressFromCoordinates(
-        _currentPosition!.latitude, _currentPosition!.longitude);
+      // Obtain address from coordinates
+      await _getAddressFromCoordinates(
+          _currentPosition!.latitude, _currentPosition!.longitude);
 
-    // Write the text on the image and save it in the gallery
-    await _writeTextOnImageAndSaveToGallery(widget.imagePath);
-
-    // Update the state to reflect the new location
-    setState(() {});
+      // Write the text on the image and save it in the gallery
+      await _writeTextOnImageAndSaveToGallery(widget.imagePath);
+    } catch (e) {
+      log.severe('Failed to obtain location or process image: $e');
+    } finally {
+      // Ensure the loading spinner is hidden
+      setState(() {
+        _isLoading = false; // Hide the loading spinner when processing is done
+      });
+    }
   }
 
   // Function to get the address from the coordinates
@@ -83,18 +90,25 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
     final url =
         'https://api.mapbox.com/geocoding/v5/mapbox.places/$lon,$lat.json?access_token=$accessToken';
 
-    final response = await http.get(Uri.parse(url));
+    try {
+      final response = await http.get(Uri.parse(url));
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['features'].isNotEmpty) {
-        setState(() {
-          _address = data['features'][0]['place_name'];
-        });
-        log.info('Address: $_address');
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['features'].isNotEmpty) {
+          setState(() {
+            // Adjust the address to be split into three lines
+            final addressParts = data['features'][0]['place_name'].split(',');
+            _address =
+                "${addressParts[0].trim()}\n${addressParts[1].trim()}\n${addressParts[2].trim()}";
+          });
+          log.info('Address: $_address');
+        }
+      } else {
+        log.severe('Failed to get address from coordinates');
       }
-    } else {
-      log.severe('Failed to get address from coordinates');
+    } catch (e) {
+      log.severe('Error fetching address: $e');
     }
   }
 
@@ -114,12 +128,13 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
       final formattedLocation =
           'Lat: ${_currentPosition?.latitude.toStringAsFixed(5)}\nLon: ${_currentPosition?.longitude.toStringAsFixed(5)}';
 
-      // Draw the address and coordinates on the image
+      // Draw the address and coordinates on the image with manual padding
+      const paddingLeft = 60; // Increased padding from left
       final updatedImage = img.drawString(
         originalImage,
         '$formattedAddress\n$formattedLocation',
         font: font,
-        x: 20,
+        x: paddingLeft, // Apply the padding
         y: originalImage.height - 750,
         color: img.ColorRgba8(255, 255, 255, 255),
       );
@@ -159,35 +174,67 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('GeoPosición'),
+        backgroundColor: const Color(0xFFE6E6E6), // Light gray
+        foregroundColor: const Color(0xFF1976D2), // Navy blue for text
+        elevation: 0, // No shadow in the AppBar
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (_updatedImagePath != null)
-              Expanded(
-                child: Image.file(File(_updatedImagePath!)),
+        child: _isLoading
+            ? const CircularProgressIndicator(
+                color: Color(0xFF1976D2), // Navy blue spinner
+              )
+            : Column(
+                children: [
+                  if (_updatedImagePath != null)
+                    Expanded(
+                      child: Image.file(
+                        File(_updatedImagePath!),
+                        fit: BoxFit.cover, // Ensures the image fills the space
+                        width: double.infinity,
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  if (_currentPosition != null)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on,
+                            color: Color(0xFF388E3C), // Dark green
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Latitud: ${_currentPosition?.latitude}\nLongitud: ${_currentPosition?.longitude}',
+                            textAlign: TextAlign.left,
+                            style: const TextStyle(
+                                color: Color(0xFF424242)), // Dark gray
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (_address != null)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.home,
+                            color: Color(0xFF388E3C), // Dark green
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '$_address',
+                            textAlign: TextAlign.left,
+                            style: const TextStyle(
+                                color: Color(0xFF424242)), // Dark gray
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                ],
               ),
-            const SizedBox(height: 20),
-            if (_currentPosition != null)
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  'Ubicación\nLatitud: ${_currentPosition?.latitude}\nLongitud: ${_currentPosition?.longitude}',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            if (_address != null)
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  'Dirección\n$_address',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            const SizedBox(height: 20),
-          ],
-        ),
       ),
     );
   }
