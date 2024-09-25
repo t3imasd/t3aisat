@@ -12,21 +12,20 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:image/image.dart' as img;
 import 'package:flutter/services.dart' show rootBundle;
 
-class TakePhotoScreen extends StatefulWidget {
+class PhotoLocationScreen extends StatefulWidget {
   final String imagePath;
 
-  const TakePhotoScreen({super.key, required this.imagePath});
+  const PhotoLocationScreen({super.key, required this.imagePath});
 
   @override
-  TakePhotoScreenState createState() => TakePhotoScreenState();
+  PhotoLocationScreenState createState() => PhotoLocationScreenState();
 }
 
-class TakePhotoScreenState extends State<TakePhotoScreen> {
+class PhotoLocationScreenState extends State<PhotoLocationScreen> {
   Position? _currentPosition;
   String? _address;
-  final Logger log = Logger('TakePhotoScreen');
-  String?
-      _updatedImagePath; // Variable to store the updated image route
+  final Logger log = Logger('PhotoLocationScreen');
+  String? _updatedImagePath; // Variable to store the updated image path
 
   @override
   void initState() {
@@ -71,7 +70,7 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
     await _getAddressFromCoordinates(
         _currentPosition!.latitude, _currentPosition!.longitude);
 
-    // Write the text in the image and save in the gallery
+    // Write the text on the image and save it in the gallery
     await _writeTextOnImageAndSaveToGallery(widget.imagePath);
 
     // Update the state to reflect the new location
@@ -105,17 +104,17 @@ class TakePhotoScreenState extends State<TakePhotoScreen> {
       final bytes = await File(imagePath).readAsBytes();
       final img.Image originalImage = img.decodeImage(bytes)!;
 
-      // Load the source
+      // Load the font
       final fontData = await rootBundle.load(
           'assets/fonts/roboto_black/Roboto-Black_100_size_white_color.ttf.zip');
       final font = img.BitmapFont.fromZip(fontData.buffer.asUint8List());
 
-      // Format direction and location
+      // Format address and location
       final formattedAddress = _address?.split(',').join('\n');
       final formattedLocation =
           'Lat: ${_currentPosition?.latitude.toStringAsFixed(5)}\nLon: ${_currentPosition?.longitude.toStringAsFixed(5)}';
 
-      // Draw the address and coordinates in the image
+      // Draw the address and coordinates on the image
       final updatedImage = img.drawString(
         originalImage,
         '$formattedAddress\n$formattedLocation',

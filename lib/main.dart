@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logging/logging.dart';
-import 'package:image_picker/image_picker.dart'; // Import para abrir la cámara
-import 'screens/take_photo_screen.dart';
+import 'package:image_picker/image_picker.dart'; // Import to open the camera
+import 'screens/photo_location_screen.dart';
 import 'screens/parcel_map_screen.dart';
 
 Future<void> main() async {
@@ -46,7 +46,7 @@ class MyApp extends StatelessWidget {
             backgroundColor: WidgetStateProperty.all(
                 const Color(0xFF388E3C)), // Dark green
             foregroundColor:
-                WidgetStateProperty.all(const Color(0xFFFFFFFF)), // blanco
+                WidgetStateProperty.all(const Color(0xFFFFFFFF)), // White
             textStyle: WidgetStateProperty.all(
               const TextStyle(
                 fontSize: 18,
@@ -97,11 +97,11 @@ class MyHomePage extends StatelessWidget {
                 final ImagePicker picker = ImagePicker();
                 final XFile? photo = await picker.pickImage(source: ImageSource.camera);
                 if (photo != null && context.mounted) {
-                  // Navigate to the TakePhotosScreen screen with the captured photo route
+                  // Navigate to the PhotoLocationScreen screen with the captured photo route
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => TakePhotoScreen(imagePath: photo.path),
+                      builder: (context) => PhotoLocationScreen(imagePath: photo.path),
                     ),
                   );
                 }
