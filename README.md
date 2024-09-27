@@ -7,7 +7,7 @@
 1. [Arquitectura del Proyecto](#arquitectura-del-proyecto)
 2. [Descripción de Archivos y Funcionalidades](#descripción-de-archivos-y-funcionalidades)
    - [lib/main.dart](#libmaindart)
-   - [lib/screens/take_photo_screen.dart](#libscreenstake_photo_screendart)
+   - [lib/screens/photo_location_screen.dart](#libscreensphoto_location_screendart)
    - [lib/screens/parcel_map_screen.dart](#libscreensparcel_map_screendart)
    - [lib/model/environment.dart](#libmodelenvironmentdart)
 3. [Dependencias](#dependencias)
@@ -24,7 +24,7 @@ La aplicación sigue un enfoque basado en widgets y se estructura de la siguient
 - **lib/**: Carpeta principal que contiene el código fuente de la aplicación.
   - **main.dart**: Punto de entrada de la aplicación.
   - **screens/**: Carpeta que contiene las pantallas de la aplicación.
-    - `take_photo_screen.dart`: Pantalla para capturar fotos y geolocalización.
+    - `photo_location_screen.dart`: Pantalla para capturar fotos y geolocalización, además de anotar la información en la imagen.
     - `parcel_map_screen.dart`: Pantalla para visualizar mapas de parcelas.
   - **model/**: Carpeta que contiene las definiciones de modelos.
     - `environment.dart`: Archivo para la configuración del entorno.
@@ -35,7 +35,7 @@ El siguiente diagrama muestra la arquitectura general de la aplicación y cómo 
 
 ```mermaid
 graph TD;
-    A[Main.dart] --> B[TakePhotoScreen.dart];
+    A[Main.dart] --> B[PhotoLocationScreen.dart];
     A --> C[ParcelMapScreen.dart];
     B --> D[Geolocator API];
     B --> E[Mapbox API];
@@ -43,7 +43,7 @@ graph TD;
     C --> G[XML Parser];
 ```
 
-La pantalla `TakePhotoScreen` interactúa con las APIs de `Geolocator` y `Mapbox` para capturar la geolocalización del usuario y realizar anotaciones en las fotos. La pantalla `ParcelMapScreen` utiliza el plugin de `Mapbox` para mostrar un mapa interactivo que permite a los usuarios visualizar parcelas catastrales.
+La pantalla `PhotoLocationScreen` interactúa con las APIs de `Geolocator` y `Mapbox` para capturar la geolocalización del usuario, anotar esta información junto con la fecha y hora en la foto, y luego guardar la imagen en la galería del dispositivo. La pantalla `ParcelMapScreen` utiliza el plugin de `Mapbox` para mostrar un mapa interactivo que permite a los usuarios visualizar parcelas catastrales.
 
 ## Descripción de Archivos y Funcionalidades
 
@@ -61,31 +61,36 @@ Este archivo es el punto de entrada de la aplicación. Se encarga de configurar 
 - **`MyApp`**: Define el `MaterialApp` con el tema y la pantalla inicial de la aplicación (`MyHomePage`).
 - **`MyHomePage`**: Pantalla principal que ofrece dos botones: uno para capturar fotos con geolocalización y otro para ver un mapa de parcelas.
 
-### lib/screens/take_photo_screen.dart
+### lib/screens/photo_location_screen.dart
 
-Esta pantalla permite a los usuarios capturar fotos utilizando la cámara del dispositivo, obtener su geolocalización actual, y guardar la imagen con la información de geolocalización anotada en la galería del dispositivo.
+Esta pantalla permite a los usuarios capturar fotos utilizando la cámara del dispositivo, obtener su geolocalización actual, y guardar la imagen con la información de geolocalización, dirección, fecha y hora anotadas en la galería del dispositivo.
 
 #### Principales Objetos y Variables
 
-- **`_imageFile`**: Almacena la imagen capturada.
 - **`_currentPosition`**: Almacena la posición geográfica actual.
 - **`_address`**: Almacena la dirección obtenida a partir de la posición geográfica.
-- **`_picker`**: Instancia de `ImagePicker` para capturar imágenes.
+- **`_updatedImagePath`**: Almacena la ruta de la imagen con la anotación de la geolocalización.
 
 #### Principales Métodos
 
-- **`_takePhoto()`**: Captura una foto usando la cámara del dispositivo y luego llama a otras funciones para obtener la ubicación actual, la dirección correspondiente, y anotar la información en la foto.
-- **`_writeTextOnImageAndSaveToGallery()`**: Anota la información de geolocalización en la imagen y la guarda en la galería del dispositivo.
 - **`_getCurrentLocation()`**: Obtiene la ubicación actual del dispositivo utilizando `Geolocator`.
 - **`_getAddressFromCoordinates()`**: Usa la API de Mapbox para obtener la dirección basada en las coordenadas actuales.
+- **`_writeTextOnImageAndSaveToGallery()`**: Anota la información de geolocalización, dirección, fecha y hora en la imagen y la guarda en la galería del dispositivo.
 
 #### Ejemplo de Uso
 
 ```dart
 // Captura una foto y guarda la imagen con la geolocalización anotada
-_elevatedButton(
-  onPressed: _takePhoto,
-  child: const Text('Hacer Foto'),
+ElevatedButton(
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PhotoLocationScreen(imagePath: _imagePath),
+      ),
+    );
+  },
+  child: const Text('Foto con Ubicación'),
 );
 ```
 
@@ -130,6 +135,7 @@ El archivo `pubspec.yaml` contiene las dependencias utilizadas en el proyecto. A
 - **`geolocator`**: Biblioteca para obtener la ubicación geográfica del usuario.
 - **`http`**: Realiza solicitudes HTTP.
 - **`image`**: Para manipulación de imágenes.
+- **`intl`**: Proporciona internacionalización y formateo de fechas.
 
 ## Configuración de iOS
 
@@ -160,8 +166,8 @@ La configuración de Android se encuentra en los archivos `AndroidManifest.xml`,
 
 1. **Clonar el Repositorio**: `git clone https://github.com/pedrohr99/t3aisat`
 2. **Instalar Dependencias**: `flutter pub get`
-3. **Configurar las Variables de Entorno**: Crear los archivos `.env.development` y `.env.production` con las claves API necesarias.
-4. **Ejecutar la Aplicación**: `flutter run`
+3. **Configurar las Variables de Entorno**: Crear los archivos `.env.development` y `.env.production`con las claves API necesarias.
+4. **Ejecutar la Aplicación**:`flutter run`
 
 ## Buenas Prácticas
 
