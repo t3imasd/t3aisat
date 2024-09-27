@@ -11,6 +11,7 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:image/image.dart' as img;
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:intl/intl.dart'; // Import for date formatting
 
 class PhotoLocationScreen extends StatefulWidget {
   final String imagePath;
@@ -128,13 +129,19 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
       final formattedLocation =
           'Lat: ${_currentPosition?.latitude.toStringAsFixed(5)}\nLon: ${_currentPosition?.longitude.toStringAsFixed(5)}';
 
-      // Draw the address and coordinates on the image with manual padding
-      const paddingLeft = 60; // Increased padding from left
+      // Get the current date and time
+      final now = DateTime.now();
+      final formattedDate = DateFormat('dd-MM-yyyy').format(now);
+      final formattedTime = DateFormat('HH:mm:ss').format(now);
+      final dateTime = 'Fecha: $formattedDate\nHora: $formattedTime';
+
+      // Draw the address and coordinates
+      const paddingLeft = 60;
       final updatedImage = img.drawString(
         originalImage,
-        '$formattedAddress\n$formattedLocation',
+        '$formattedAddress\n$formattedLocation\n$dateTime',
         font: font,
-        x: paddingLeft, // Apply the padding
+        x: paddingLeft,
         y: originalImage.height - 750,
         color: img.ColorRgba8(255, 255, 255, 255),
       );
