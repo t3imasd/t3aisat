@@ -12,6 +12,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:image/image.dart' as img;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart'; // Import for date formatting
+import 'package:native_exif/native_exif.dart'; // Import for EXIF data
 
 class PhotoLocationScreen extends StatefulWidget {
   final String imagePath;
@@ -113,6 +114,43 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
     }
   }
 
+  // Function to convert decimal coordinates to DMS format
+  String _convertToDMS(double decimal) {
+    final degrees = decimal.truncate();
+    final minutes = ((decimal - degrees) * 60).truncate();
+    final seconds = (((decimal - degrees) * 60) - minutes) * 60;
+
+    return '${degrees.abs()}°${minutes.abs()}\'${seconds.abs().toStringAsFixed(2)}" ${decimal >= 0 ? 'N' : 'S'}';
+  }
+
+  // Function to add EXIF data to the image
+  Future<void> _addExifData(String imagePath) async {
+    try {
+      final exif = await Exif.fromPath(imagePath);
+
+      if (_currentPosition != null) {
+        // Add GPS coordinates
+        await exif.writeAttributes({
+          'GPSLatitude': _currentPosition!.latitude.toString(),
+          'GPSLongitude': _currentPosition!.longitude.toString(),
+        });
+      }
+
+      // Add other EXIF data
+      final now = DateTime.now();
+      await exif.writeAttributes({
+        'DateTimeOriginal': DateFormat('yyyy:MM:dd HH:mm:ss').format(now),
+        'ImageDescription': _address ?? 'Sin dirección',
+        'UserComment': 't3AISAT App',
+        'UserCommentEncoding': 'UTF-8'
+      });
+
+      await exif.close();
+    } catch (e) {
+      log.severe('Error writing EXIF data: $e');
+    }
+  }
+
   // Function to save the photo with the location on the device and the gallery
   Future<void> _writeTextOnImageAndSaveToGallery(String imagePath) async {
     try {
@@ -124,10 +162,9 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
           'assets/fonts/roboto_black/Roboto-Black_100_size_white_color.ttf.zip');
       final font = img.BitmapFont.fromZip(fontData.buffer.asUint8List());
 
-      // Format address and location
-      final formattedAddress = _address?.split(',').join('\n');
-      final formattedLocation =
-          'Lat: ${_currentPosition?.latitude.toStringAsFixed(5)}\nLon: ${_currentPosition?.longitude.toStringAsFixed(5)}';
+      // Convert coordinates to DMS format
+      final latitudeDMS = _convertToDMS(_currentPosition!.latitude);
+      final longitudeDMS = _convertToDMS(_currentPosition!.longitude);
 
       // Get the current date and time
       final now = DateTime.now();
@@ -135,23 +172,44 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
       final formattedTime = DateFormat('HH:mm:ss').format(now);
       final dateTime = 'Fecha: $formattedDate\nHora: $formattedTime';
 
-      // Draw the address and coordinates
-      const paddingLeft = 60;
+      // Format the address and location for the image
+      final formattedAddress = _address?.split(',').join('\n');
+      final formattedLocation =
+          'Lat: ${_currentPosition?.latitude.toStringAsFixed(5)}, Lon: ${_currentPosition?.longitude.toStringAsFixed(5)}';
+
+      // Draw the address and coordinates (both decimal and DMS) on the image
       final updatedImage = img.drawString(
         originalImage,
-        '$formattedAddress\n$formattedLocation\n$dateTime',
+        '$formattedAddress\n$formattedLocation\n'
+        'Lat (DMS): $latitudeDMS, Lon (DMS): $longitudeDMS\n'
+        '$dateTime',
         font: font,
-        x: paddingLeft,
-        y: originalImage.height - 750,
+        x: 60,
+        y: originalImage.height - 850,
         color: img.ColorRgba8(255, 255, 255, 255),
       );
 
-      // Save the updated image
+      // Image path
       final updatedImagePath = path.join(
           (await getApplicationDocumentsDirectory()).path,
           'updated_${path.basename(imagePath)}');
+
+      // Save the updated image
       final updatedImageFile = File(updatedImagePath);
-      updatedImageFile.writeAsBytesSync(img.encodeJpg(updatedImage));
+
+      // Make sure the image is saved correctly before continuing
+      await updatedImageFile.writeAsBytes(img.encodeJpg(updatedImage));
+
+      // Verify if the file exists
+      if (await updatedImageFile.exists()) {
+        log.info('File created successfully: ${updatedImageFile.path}');
+      } else {
+        log.severe('File not created: ${updatedImageFile.path}');
+        return;
+      }
+
+      // Add EXIF data to the image
+      await _addExifData(updatedImageFile.path);
 
       // Request permission to save in the gallery
       var status = await Permission.photos.status;
@@ -161,7 +219,7 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
 
       if (status.isGranted) {
         // Save the updated image in the gallery
-        final result = await ImageGallerySaver.saveFile(updatedImagePath);
+        final result = await ImageGallerySaver.saveFile(updatedImageFile.path);
         log.info('Updated image saved to gallery: $result');
       } else {
         log.severe('Permission denied to access photos');
