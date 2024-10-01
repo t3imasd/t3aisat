@@ -21,19 +21,19 @@
 
 ## Iconografía
 
-- **Estilo:** Minimalista y moderno, siguiendo la paleta de colores.
-- **Color de los Íconos Principales:** Verde Oscuro (#388E3C).
-- **Color de los Íconos Secundarios:** Gris Oscuro (#424242).
+- **Estilo:** Minimalista y moderno, siguiendo la paleta de colores
+- **Color de los Íconos Principales:** Verde Oscuro (#388E3C)
+- **Color de los Íconos Secundarios:** Gris Oscuro (#424242)
 
 ## Componentes y Pantallas
 
 ### 1. Pantalla Principal (Inicio)
 
 - **Background:**
-  - Color: Gris Claro (#E6E6E6).
+  - Color: Gris Claro (#E6E6E6)
 - **Título:**
   - Texto: "T3 AI Sat"
-  - Tipografía: Roboto, 28px, Negrita, Color: Azul Marino (#1976D2).
+  - Tipografía: Roboto, 28px, Negrita, Color: Azul Marino (#1976D2)
   - **Posicionamiento:** Centrar verticalmente todo el contenido en la pantalla para mejorar el balance visual.
   - **Sombra del Título:**
     - **Color:** #000000 (negro)
@@ -42,61 +42,59 @@
     - **Desplazamiento:** 2px hacia abajo y 0px en el eje horizontal.
 - **Botones:**
   - **"Foto con Ubicación" y "Mapa de Parcelas":**
-    - Fondo: Verde Oscuro (#388E3C).
-    - Texto: Blanco (#FFFFFF), Tipografía: Roboto, 18px, Semi-Negrita.
-    - **Padding interno:** Aumentar a 16px en cada dirección.
-    - **Bordes Redondeados:** Radio de borde incrementado a 12px para una apariencia más moderna.
-    - **Sombra:** Sombra sutil pero ligeramente intensificada para dar más profundidad visual. Usa un `elevation` de 4dp en Flutter con ligero desenfoque.
+    - Fondo: Verde Oscuro (#388E3C)
+    - Texto: Blanco (#FFFFFF), Tipografía: Roboto, 18px, Semi-Negrita
+    - **Padding interno:** 16px en todas direcciones
+    - **Bordes Redondeados:** Radio de borde de 12px
+    - **Sombra:** Elevación de 4dp con desenfoque sutil
     - **Efecto de Pulsación:** Ripple con Verde Oscuro más intenso (código de color automático de Flutter), con una animación más suave y ligeramente prolongada.
-  - **Iconografía:** Considerar la incorporación de íconos pequeños a la izquierda del texto en los botones (opcional).
+  - **Iconografía:** Posibilidad de añadir íconos pequeños a la izquierda del texto (opcional).
 - **Espaciado:**
-  - **Entre Título y Botones:** Aumentar el espacio entre el título y el primer botón a 60px para mejorar la separación y claridad visual.
-  - **Entre Botones:** Mantener un espaciado uniforme de 20px.
+  - **Entre Título y Botones:** 60px
+  - **Entre Botones:** 20px
   - **Alineación:** Alinear los botones horizontalmente y centrar en la pantalla para un balance visual óptimo.
 
-### 2. Cámara de Fotos (Interfaz de Cámara)
+### 2. Pantalla de la Cámara
 
-- **Apertura Directa:** Al pulsar "Foto con Ubicación", se abrirá directamente la interfaz de la cámara del dispositivo.
+- **No Cambios:** La interfaz de la cámara debe permanecer sin cambios, asegurando que se abra directamente al pulsar "Foto con Ubicación".
+
+### 3. Cámara de Fotos (Interfaz de Cámara)
+
+- **Apertura Directa:** La cámara se abre directamente al pulsar "Foto con Ubicación".
 - **Cambios:** No se requiere cambio estético, pero asegúrate de que el flujo sea fluido y directo, sin pantallas intermedias innecesarias.
 
-### 3. Pantalla de Confirmación de Foto (nueva)
+### 4. Pantalla de Confirmación de Foto
 
-- **Background:**
-  - Color: Gris Claro (#E6E6E6).
-- **Visualización de la Foto:**
-  - Imagen a pantalla completa con la opción de confirmarla.
+- **Background:** Gris Claro (#E6E6E6)
+- **Visualización de la Foto:** Imagen a pantalla completa con opción para confirmarla.
 - **Botones:**
   - **"Usar esta Foto":**
-    - Fondo: Verde Oscuro (#388E3C).
-    - Texto: Blanco (#FFFFFF), Tipografía: Roboto, 16px, Negrita.
+    - Fondo: Verde Oscuro (#388E3C)
+    - Texto: Blanco (#FFFFFF), Tipografía: Roboto, 16px, Negrita
     - Posición: Fijo en la parte inferior con un padding de 12px.
   - **"Rehacer Foto":**
-    - Texto: Azul Marino (#1976D2), Sin fondo, Tipografía: Roboto, 16px, Negrita.
+    - Texto: Azul Marino (#1976D2), Sin fondo, Tipografía: Roboto, 16px, Negrita
     - Posición: Fijo en la parte inferior izquierda, con un padding de 12px.
 
-### 4. Pantalla de GeoPosición (Pantalla de Foto con Ubicación)
+### 5. Pantalla de Foto con Ubicación
 
-- **Background:**
-  - Color: Gris Claro (#E6E6E6).
+- **Background:** Gris Claro (#E6E6E6)
 - **Título:**
   - Texto: "GeoPosición"
-  - Tipografía: Roboto, 24px, Negrita, Color: Azul Marino (#1976D2).
+  - Tipografía: Roboto, 24px, Negrita, Color: Azul Marino (#1976D2)
 - **Imagen Geolocalizada:**
-  - **Eliminación del Botón "Hacer Foto":** Este botón ya no es necesario, por lo que se ha eliminado de la pantalla.
-  - **Ajuste de Diseño:** La imagen geolocalizada y la información asociada ahora ocupan más espacio vertical.
-  - **Carga de la Imagen:** Se ha añadido un **spinner de carga** con color Azul Marino (#1976D2) mientras se procesa la imagen y se generan los datos de geolocalización.
+  - **Carga de la Imagen:** Añadir un **spinner de carga** con color Azul Marino (#1976D2) mientras se procesa la imagen y se generan los datos de geolocalización.
 - **Texto de Ubicación y Dirección:**
-  - Color: Gris Oscuro (#424242).
-  - Tipografía: Roboto, 16px, Regular.
-  - **Incorporación de Íconos:**
+  - Color: Gris Oscuro (#424242)
+  - Tipografía: Roboto, 16px, Regular
+  - **Íconos de Latitud/Longitud y Dirección:**
     - **Latitud y Longitud:** Ícono de ubicación (un pin) en Verde Oscuro (#388E3C) antes de los valores de latitud y longitud.
     - **Dirección:** Ícono de dirección (una casa) en Verde Oscuro (#388E3C) antes de la dirección textual.
     - **Alineación:** Los íconos están alineados a la izquierda del texto. El texto y los íconos se mantienen alineados en una línea vertical para evitar desajustes visuales.
 
-### 5. Pantalla Mapa de Parcelas
+### 6. Pantalla Mapa de Parcelas
 
-- **Background:**
-  - Color: Gris Claro (#E6E6E6).
+- **Background:** Gris Claro (#E6E6E6)
 - **Título:**
   - Texto: "Mapa Parcelas"
   - Tipografía: Roboto, 24px, Negrita, Color: Azul Marino (#1976D2).
@@ -105,7 +103,7 @@
   - **Área de Parcelas:**
     - **Color de Texto:** Negro (#000000) para el área en m².
     - **Fuente:** Roboto, **14px**, Regular.
-    - **Espaciado:** Asegurar un espacio adecuado entre el texto del área y los bordes de la parcela para evitar solapamientos.
+    - **Espaciado:** Asegurar un espacio de 4px entre el texto del área y los bordes de la parcela para evitar solapamientos.
 - **Selección de Parcela:**
   - Color de Resaltado: Naranja Tierra (#F57C00) para el borde de la parcela seleccionada.
   - **Detalles de la Parcela Seleccionada:**
@@ -114,27 +112,70 @@
     - **Texto Secundario (Registro Catastral):** Color: Gris Oscuro (#424242), Fuente: Roboto, 16px, Regular.
     - **Bottom Sheet:** Fondo Blanco (#FFFFFF) con sombra sutil para destacarlo sobre el mapa.
 
-### 6. Pantalla con Bottom Sheet
+### 6.1. Bottom Sheet (Cambios para Selección Múltiple)
 
-- **Bottom Sheet:**
-  - Color de Fondo: Blanco (#FFFFFF).
-  - **Texto Principal (Área de la Parcela):**
-    - Color: Negro (#000000).
-    - Tipografía: Roboto, 24px, Negrita.
-    - Alineación: Centrada en la primera línea.
-  - **Texto Secundario (Registro Catastral):**
-    - Color: Gris Oscuro (#424242).
-    - Tipografía: Roboto, 16px, Regular.
-    - Alineación: Centrada en la segunda línea.
-  - Sombra: Sombra sutil alrededor del bottom sheet para destacarlo sobre el mapa.
+#### 6.1.1. Modo Compacto (Vista Inicial)
 
-### 7. Pantalla de la Cámara
+- El `BottomSheet` debe mostrar la suma total del área de las parcelas seleccionadas.
+- **Texto Principal (Área Total):**
 
-- **No Cambios:** La interfaz de la cámara debe permanecer sin cambios, asegurando que se abra directamente al pulsar "Foto con Ubicación".
+  - Color: Negro (#000000)
+  - Tipografía: Roboto, 24px, Negrita
+  - Alineación: Centrada en la primera línea.
+  - **Ejemplo de texto**:
+
+    ```markdown
+    **Área Total: 5000 m²**
+    ```
+
+- Si se selecciona **una sola parcela**, debajo del área se debe mostrar el registro catastral:
+
+  ```markdown
+  Reg. Catastral: 30038A00600251
+  ```
+
+- Si se seleccionan **múltiples parcelas**, mostrar un resumen de la cantidad de registros seleccionados:
+
+  ```markdown
+  Registros Catastrales: 3 seleccionados
+  ```
+
+- **Tipografía de los Registros:** Roboto, 14px, Regular, Color: Gris Oscuro (#424242)
+- **Botón "Ver más detalles":** Cuando haya más de una parcela seleccionada, debe aparecer un botón que permita expandir el `BottomSheet`:
+  - Texto: "Ver más detalles"
+  - Fondo: Verde Oscuro (#388E3C)
+  - Texto: Blanco (#FFFFFF), Roboto, 16px, Negrita
+  - **Padding interno:** 16px en todas direcciones.
+  - **Bordes redondeados:** 12px para coherencia con los botones de la app.
+
+#### 6.1.2. Modo Expandido (Al Deslizar Hacia Arriba)
+
+- **Lista Completa de Registros Catastrales**: Al expandir el `BottomSheet`, debe mostrarse la lista completa de los registros catastrales seleccionados. Cada número debe estar en una nueva línea, con un espacio vertical de **12px** entre cada registro para mejorar la legibilidad.
+
+  - **Ejemplo de formato**:
+
+    ```markdown
+    Registros Catastrales:
+
+    - 30038A00600251
+    - 30038A00600252
+    - 30038A00600253
+    ```
+
+- **Padding**: Asegurar un padding de **16px** en los laterales de los textos para evitar que el contenido esté alineado completamente a la izquierda y cumpla con las guidelines de Apple y Google.
+
+#### 6.1.3. Comportamiento de Desplazamiento
+
+- El `BottomSheet` debe tener comportamiento expandible y colapsable.
+- **Altura inicial**: El `BottomSheet` debe ocupar el 20% de la pantalla cuando está en modo compacto.
+- **Altura expandida**: Al expandir, debe ocupar un máximo del 50% de la pantalla en pantallas pequeñas y medianas, y hasta un 70% en pantallas grandes.
+
+- **Redimensionamiento del mapa**: Al expandir el `BottomSheet`, el mapa debe ajustarse dinámicamente para seguir visible, recortándose pero manteniendo el centro del mapa visible en todo momento.
 
 ---
 
 ## Consideraciones Finales
 
-- **Transiciones y Animaciones:** Utilizar transiciones suaves entre pantallas y animaciones de ripple en los botones para mejorar la interactividad y dar feedback visual al usuario.
-- **Pruebas:** Asegurar que todos los cambios se prueben en condiciones reales, incluyendo trabajo en exteriores, para validar la visibilidad y usabilidad de la aplicación en entornos agrícolas.
+- **Transiciones y Animaciones:** Implementar transiciones suaves de 300ms para expandir y colapsar el `BottomSheet`, y animaciones de ripple effect en los botones para mejorar la interactividad y dar feedback visual al usuario.
+- **Feedback Visual:** Añadir microinteracciones al seleccionar parcelas, como un cambio en el color del borde de la parcela seleccionada (Naranja Tierra #F57C00).
+- **Pruebas:** Asegurar que los cambios sean probados en dispositivos móviles y en **diferentes condiciones de luz**, como en exteriores, para validar la legibilidad del `BottomSheet` y del mapa bajo diferentes condiciones de iluminación. También asegurar que el `BottomSheet` sea responsivo y funcione bien en diferentes tamaños de pantalla.

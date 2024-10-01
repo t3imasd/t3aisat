@@ -22,13 +22,14 @@ class ParcelMapScreen extends StatefulWidget {
 class ParcelMapScreenState extends State<ParcelMapScreen> {
   late mapbox.MapboxMap _mapboxMap;
   geo.Position? _currentPosition;
-  String _selectedParcelId = '';
-  String _selectedParcelCadastralRef = '';
-  String _selectedParcelArea = '';
+  final List<String> _selectedParcelIds =
+      []; // List to hold selected parcel IDs
+  final Map<String, String> _selectedParcels =
+      {}; // Map to hold cadastral ref and area for selected parcels
   final log = Logger('ParcelMapScreen');
   Timer? _debounce; // Timer to handle user inactivity after scrolling
   bool _isFetching = false;
-  bool _isBottomSheetVisible = false; // Track bottom sheet visibility
+  bool _isBottomSheetExpanded = false; // Track the state of the bottom sheet
 
   // Retrieve the Mapbox Access Token from environment variables
   final String accessToken = dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
@@ -291,9 +292,9 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
         lineColor: const Color(0xFFF57C00).value, // Orange color for highlight
         lineWidth: 2.0,
         filter: [
-          '==',
+          'in',
           'id',
-          _selectedParcelId, // Initially, _selectedParcelId is empty
+          ..._selectedParcelIds, // Spread operator to include all selected IDs
         ],
       ),
     );
@@ -424,8 +425,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
     return [centroidX / numPoints, centroidY / numPoints];
   }
 
-  // Function to highlight the selected parcel
-  void _highlightSelectedParcel(String parcelId) async {
+  // Highlight all selected parcels
+  void _highlightSelectedParcels() async {
     // Ensure the style is fully loaded before making changes
     bool isStyleLoaded = await _mapboxMap.style.isStyleLoaded();
 
@@ -434,57 +435,80 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
       return;
     }
 
-    // Check if the line layer exists
+    // Verify if the layers already exist
     bool lineLayerExists =
         await _mapboxMap.style.styleLayerExists('selected-parcel-line');
     bool fillLayerExists =
         await _mapboxMap.style.styleLayerExists('selected-parcel-fill');
 
+    // Update or add the line layer to highlight the contours of the selected plots
     if (lineLayerExists) {
-      // If the line layer exists, update it
+      // Update if there is already
       _mapboxMap.style.updateLayer(
         mapbox.LineLayer(
           id: 'selected-parcel-line',
           sourceId: 'source-id',
-          lineColor:
-              const Color(0xFFF57C00).value, // Orange color for highlight
+          lineColor: const Color(0xFFF57C00).value, // Orange for contour
           lineWidth: 2.0,
-          filter: ['==', 'id', parcelId],
+          filter: [
+            'in',
+            'id',
+            ..._selectedParcelIds
+          ], // Highlight all selected plots
         ),
       );
     } else {
-      // If the line layer does not exist, add it
+      // Add if there is no
       await _mapboxMap.style.addLayer(
         mapbox.LineLayer(
           id: 'selected-parcel-line',
           sourceId: 'source-id',
           lineColor:
-              const Color(0xFFF57C00).value, // Orange color for highlight
+              const Color(0xFFF57C00).value, // Color naranja para el contorno
           lineWidth: 2.0,
-          filter: ['==', 'id', parcelId],
+          filter: [
+            'in',
+            'id',
+            ..._selectedParcelIds
+          ], // Highlight all selected plots
         ),
       );
     }
 
-    // Check if the fill layer exists and remove it if necessary
+    // Eliminate the filling layer if it already exists
     if (fillLayerExists) {
       await _mapboxMap.style.removeStyleLayer('selected-parcel-fill');
     }
 
-    // Add a new fill layer to color the inside of the selected parcel
+    // Add or update the filling layer for selected plots
     await _mapboxMap.style.addLayer(
       mapbox.FillLayer(
         id: 'selected-parcel-fill',
         sourceId: 'source-id',
-        fillColor: const Color(0xFFF57C00)
-            .value, // Orange fill color for the selected parcel
-        fillOpacity: 0.3, // Adjust opacity for transparency
-        filter: ['==', 'id', parcelId], // Filter for the selected parcel
+        fillColor:
+            const Color(0xFFF57C00).value, // Orange filling for selected plots
+        fillOpacity: 0.3, // Filling opacity
+        filter: [
+          'in',
+          'id',
+          ..._selectedParcelIds
+        ], // Highlight all selected plots
       ),
     );
   }
 
-  // Handle Map Click to Select Parcel
+  // Calculate total area of selected parcels
+  String _calculateTotalArea() {
+    double totalArea = 0;
+    _selectedParcels.forEach((key, value) {
+      final area =
+          double.tryParse(value.split('-')[1].replaceAll(' m²', '')) ?? 0;
+      totalArea += area;
+    });
+    return totalArea.toStringAsFixed(0);
+  }
+
+  // Handle Map Click to Select/Deselect Parcel
   void _onMapClick(mapbox.MapContentGestureContext clickContext) async {
     final screenCoordinate = clickContext.touchPosition;
 
@@ -493,7 +517,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
       final renderedQueryGeometry = mapbox.RenderedQueryGeometry(
         value: jsonEncode([
           screenCoordinate.x,
-          screenCoordinate.y,
+          screenCoordinate.y
         ]), // A list of doubles for x and y coordinates
         type: mapbox.Type.SCREEN_COORDINATE,
       );
@@ -502,55 +526,56 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
       final features = await _mapboxMap.queryRenderedFeatures(
         renderedQueryGeometry,
         mapbox.RenderedQueryOptions(
-          layerIds: ['parcel-lines', 'parcel-labels'], // Layer IDs to query
-        ),
+            layerIds: ['parcel-lines', 'parcel-labels']), // Keep both layers
       );
 
       if (features.isNotEmpty) {
         // Get the first feature (parcel) from the list
         final feature = features.first;
 
-        // Check if feature is not null
-        if (feature != null) {
-          // Extract the properties of the parcel
-          final rawProperties = feature.queriedFeature.feature['properties'];
+        // Declare Properties before the if block
+        Map<String, dynamic> properties = {};
 
-          // Safely cast the properties map to Map<String, dynamic>
-          final properties = Map<String, dynamic>.from(
-            rawProperties as Map<Object?, Object?>,
+        // Verify that feature and the properties are not null
+        if (feature != null &&
+            feature.queriedFeature.feature['properties'] != null) {
+          properties = Map<String, dynamic>.from(
+            feature.queriedFeature.feature['properties']
+                as Map<Object?, Object?>,
           );
+        }
 
-          // Extract specific properties needed
-          final cadastralReference = properties['cadastralReference'];
-          final areaValue = properties['areaValue'];
-          final parcelId = properties['id'];
+        // Extract the necessary values ​​of properties
+        final cadastralReference = properties['cadastralReference'];
+        final areaValue = properties['areaValue'];
+        final parcelId = properties['id'];
 
-          if (cadastralReference != null &&
-              areaValue != null &&
-              parcelId != null) {
-            setState(() {
-              _selectedParcelId = parcelId;
-              _selectedParcelCadastralRef = cadastralReference;
-              _selectedParcelArea = areaValue;
-              _isBottomSheetVisible = true; // Show the bottom sheet
-            });
+        // Verify that the properties are complete
+        if (cadastralReference != null &&
+            areaValue != null &&
+            parcelId != null) {
+          setState(() {
+            if (_selectedParcelIds.contains(parcelId)) {
+              // Deselect the parcel
+              _selectedParcelIds.remove(parcelId);
+              _selectedParcels.remove(parcelId);
+            } else {
+              // Select the parcel
+              _selectedParcelIds.add(parcelId);
+              _selectedParcels[parcelId] =
+                  '$cadastralReference - $areaValue m²';
+            }
+          });
 
-            // Highlight the selected parcel
-            _highlightSelectedParcel(parcelId);
-
-            log.info(
-                'Selected Parcel: $cadastralReference, Area: $areaValue m²');
-          } else {
-            log.warning('Parcel properties are incomplete.');
-          }
+          _highlightSelectedParcels();
         } else {
-          log.warning('No valid parcel found at clicked location.');
+          log.warning('Parcel properties are incomplete.');
         }
       } else {
-        log.warning('No parcel found at clicked location.');
+        log.warning('No valid parcel found at clicked location.');
       }
-    } catch (e, stacktrace) {
-      log.severe('Error querying features: $e', e, stacktrace);
+    } catch (e) {
+      log.severe('Error querying features: $e');
     }
   }
 
@@ -570,6 +595,111 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
           (currentCamera.center.coordinates[0] as double) // Longitude
           );
     });
+    log.info('User is interacting with the map...');
+  }
+
+  // BottomSheet UI for selected parcels
+  Widget _buildBottomSheet(BuildContext context) {
+    final totalArea = _calculateTotalArea();
+    final numSelected = _selectedParcels.length;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      height: numSelected > 1
+          ? (_isBottomSheetExpanded
+              ? MediaQuery.of(context).size.height * 0.5 // Expanded height 50%
+              : MediaQuery.of(context).size.height * 0.25) // Compact height 25%
+          : MediaQuery.of(context).size.height *
+              0.15, // Height when only one parcel is selected
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 8.0,
+            offset: Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              'Área Total: $totalArea m²',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black, // Main text in black
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            numSelected > 1
+                ? 'Registros Catastrales: $numSelected seleccionados'
+                : _selectedParcels.values.first,
+            style: const TextStyle(fontSize: 16, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+          if (numSelected > 1)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _isBottomSheetExpanded = !_isBottomSheetExpanded;
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF388E3C), // Verde Oscuro
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 12.0,
+                  ), // Internal Padding of the button
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                ),
+                child: Text(
+                  _isBottomSheetExpanded ? 'Ver menos' : 'Ver más detalles',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          if (_isBottomSheetExpanded)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0), // Lateral padding 16px
+                child: ListView.builder(
+                  itemCount: _selectedParcels.length,
+                  itemBuilder: (context, index) {
+                    final entry = _selectedParcels.entries.toList()[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 4.0, // Vertical space 4px
+                          ),
+                      child: Text(
+                        entry.value,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -586,67 +716,30 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
             onPressed: () {
               // Show input fields for latitude and longitude
             },
-          )
+          ),
         ],
       ),
       body: Stack(
         children: [
+          // Mapbox Map
           mapbox.MapWidget(
             mapOptions: mapbox.MapOptions(
               pixelRatio: MediaQuery.of(context).devicePixelRatio,
             ),
             onMapCreated: (mapbox.MapboxMap mapboxMap) {
               _mapboxMap = mapboxMap;
+              // Map initialization logic
               _onMapCreated(mapboxMap); // Initialize the map
             },
             onTapListener: _onMapClick, // Handle map click
           ),
-          if (_isBottomSheetVisible)
+          // Show the BottomSheet if there are selected plots
+          if (_selectedParcels.isNotEmpty)
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 8.0,
-                      offset: Offset(0, -2),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Área: $_selectedParcelArea m²',
-                      style: const TextStyle(
-                        fontSize: 24, // Bigger font size for the area
-                        fontWeight: FontWeight.bold, // Bold font for emphasis
-                        color: Color(0xFF000000), // Black color for text
-                      ),
-                      textAlign: TextAlign.center, // Center the text
-                    ),
-                    const SizedBox(
-                        height: 8), // Add some spacing between the texts
-                    Text(
-                      'Reg. Catastral: $_selectedParcelCadastralRef',
-                      style: const TextStyle(
-                        fontSize:
-                            16, // Increased font size for the cadastral reference
-                        fontWeight: FontWeight
-                            .normal, // Normal weight for secondary info
-                        color: Color(0xFF424242), // Dark gray color for text
-                      ),
-                      textAlign: TextAlign.center, // Center the text
-                    ),
-                  ],
-                ),
-              ),
+              child: _buildBottomSheet(context),
             ),
         ],
       ),
