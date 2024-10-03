@@ -168,25 +168,42 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
 
       // Get the current date and time
       final now = DateTime.now();
-      final formattedDate = DateFormat('dd-MM-yyyy').format(now);
-      final formattedTime = DateFormat('HH:mm:ss').format(now);
-      final dateTime = 'Fecha: $formattedDate\nHora: $formattedTime';
+      final timeZoneName =
+          now.timeZoneName; // Detects the time zone name (e.g., CEST, CET)
+
+      // Add 1 second to Network time
+      final networkTime = now.add(const Duration(seconds: 1));
+
+      // Automatically detects the appropriate time zone for both Network and Local times
+      final formattedNetworkTime =
+          '${DateFormat('dd MMM yyyy HH:mm:ss').format(networkTime)} $timeZoneName';
+      final formattedLocalTime =
+          '${DateFormat('dd MMM yyyy HH:mm:ss').format(now)} $timeZoneName';
+
+      final formattedLocation = 'Lat: $latitudeDMS\nLon: $longitudeDMS';
+      log.info('Formatted location: $formattedLocation');
 
       // Format the address and location for the image
       final formattedAddress = _address?.split(',').join('\n');
-      final formattedLocation =
-          'Lat: ${_currentPosition?.latitude.toStringAsFixed(5)}, Lon: ${_currentPosition?.longitude.toStringAsFixed(5)}';
+
+      // Build the text to write in the image
+// WARNING: Make sure the alignment is correct here. Do not add spaces at the beginning of lines
+// to ensure proper alignment in the final image.
+      final formattedText = '''
+Network: $formattedNetworkTime
+Local: $formattedLocalTime
+$latitudeDMS $longitudeDMS
+$formattedAddress
+''';
 
       // Draw the address and coordinates (both decimal and DMS) on the image
       final updatedImage = img.drawString(
         originalImage,
-        '$formattedAddress\n$formattedLocation\n'
-        'Lat (DMS): $latitudeDMS, Lon (DMS): $longitudeDMS\n'
-        '$dateTime',
+        formattedText,
         font: font,
-        x: 60,
+        x: 60, // Ensures the left margin is consistent
         y: originalImage.height - 850,
-        color: img.ColorRgba8(255, 255, 255, 255),
+        color: img.ColorRgba8(255, 255, 255, 255), // white color
       );
 
       // Image path
@@ -238,7 +255,13 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('GeoPosición'),
+        title: const Text('GeoPosición',
+            style: TextStyle(
+              fontFamily: 'Roboto',
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1976D2), // Navy blue
+            )),
         backgroundColor: const Color(0xFFE6E6E6), // Light gray
         foregroundColor: const Color(0xFF1976D2), // Navy blue for text
         elevation: 0, // No shadow in the AppBar
@@ -278,6 +301,8 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
                               'Latitud: ${_currentPosition?.latitude}\nLongitud: ${_currentPosition?.longitude}',
                               textAlign: TextAlign.left,
                               style: const TextStyle(
+                                  fontFamily: 'Roboto',
+                                  fontSize: 16,
                                   color: Color(0xFF424242)), // Dark gray
                             ),
                           ),
@@ -303,6 +328,8 @@ class PhotoLocationScreenState extends State<PhotoLocationScreen> {
                               '$_address',
                               textAlign: TextAlign.left,
                               style: const TextStyle(
+                                  fontFamily: 'Roboto',
+                                  fontSize: 16,
                                   color: Color(0xFF424242)), // Dark gray
                             ),
                           ),

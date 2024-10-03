@@ -92,6 +92,81 @@
     - **Dirección:** Ícono de dirección (una casa) en Verde Oscuro (#388E3C) antes de la dirección textual.
     - **Alineación:** Los íconos están alineados a la izquierda del texto. El texto y los íconos se mantienen alineados en una línea vertical para evitar desajustes visuales.
 
+#### Formato de la Información Geolocalizada en la Imagen
+
+- **Formato del Texto en la Imagen:**
+
+  ```text
+  Network: [dd mmm yyyy hh:mm ZZZ]
+  Local: [dd mmm yyyy hh:mm ZZZ]
+  [Latitud DMS] [Longitud DMS]
+  [Calle con número]
+  [Código postal y Localidad]
+  [Provincia]
+  ```
+
+- **Ejemplo en la Imagen:**
+
+  ```text
+  Network: 3 oct 2024 9:14:14 CEST
+  Local: 3 oct 2024 9:14:13 CEST
+  38°1 22,83"N 1°14 59,22"W
+  12 Calle Venezuela
+  30565 Las Torres de Cotillas
+  Región de Murcia
+  ```
+
+- **Especificaciones del Formato:**
+  - **Tipografía:**
+    - Fuente: Roboto, Regular
+    - Tamaño: 14px
+    - Color: Gris Oscuro (#424242)
+  - **Alineación:** Justificado a la izquierda.
+  - **Espaciado:** Asegurar que el espaciado entre cada línea sea uniforme y balanceado para una correcta visualización.
+
+##### Detalles
+
+1. **Network y Local (Fecha y Hora):**
+
+   - El formato de fecha y hora para "Network" y "Local" es:
+
+     - **Fecha:** `dd mmm yyyy`
+     - **Hora:** `hh:mm:ss ZZZ` (zona horaria abreviada).
+     - Ejemplo:
+
+       ```text
+       Network: 3 oct 2024 9:14:14 CEST
+       Local: 3 oct 2024 9:14:13 CEST
+       ```
+
+2. **Coordenadas (Latitud y Longitud en DMS):**
+
+   - Mostrar las coordenadas en formato de grados, minutos y segundos (DMS), con dos decimales de precisión en los segundos.
+   - Ejemplo:
+
+     ```text
+     38°1 22,83"N 1°14 59,22"W
+     ```
+
+3. **Dirección (Calle, Código Postal, Localidad y Provincia):**
+
+   - La dirección se presenta en tres líneas:
+     1. La primera línea con la **calle y número**.
+     2. La segunda línea con el **código postal** y la **localidad**.
+     3. La tercera línea con la **provincia**.
+   - Ejemplo:
+
+     ```text
+     12 Calle Venezuela
+     30565 Las Torres de Cotillas
+     Región de Murcia
+     ```
+
+##### Comportamiento
+
+- Validar que este texto se coloque correctamente sobre la imagen geolocalizada.
+- Mantener la legibilidad del texto bajo diferentes condiciones de luz y tamaños de pantalla.
+
 ### 6. Pantalla Mapa de Parcelas
 
 - **Background:** Gris Claro (#E6E6E6)
