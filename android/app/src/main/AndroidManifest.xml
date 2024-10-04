@@ -6,6 +6,8 @@
         <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
         <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
         <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+        <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+        <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION"/>
         <!-- Permisos específicos para Android 13 o superior -->
         <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
         <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
