@@ -91,7 +91,8 @@ class MyHomePage extends StatelessWidget {
             shadows: [
               Shadow(
                 blurRadius: 3.0,
-                color: Colors.black.withOpacity(0.25), // Light shadow behind the title
+                color: Colors.black
+                    .withOpacity(0.25), // Light shadow behind the title
                 offset: const Offset(0, 2.0),
               ),
             ],
