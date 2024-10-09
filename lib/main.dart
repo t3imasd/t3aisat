@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logging/logging.dart';
 import 'package:image_picker/image_picker.dart'; // Import to open the camera
-import 'screens/photo_location_screen.dart';
+import 'screens/media_location_screen.dart';
 import 'screens/parcel_map_screen.dart';
 
 Future<void> main() async {
@@ -124,7 +124,7 @@ class MyHomePage extends StatelessWidget {
                   );
                 }
               },
-              child: const Text('Foto con Ubicación'),
+              child: const Text('Captura con Ubicación'),
             ),
             const SizedBox(height: 40), // Spacing between the buttons
             ElevatedButton(

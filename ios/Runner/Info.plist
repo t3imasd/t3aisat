@@ -59,5 +59,7 @@
 	<true/>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Necesitamos añadir fotos a tu libería de Fotos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>La aplicación necesita acceso al micrófono para grabar videos.</string>
 </dict>
 </plist>

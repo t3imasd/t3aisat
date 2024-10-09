@@ -20,13 +20,13 @@ class PhotoLocationScreen extends StatefulWidget {
   const PhotoLocationScreen({super.key, required this.imagePath});
 
   @override
-  PhotoLocationScreenState createState() => PhotoLocationScreenState();
+  MediaLocationScreenState createState() => MediaLocationScreenState();
 }
 
-class PhotoLocationScreenState extends State<PhotoLocationScreen> {
+class MediaLocationScreenState extends State<PhotoLocationScreen> {
   Position? _currentPosition;
   String? _address;
-  final Logger log = Logger('PhotoLocationScreen');
+  final Logger log = Logger('MediaLocationScreen');
   String? _updatedImagePath; // Variable to store the updated image path
   bool _isLoading = true; // Variable to manage the loading spinner
 
