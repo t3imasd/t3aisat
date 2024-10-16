@@ -18,7 +18,6 @@ import 'package:ffmpeg_kit_flutter_full_gpl/ffmpeg_kit_config.dart';
 import 'package:ffmpeg_kit_flutter_full_gpl/return_code.dart';
 import 'package:video_player/video_player.dart';
 import 'package:saver_gallery/saver_gallery.dart';
-import 'package:archive/archive.dart'; // To decompress files
 
 class MediaLocationScreen extends StatefulWidget {
   final String mediaPath;
@@ -595,12 +594,14 @@ T3AI-SAT App''';
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      // Override back button behavior
-      onWillPop: () async {
-        // Navigate back to the main screen
-        Navigator.of(context).popUntil((route) => route.isFirst);
-        return false;
+    return PopScope(
+      canPop: true, // Allows backward navigation
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) {
+          // Navigate back to the main screen
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+        return;
       },
       child: Scaffold(
         appBar: AppBar(
@@ -638,7 +639,7 @@ T3AI-SAT App''';
                                       VideoProgressIndicator(
                                         _videoController!,
                                         allowScrubbing: true,
-                                        colors: VideoProgressColors(
+                                        colors: const VideoProgressColors(
                                           playedColor: Colors.blue,
                                           bufferedColor: Colors.grey,
                                           backgroundColor: Colors.black,
