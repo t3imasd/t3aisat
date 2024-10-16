@@ -148,11 +148,6 @@ class MediaLocationScreenState extends State<MediaLocationScreen> {
       }
     } catch (e) {
       log.severe('Failed to obtain location or process media: $e');
-    } finally {
-      // Ensure the loading spinner is hidden
-      setState(() {
-        _isLoading = false; // Hide the loading spinner when processing is done
-      });
     }
   }
 
@@ -409,10 +404,14 @@ T3AI-SAT App''';
       // Update the state to reflect the new image path in the UI
       setState(() {
         _updatedMediaPath = updatedImagePath;
+        _isLoading = false; // Hide the spinner after processing the image
       });
     } catch (e) {
       // Log any errors that occur during the image processing
       log.severe('Failed to process image: $e');
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -566,23 +565,35 @@ T3AI-SAT App''';
             _updatedMediaPath = outputPath;
           });
 
+          // Inicializar el controlador de vídeo y esperar a que se complete
           _videoController =
-              VideoPlayerController.file(File(_updatedMediaPath!))
-                ..initialize().then((_) {
-                  setState(() {
-                    _videoController!.play();
-                  });
-                });
+              VideoPlayerController.file(File(_updatedMediaPath!));
+          await _videoController!.initialize();
+          await _videoController!.play();
+
+          // Actualizar el estado para ocultar el spinner
+          setState(() {
+            _isLoading = false;
+          });
         } else {
           log.severe('Processed video file does not exist.');
+          setState(() {
+            _isLoading = false;
+          });
         }
       } else {
         final logs = await session.getAllLogsAsString();
         log.severe('FFmpeg command failed with return code $returnCode');
         log.severe('FFmpeg logs:\n$logs');
+        setState(() {
+          _isLoading = false;
+        });
       }
     } catch (e) {
       log.severe('Error processing video: $e');
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -647,9 +658,7 @@ T3AI-SAT App''';
                                       ),
                                     ],
                                   )
-                                : const Center(
-                                    child: Text('Error cargando el vídeo'),
-                                  )
+                                : const SizedBox.shrink() // Not showing nothing if it is not initialized
                             : Image.file(
                                 File(_updatedMediaPath!),
                                 fit: BoxFit.cover,
