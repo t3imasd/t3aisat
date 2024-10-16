@@ -648,7 +648,7 @@ T3AI-SAT App''';
                                     ],
                                   )
                                 : const Center(
-                                    child: Text('Error loading video'),
+                                    child: Text('Error cargando el vídeo'),
                                   )
                             : Image.file(
                                 File(_updatedMediaPath!),
