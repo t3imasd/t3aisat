@@ -281,7 +281,7 @@ class CameraScreenState extends State<CameraScreen>
               children: [
                 FloatingActionButton(
                   onPressed: _onTakePictureButtonPressed,
-                  child: const Icon(Icons.camera),
+                  child: const Icon(Icons.photo_camera),
                 ),
                 FloatingActionButton(
                   onPressed: _onRecordVideoButtonPressed,
