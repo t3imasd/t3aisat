@@ -10,30 +10,97 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:image/image.dart' as img;
-import 'package:flutter/services.dart'; // Add this import for MethodChannel
-import 'package:intl/intl.dart'; // Import for date formatting
-import 'package:native_exif/native_exif.dart'; // Import for EXIF data
+import 'package:flutter/services.dart'; // For MethodChannel
+import 'package:intl/intl.dart'; // For date formatting
+import 'package:native_exif/native_exif.dart'; // For EXIF data
+import 'package:ffmpeg_kit_flutter_full_gpl/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_full_gpl/ffmpeg_kit_config.dart';
+import 'package:ffmpeg_kit_flutter_full_gpl/return_code.dart';
+import 'package:video_player/video_player.dart';
+import 'package:saver_gallery/saver_gallery.dart';
+import 'package:archive/archive.dart'; // To decompress files
 
-class PhotoLocationScreen extends StatefulWidget {
-  final String imagePath;
+class MediaLocationScreen extends StatefulWidget {
+  final String mediaPath;
+  final bool isVideo;
 
-  const PhotoLocationScreen({super.key, required this.imagePath});
+  const MediaLocationScreen(
+      {super.key, required this.mediaPath, required this.isVideo});
 
   @override
   MediaLocationScreenState createState() => MediaLocationScreenState();
 }
 
-class MediaLocationScreenState extends State<PhotoLocationScreen> {
+class MediaLocationScreenState extends State<MediaLocationScreen> {
   Position? _currentPosition;
   String? _address;
   final Logger log = Logger('MediaLocationScreen');
-  String? _updatedImagePath; // Variable to store the updated image path
+  String?
+      _updatedMediaPath; // Variable to store the updated media (image/video) path
   bool _isLoading = true; // Variable to manage the loading spinner
+
+  VideoPlayerController? _videoController;
+
+  Directory? _tempDir;
+  String? _fontFilePath;
 
   @override
   void initState() {
     super.initState();
+
+    _initializeFonts(); // Method to initialize fonts
+    _listFFmpegFilters(); // Method to list the filters available
+
     _getCurrentLocation();
+  }
+
+  Future<void> _initializeFonts() async {
+    try {
+      // Load the TTF font directly from the Assets
+      final fontData =
+          await rootBundle.load('assets/fonts/roboto/Roboto-Bold.ttf');
+      final fontBytes = fontData.buffer.asUint8List();
+
+      // Write the font to a temporary file so that FFmpeg can access it
+      _tempDir = await getTemporaryDirectory();
+      final fontFile = File('${_tempDir!.path}/Roboto-Bold.ttf');
+      await fontFile.writeAsBytes(fontBytes);
+
+      // Verify that the font file exists
+      if (!await fontFile.exists()) {
+        log.severe(
+            'The font file could not be written to the temporary directory.');
+        return;
+      }
+
+      _fontFilePath = fontFile.path;
+
+      // Register the font directories
+      if (Platform.isAndroid) {
+        await FFmpegKitConfig.setFontDirectoryList([
+          '/system/fonts', // System Fonts Directory
+          _tempDir!.path, // Temporary Directory where the font is
+        ]);
+      } else if (Platform.isIOS) {
+        await FFmpegKitConfig.setFontDirectoryList([
+          '/System/Library/Fonts', // System Fonts Directory
+          _tempDir!.path, // Temporary Directory where the font is
+        ]);
+      }
+    } catch (e) {
+      log.severe('Error initializing fonts: $e');
+    }
+  }
+
+  Future<void> _listFFmpegFilters() async {
+    final session = await FFmpegKit.execute('-filters');
+    final output = await session.getAllLogsAsString();
+    // Check if drawtext filter is available
+    final bool drawTextFilter = output?.contains('drawtext') ?? false;
+    if (!drawTextFilter) {
+      log.severe('drawtext filter is not available in FFmpeg');
+    }
+    log.info('FFmpeg filters:\n$output');
   }
 
   // Function to obtain the current location
@@ -74,10 +141,14 @@ class MediaLocationScreenState extends State<PhotoLocationScreen> {
       await _getAddressFromCoordinates(
           _currentPosition!.latitude, _currentPosition!.longitude);
 
-      // Write the text on the image and save it in the gallery
-      await _writeTextOnImageAndSaveToGallery(widget.imagePath);
+      // Write the text on the image or video and save it in the gallery
+      if (widget.isVideo) {
+        await _writeTextOnVideoAndSaveToGallery(widget.mediaPath);
+      } else {
+        await _writeTextOnImageAndSaveToGallery(widget.mediaPath);
+      }
     } catch (e) {
-      log.severe('Failed to obtain location or process image: $e');
+      log.severe('Failed to obtain location or process media: $e');
     } finally {
       // Ensure the loading spinner is hidden
       setState(() {
@@ -163,12 +234,12 @@ class MediaLocationScreenState extends State<PhotoLocationScreen> {
         'GPSTimeStamp': DateFormat('HH:mm:ss').format(now),
       });
 
-      // Add other EXIF data with ASCII encoding (as required by Android EXIF specification)
+      // Add other EXIF data with ASCII encoding
       await exif.writeAttributes({
         'DateTimeOriginal':
             DateFormat('yyyy:MM:dd HH:mm:ss').format(DateTime.now()),
         'UserComment':
-            't3AI-SAT App. Direccion en la que fue tomada la foto: ${_address ?? 'Sin direccion'}',
+            't3AI-SAT App. Direccion donde se tomó la foto: ${_address ?? 'Sin direccion'}',
         'ProfileDescription': 'sRGB', // Add color profile description
         'ColorSpace': '1', // Add color space as sRGB (value 1 means sRGB)
       });
@@ -177,6 +248,19 @@ class MediaLocationScreenState extends State<PhotoLocationScreen> {
     } catch (e) {
       log.severe('Error writing EXIF data: $e');
     }
+  }
+
+  int countLinesInText(String text) {
+    // Verify if the last two characters are '\ n'
+    if (text.length >= 2 && text.substring(text.length - 2) == '\n\n') {
+      // Eliminate the last two characters
+      text = text.substring(0, text.length - 2);
+    }
+
+    // Obtain the correct number of lines with text
+    int numberOfLines = text.split('\n').length;
+
+    return numberOfLines;
   }
 
   // Function to get the directory path for saving on Android in the DCIM/Camera folder
@@ -201,7 +285,7 @@ class MediaLocationScreenState extends State<PhotoLocationScreen> {
 
       // Load the font from the assets to draw text on the image
       final fontData = await rootBundle.load(
-          'assets/fonts/roboto_black/Roboto-Black_100_size_white_color.ttf.zip');
+          'assets/fonts/roboto_bold/Roboto-Bold-20-size-white-color.ttf.zip');
       final font = img.BitmapFont.fromZip(fontData.buffer.asUint8List());
 
       // Convert coordinates to Degrees, Minutes, Seconds (DMS) format
@@ -229,20 +313,26 @@ class MediaLocationScreenState extends State<PhotoLocationScreen> {
       final formattedAddress = _address?.split(',').join('\n');
 
       // Build the text that will be drawn on the image
-      final formattedText = '''
-Network: $formattedNetworkTime
+      final formattedText = '''Network: $formattedNetworkTime
 Local: $formattedLocalTime
 $latitudeDMS $longitudeDMS
 $formattedAddress
-''';
+T3AI-SAT App''';
+
+      // Calculate text size
+      final numLineBreaks = countLinesInText(formattedText);
+
+      final textHeight = font.lineHeight * numLineBreaks;
 
       // Draw the address and coordinates on the image
       final updatedImage = img.drawString(
         originalImage,
         formattedText,
         font: font,
-        x: 60, // Ensure the left margin is consistent
-        y: originalImage.height - 850, // Position the text towards the bottom
+        x: 20, // Left margin
+        y: originalImage.height -
+            textHeight -
+            20, // Position the text at the bottom
         color: img.ColorRgba8(255, 255, 255, 255), // White color for text
       );
 
@@ -319,7 +409,7 @@ $formattedAddress
 
       // Update the state to reflect the new image path in the UI
       setState(() {
-        _updatedImagePath = updatedImagePath;
+        _updatedMediaPath = updatedImagePath;
       });
     } catch (e) {
       // Log any errors that occur during the image processing
@@ -341,94 +431,285 @@ $formattedAddress
     }
   }
 
+  // Function to write text in the video and save it in the gallery
+  Future<void> _writeTextOnVideoAndSaveToGallery(String videoPath) async {
+    try {
+      // Verify that the font file path is set
+      if (_fontFilePath == null) {
+        log.severe('Font file path is not initialized.');
+        return;
+      }
+
+      // Verify that the input video exists
+      final inputVideoFile = File(videoPath);
+      if (!await inputVideoFile.exists()) {
+        log.severe('Input video file does not exist at path: $videoPath');
+        return;
+      }
+
+      // Convert the .temp file to .mp4 by copying it
+      final String inputMp4Path = path.join(
+        path.dirname(videoPath),
+        '${path.basenameWithoutExtension(videoPath)}.mp4',
+      );
+      final inputMp4File = File(inputMp4Path);
+      await inputVideoFile.copy(inputMp4Path);
+
+      // Verify that the input video exists
+      if (!await inputMp4File.exists()) {
+        log.severe('Input video file does not exist at path: $inputMp4Path');
+        return;
+      }
+
+      // Optionally, delete the original .temp file if no longer needed
+      // await inputVideoFile.delete();
+
+      // Verify that the file has a .mp4 extension
+      if (path.extension(inputMp4Path).toLowerCase() != '.mp4') {
+        log.severe('Input video file is not an MP4: $inputMp4Path');
+        return;
+      }
+
+      // Convert coordinates to Degrees, Minutes, Seconds (DMS) format
+      final latitudeDMS = _convertToDMS(_currentPosition!.latitude);
+      final longitudeDMS = _convertToDMS(_currentPosition!.longitude);
+
+      // Get the current date and time
+      final now = DateTime.now();
+      final timeZoneName =
+          now.timeZoneName; // Detects the time zone name (e.g., CEST, CET)
+
+      // Add 1 second to the network time to simulate network synchronization
+      final networkTime = now.add(const Duration(seconds: 1));
+
+      // Format the network and local times
+      final formattedNetworkTime =
+          '${DateFormat('dd MMM yyyy HH:mm:ss').format(networkTime)} $timeZoneName';
+      final formattedLocalTime =
+          '${DateFormat('dd MMM yyyy HH:mm:ss').format(now)} $timeZoneName';
+
+      final formattedLocation = 'Lat: $latitudeDMS\nLon: $longitudeDMS';
+      log.info('Formatted location: $formattedLocation');
+
+      // Format the address and location for displaying on the video
+      final formattedAddress = _address ?? '';
+
+      // Build the text that will be drawn on the video
+      final formattedText = '''Network: $formattedNetworkTime
+Local: $formattedLocalTime
+$latitudeDMS $longitudeDMS
+$formattedAddress
+T3AI-SAT App''';
+
+      // Escape special characters for FFmpeg command
+      String escapedText = formattedText
+          .replaceAll('"', r'˝') // Escape double quotes
+          .replaceAll(':', r'\:') // Escape colons
+          .replaceAll('%', r'\%'); // Escape percent signs
+
+      // Log the formatted and escaped text for debugging
+      log.info('Formatted text:\n$formattedText');
+      log.info('Escaped text:\n$escapedText');
+
+      // Configure the output path
+      // final Directory extDir = await getTemporaryDirectory();
+      if (_tempDir == null) {
+        log.severe('Temporary directory is not initialized.');
+        return;
+      }
+      final Directory extDir = _tempDir!;
+      final String dirPath = '${extDir.path}/Videos/flutter_test';
+      await Directory(dirPath).create(recursive: true);
+      final String outputPath = path.join(
+        dirPath,
+        't3aisat_${DateFormat('yyyyMMdd_HHmmss').format(now)}_temp.mp4',
+      );
+
+      // Log the paths for debugging
+      log.info('Font file path: $_fontFilePath');
+      log.info('Input video path: $inputMp4Path');
+      log.info('Output video path: $outputPath');
+
+      // Build FFmpeg command
+      final String ffmpegCommand =
+          "drawtext=fontfile='$_fontFilePath':text='$escapedText':fontcolor=white:fontsize=20:line_spacing=2:x=10:y=H-th-10";
+
+      final command = [
+        '-y',
+        '-i',
+        inputMp4Path,
+        '-vf',
+        ffmpegCommand,
+        '-codec:a',
+        'copy',
+        outputPath,
+      ];
+
+      log.info('FFmpeg command: ffmpeg ${command.join(' ')}');
+
+      // Execute FFmpeg command
+      final session = await FFmpegKit.executeWithArguments(command);
+      final returnCode = await session.getReturnCode();
+
+      if (ReturnCode.isSuccess(returnCode)) {
+        log.info('FFmpeg command executed successfully');
+        final outputFile = File(outputPath);
+        if (await outputFile.exists()) {
+          final result = await SaverGallery.saveFile(
+            file: outputPath,
+            name: 't3aisat_${DateFormat('yyyyMMdd_HHmmss').format(now)}.mp4',
+            androidRelativePath: 'Movies/t3aisat',
+            androidExistNotSave: false,
+          );
+          log.info('Video saved to gallery: $result');
+
+          setState(() {
+            _updatedMediaPath = outputPath;
+          });
+
+          _videoController =
+              VideoPlayerController.file(File(_updatedMediaPath!))
+                ..initialize().then((_) {
+                  setState(() {
+                    _videoController!.play();
+                  });
+                });
+        } else {
+          log.severe('Processed video file does not exist.');
+        }
+      } else {
+        final logs = await session.getAllLogsAsString();
+        log.severe('FFmpeg command failed with return code $returnCode');
+        log.severe('FFmpeg logs:\n$logs');
+      }
+    } catch (e) {
+      log.severe('Error processing video: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('GeoPosición',
-            style: TextStyle(
-              fontFamily: 'Roboto',
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1976D2), // Navy blue
-            )),
-        backgroundColor: const Color(0xFFE6E6E6), // Light gray
-        foregroundColor: const Color(0xFF1976D2), // Navy blue for text
-        elevation: 0, // No shadow in the AppBar
-      ),
-      body: Center(
-        child: _isLoading
-            ? const CircularProgressIndicator(
-                color: Color(0xFF1976D2), // Navy blue spinner
-              )
-            : Column(
-                children: [
-                  if (_updatedImagePath != null)
-                    Expanded(
-                      child: Image.file(
-                        File(_updatedImagePath!),
-                        fit: BoxFit.cover, // Ensures the image fills the space
-                        width: double.infinity,
+    return WillPopScope(
+      // Override back button behavior
+      onWillPop: () async {
+        // Navigate back to the main screen
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('GeoPosición',
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1976D2), // Navy blue
+              )),
+          backgroundColor: const Color(0xFFE6E6E6), // Light gray
+          foregroundColor: const Color(0xFF1976D2), // Navy blue for text
+          elevation: 0, // No shadow in the AppBar
+        ),
+        body: Center(
+          child: _isLoading
+              ? const CircularProgressIndicator(
+                  color: Color(0xFF1976D2), // Navy blue spinner
+                )
+              : Column(
+                  children: [
+                    if (_updatedMediaPath != null)
+                      Expanded(
+                        child: widget.isVideo
+                            ? _videoController != null &&
+                                    _videoController!.value.isInitialized
+                                ? Stack(
+                                    alignment: Alignment.bottomCenter,
+                                    children: [
+                                      AspectRatio(
+                                        aspectRatio:
+                                            _videoController!.value.aspectRatio,
+                                        child: VideoPlayer(_videoController!),
+                                      ),
+                                      VideoProgressIndicator(
+                                        _videoController!,
+                                        allowScrubbing: true,
+                                        colors: VideoProgressColors(
+                                          playedColor: Colors.blue,
+                                          bufferedColor: Colors.grey,
+                                          backgroundColor: Colors.black,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : const Center(
+                                    child: Text('Error loading video'),
+                                  )
+                            : Image.file(
+                                File(_updatedMediaPath!),
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                              ),
                       ),
-                    ),
-                  const SizedBox(height: 20),
-                  if (_currentPosition != null)
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment
-                            .start, // Align content to the start of the row
-                        children: [
-                          const Icon(
-                            Icons.location_on,
-                            color: Color(0xFF388E3C), // Dark green
-                            size: 30, // Increased icon size
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            // Ensures text wraps and aligns properly
-                            child: Text(
-                              'Latitud: ${_currentPosition?.latitude}\nLongitud: ${_currentPosition?.longitude}',
-                              textAlign: TextAlign.left,
-                              style: const TextStyle(
-                                  fontFamily: 'Roboto',
-                                  fontSize: 16,
-                                  color: Color(0xFF424242)), // Dark gray
+                    const SizedBox(height: 20),
+                    if (_currentPosition != null)
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.location_on,
+                              color: Color(0xFF388E3C), // Dark green
+                              size: 30, // Increased icon size
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (_address != null)
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment
-                            .start, // Align content to the start of the row
-                        children: [
-                          const Icon(
-                            Icons.home,
-                            color: Color(0xFF388E3C), // Dark green
-                            size: 30, // Increased icon size
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            // Ensures text wraps and aligns properly
-                            child: Text(
-                              '$_address',
-                              textAlign: TextAlign.left,
-                              style: const TextStyle(
-                                  fontFamily: 'Roboto',
-                                  fontSize: 16,
-                                  color: Color(0xFF424242)), // Dark gray
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Latitude: ${_currentPosition?.latitude}\nLongitude: ${_currentPosition?.longitude}',
+                                textAlign: TextAlign.left,
+                                style: const TextStyle(
+                                    fontFamily: 'Roboto',
+                                    fontSize: 16,
+                                    color: Color(0xFF424242)), // Dark gray
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  const SizedBox(height: 20),
-                ],
-              ),
+                    if (_address != null)
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.home,
+                              color: Color(0xFF388E3C), // Dark green
+                              size: 30, // Increased icon size
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '$_address',
+                                textAlign: TextAlign.left,
+                                style: const TextStyle(
+                                    fontFamily: 'Roboto',
+                                    fontSize: 16,
+                                    color: Color(0xFF424242)), // Dark gray
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+        ),
       ),
     );
   }

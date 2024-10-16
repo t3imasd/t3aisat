@@ -29,6 +29,7 @@ dependencies:
   camera: ^0.11.0+2
   video_player: ^2.9.2
   saver_gallery: ^3.0.6
+  ffmpeg_kit_flutter_full_gpl: ^6.0.3
 
 dev_dependencies:
   flutter_test:
@@ -49,3 +50,5 @@ flutter:
     - .env.development
     - .env.production
     - assets/fonts/roboto_black/Roboto-Black_100_size_white_color.ttf.zip
+    - assets/fonts/roboto_bold/Roboto-Bold-20-size-white-color.ttf.zip
+    - assets/fonts/roboto/Roboto-Bold.ttf

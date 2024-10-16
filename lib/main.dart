@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logging/logging.dart';
-import 'package:image_picker/image_picker.dart'; // Import to open the camera
 import 'screens/media_location_screen.dart';
 import 'screens/parcel_map_screen.dart';
+import 'package:camera/camera.dart';
+
+List<CameraDescription> cameras = [];
 
 Future<void> main() async {
-  // Set the logger
+  WidgetsFlutterBinding.ensureInitialized();
+  // Set up the logger
   _setupLogging();
 
   try {
@@ -18,6 +21,12 @@ Future<void> main() async {
   } catch (e) {
     Logger.root
         .severe('Could not load ${Environment.fileName} file. ERROR: $e');
+  }
+
+  try {
+    cameras = await availableCameras();
+  } on CameraException catch (e) {
+    Logger.root.severe('Error in fetching the cameras: $e');
   }
 
   runApp(const MyApp());
@@ -65,7 +74,7 @@ class MyApp extends StatelessWidget {
             shadowColor: WidgetStateProperty.all(
                 Colors.black54), // More pronounced shadow
             elevation: WidgetStateProperty.all(
-                4), // Greater elevation for a depth effect
+                4), // Greater elevation for depth effect
           ),
         ),
       ),
@@ -91,7 +100,8 @@ class MyHomePage extends StatelessWidget {
             shadows: [
               Shadow(
                 blurRadius: 3.0,
-                color: Colors.black.withOpacity(0.25), // Light shadow behind the title
+                color: Colors.black
+                    .withOpacity(0.25), // Light shadow behind the title
                 offset: const Offset(0, 2.0),
               ),
             ],
@@ -99,7 +109,7 @@ class MyHomePage extends StatelessWidget {
         ),
         centerTitle: true,
         backgroundColor: const Color(0xFFE6E6E6), // Light gray
-        elevation: 0, // Without shadow in the title bar
+        elevation: 0, // No shadow in the title bar
       ),
       body: Center(
         child: Column(
@@ -109,20 +119,11 @@ class MyHomePage extends StatelessWidget {
             const SizedBox(
                 height: 60), // Spacing between the title and the first button
             ElevatedButton(
-              onPressed: () async {
-                final ImagePicker picker = ImagePicker();
-                final XFile? photo =
-                    await picker.pickImage(source: ImageSource.camera);
-                if (photo != null && context.mounted) {
-                  // Navigate to the PhotoLocationScreen screen with the captured photo route
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          PhotoLocationScreen(imagePath: photo.path),
-                    ),
-                  );
-                }
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CameraScreen()),
+                );
               },
               child: const Text('Captura con Ubicación'),
             ),
@@ -141,6 +142,155 @@ class MyHomePage extends StatelessWidget {
                 height: 60), // Spacing to center the content vertically
           ],
         ),
+      ),
+    );
+  }
+}
+
+class CameraScreen extends StatefulWidget {
+  const CameraScreen({super.key});
+
+  @override
+  CameraScreenState createState() => CameraScreenState();
+}
+
+class CameraScreenState extends State<CameraScreen>
+    with WidgetsBindingObserver {
+  CameraController? controller;
+  bool _isCameraInitialized = false;
+  bool _isRecording = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initCamera();
+  }
+
+  void _initCamera() async {
+    if (cameras.isEmpty) {
+      // No cameras available
+      return;
+    }
+
+    controller = CameraController(cameras[0], ResolutionPreset.high);
+
+    try {
+      await controller?.initialize();
+      setState(() {
+        _isCameraInitialized = true;
+      });
+    } catch (e) {
+      Logger.root.severe('Error initializing camera: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    controller?.dispose();
+    super.dispose();
+  }
+
+  void _onTakePictureButtonPressed() async {
+    if (!controller!.value.isInitialized) {
+      return;
+    }
+
+    if (controller!.value.isTakingPicture) {
+      // A capture is already pending, do nothing.
+      return;
+    }
+
+    try {
+      XFile picture = await controller!.takePicture();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MediaLocationScreen(
+            mediaPath: picture.path,
+            isVideo: false,
+          ),
+        ),
+      );
+    } catch (e) {
+      Logger.root.severe('Error taking picture: $e');
+    }
+  }
+
+  void _onRecordVideoButtonPressed() async {
+    if (!controller!.value.isInitialized) {
+      return;
+    }
+
+    if (_isRecording) {
+      // Stop recording
+      try {
+        XFile videoFile = await controller!.stopVideoRecording();
+        setState(() {
+          _isRecording = false;
+        });
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MediaLocationScreen(
+              mediaPath: videoFile.path,
+              isVideo: true,
+            ),
+          ),
+        );
+      } catch (e) {
+        Logger.root.severe('Error stopping video recording: $e');
+      }
+    } else {
+      // Start recording
+      try {
+        await controller!.prepareForVideoRecording();
+        await controller!.startVideoRecording();
+        setState(() {
+          _isRecording = true;
+        });
+      } catch (e) {
+        Logger.root.severe('Error starting video recording: $e');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isCameraInitialized || controller == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Cámara'),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Cámara'),
+      ),
+      body: Stack(
+        children: [
+          CameraPreview(controller!),
+          Positioned(
+            bottom: 20,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                FloatingActionButton(
+                  onPressed: _onTakePictureButtonPressed,
+                  child: const Icon(Icons.camera),
+                ),
+                FloatingActionButton(
+                  onPressed: _onRecordVideoButtonPressed,
+                  child: Icon(_isRecording ? Icons.stop : Icons.videocam),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
