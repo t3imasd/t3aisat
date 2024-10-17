@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:async'; // Import for Timer class
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:image_gallery_saver/image_gallery_saver.dart';
@@ -39,6 +40,10 @@ class MediaLocationScreenState extends State<MediaLocationScreen> {
   bool _isLoading = true; // Variable to manage the loading spinner
 
   VideoPlayerController? _videoController;
+  bool _isMuted = false; // Variable to track mute state
+  bool _showControls =
+      true; // Variable to manage visibility of play/pause button
+  Timer? _hideControlsTimer; // Timer to hide controls after 2 seconds
 
   Directory? _tempDir;
   String? _fontFilePath;
@@ -245,7 +250,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen> {
   }
 
   int countLinesInText(String text) {
-    // Verify if the last two characters are '\ n'
+    // Verify if the last two characters are '\n'
     if (text.length >= 2 && text.substring(text.length - 2) == '\n\n') {
       // Eliminate the last two characters
       text = text.substring(0, text.length - 2);
@@ -510,7 +515,6 @@ T3AI-SAT App''';
       log.info('Escaped text:\n$escapedText');
 
       // Configure the output path
-      // final Directory extDir = await getTemporaryDirectory();
       if (_tempDir == null) {
         log.severe('Temporary directory is not initialized.');
         return;
@@ -565,15 +569,17 @@ T3AI-SAT App''';
             _updatedMediaPath = outputPath;
           });
 
-          // Inicializar el controlador de vídeo y esperar a que se complete
+          // Initialize the video controller without auto-playing
           _videoController =
               VideoPlayerController.file(File(_updatedMediaPath!));
           await _videoController!.initialize();
-          await _videoController!.play();
+          _videoController!.setLooping(false); // Do not loop the video
+          _videoController!.addListener(_videoListener);
 
-          // Actualizar el estado para ocultar el spinner
+          // Update the state to hide the spinner
           setState(() {
             _isLoading = false;
+            _showControls = true; // Show play button initially
           });
         } else {
           log.severe('Processed video file does not exist.');
@@ -597,10 +603,61 @@ T3AI-SAT App''';
     }
   }
 
+  // Listener to handle video end
+  void _videoListener() {
+    if (_videoController == null) return;
+
+    if (_videoController!.value.position >= _videoController!.value.duration &&
+        !_videoController!.value.isPlaying) {
+      setState(() {
+        _showControls = true; // Show play button when video ends
+      });
+    }
+  }
+
   @override
   void dispose() {
+    _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
+    _hideControlsTimer?.cancel();
     super.dispose();
+  }
+
+  // Function to toggle play and pause
+  void _togglePlayPause() {
+    if (_videoController == null) return;
+
+    setState(() {
+      if (_videoController!.value.isPlaying) {
+        _videoController!.pause();
+        _showControls = true; // Show pause button when paused
+        _hideControlsTimer?.cancel();
+      } else {
+        _videoController!.play();
+        _showControls = false; // Hide play button when playing
+        _startHideControlsTimer();
+      }
+    });
+  }
+
+  // Function to toggle mute and unmute
+  void _toggleMute() {
+    if (_videoController == null) return;
+
+    setState(() {
+      _isMuted = !_isMuted;
+      _videoController!.setVolume(_isMuted ? 0.0 : 1.0);
+    });
+  }
+
+  // Function to start the timer to hide controls after 2 seconds
+  void _startHideControlsTimer() {
+    _hideControlsTimer?.cancel();
+    _hideControlsTimer = Timer(const Duration(seconds: 2), () {
+      setState(() {
+        _showControls = false;
+      });
+    });
   }
 
   @override
@@ -639,26 +696,86 @@ T3AI-SAT App''';
                         child: widget.isVideo
                             ? _videoController != null &&
                                     _videoController!.value.isInitialized
-                                ? Stack(
-                                    alignment: Alignment.bottomCenter,
-                                    children: [
-                                      AspectRatio(
-                                        aspectRatio:
-                                            _videoController!.value.aspectRatio,
-                                        child: VideoPlayer(_videoController!),
-                                      ),
-                                      VideoProgressIndicator(
-                                        _videoController!,
-                                        allowScrubbing: true,
-                                        colors: const VideoProgressColors(
-                                          playedColor: Colors.blue,
-                                          bufferedColor: Colors.grey,
-                                          backgroundColor: Colors.black,
+                                ? GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () {
+                                      setState(() {
+                                        _showControls = true;
+                                        _startHideControlsTimer();
+                                      });
+                                    },
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        AspectRatio(
+                                          aspectRatio: _videoController!
+                                              .value.aspectRatio,
+                                          child: VideoPlayer(_videoController!),
                                         ),
-                                      ),
-                                    ],
+                                        // Play/Pause Button
+                                        if (_showControls)
+                                          GestureDetector(
+                                            onTap: _togglePlayPause,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: Colors.black
+                                                    .withOpacity(0.5),
+                                              ),
+                                              padding: const EdgeInsets.all(12),
+                                              child: Icon(
+                                                _videoController!
+                                                        .value.isPlaying
+                                                    ? Icons.pause
+                                                    : Icons.play_arrow,
+                                                color: Colors.white,
+                                                size: 48,
+                                              ),
+                                            ),
+                                          ),
+                                        // Mute/Unmute Button
+                                        Positioned(
+                                          bottom: 50,
+                                          right: 20,
+                                          child: GestureDetector(
+                                            onTap: _toggleMute,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: Colors.black
+                                                    .withOpacity(0.5),
+                                              ),
+                                              padding: const EdgeInsets.all(8),
+                                              child: Icon(
+                                                _isMuted
+                                                    ? Icons.volume_off
+                                                    : Icons.volume_up,
+                                                color: Colors.white,
+                                                size: 24,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // Video Progress Indicator
+                                        Positioned(
+                                          bottom: 20,
+                                          left: 20,
+                                          right: 20,
+                                          child: VideoProgressIndicator(
+                                            _videoController!,
+                                            allowScrubbing: true,
+                                            colors: const VideoProgressColors(
+                                              playedColor: Colors.blue,
+                                              bufferedColor: Colors.grey,
+                                              backgroundColor: Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   )
-                                : const SizedBox.shrink() // Not showing nothing if it is not initialized
+                                : const SizedBox
+                                    .shrink() // Do not show anything if not initialized
                             : Image.file(
                                 File(_updatedMediaPath!),
                                 fit: BoxFit.cover,
@@ -680,7 +797,7 @@ T3AI-SAT App''';
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Latitude: ${_currentPosition?.latitude}\nLongitude: ${_currentPosition?.longitude}',
+                                'Latitud: ${_currentPosition?.latitude}\nLongitud: ${_currentPosition?.longitude}',
                                 textAlign: TextAlign.left,
                                 style: const TextStyle(
                                     fontFamily: 'Roboto',
