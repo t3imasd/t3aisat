@@ -13,12 +13,16 @@ import Photos
                                                 binaryMessenger: controller.binaryMessenger)
     saveImageChannel.setMethodCallHandler { (call: FlutterMethodCall, result: @escaping FlutterResult) in
       if call.method == "saveImageWithExif" {
-        guard let args = call.arguments as? [String: Any],
-              let imagePath = args["imagePath"] as? String else {
-          result(FlutterError(code: "INVALID_ARGUMENTS", message: "Image path not provided", details: nil))
+        guard let args = call.arguments as? [String: Any] else {
+          result(FlutterError(code: "INVALID_ARGUMENTS", message: "Arguments are null", details: nil))
           return
         }
-        self.saveImageWithExif(imagePath: imagePath, result: result)
+
+        if let imagePath = args["imagePath"] as? String, !imagePath.isEmpty {
+          self.saveImageWithExif(imagePath: imagePath, result: result)
+        } else {
+          result(FlutterError(code: "INVALID_ARGUMENTS", message: "Image path not provided or is empty", details: nil))
+        }
       } else {
         result(FlutterMethodNotImplemented)
       }

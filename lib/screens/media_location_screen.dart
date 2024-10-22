@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:async'; // Import for Timer class
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:logging/logging.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:geolocator/geolocator.dart';
@@ -86,10 +85,10 @@ class MediaLocationScreenState extends State<MediaLocationScreen> {
           _tempDir!.path, // Temporary Directory where the font is
         ]);
       } else if (Platform.isIOS) {
-        await FFmpegKitConfig.setFontDirectoryList([
-          '/System/Library/Fonts', // System Fonts Directory
-          _tempDir!.path, // Temporary Directory where the font is
-        ]);
+        await FFmpegKitConfig.setFontDirectoryList(
+          [_tempDir!.path],  // Temporary Directory where the font is
+          {}  // Empty map for mapping to avoid NSNull issue
+        );
       }
     } catch (e) {
       log.severe('Error initializing fonts: $e');
@@ -141,9 +140,11 @@ class MediaLocationScreenState extends State<MediaLocationScreen> {
       );
       log.info('Current position: $_currentPosition');
 
-      // Obtain address from coordinates
-      await _getAddressFromCoordinates(
-          _currentPosition!.latitude, _currentPosition!.longitude);
+      if (_currentPosition != null) {
+        // Obtain address from coordinates
+        await _getAddressFromCoordinates(
+            _currentPosition!.latitude, _currentPosition!.longitude);
+      }
 
       // Write the text on the image or video and save it in the gallery
       if (widget.isVideo) {
@@ -277,6 +278,11 @@ class MediaLocationScreenState extends State<MediaLocationScreen> {
 
   // Function to save the photo with the location on the device and the gallery
   Future<void> _writeTextOnImageAndSaveToGallery(String imagePath) async {
+    if (_currentPosition == null) {
+      log.severe('Location data not available');
+      return;
+    }
+
     try {
       // Read the original image file as bytes
       final bytes = await File(imagePath).readAsBytes();
@@ -387,15 +393,15 @@ T3AI-SAT App''';
       if (status.isGranted) {
         if (Platform.isAndroid) {
           // Save to gallery using ImageGallerySaver for Android
-          final result =
-              await ImageGallerySaver.saveFile(updatedImageFile.path);
-          if (result != null &&
-              result['isSuccess'] != null &&
-              result['isSuccess']) {
-            log.info(
-                'Updated image saved to gallery on Android: ${result['filePath']}');
-          } else {
-            log.severe('Failed to save image to gallery');
+          if (await updatedImageFile.exists()) {
+            final result = await SaverGallery.saveFile(
+              filePath: updatedImageFile.path,
+              fileName:
+                  't3aisat_${DateFormat('yyyyMMdd_HHmmss').format(now)}.jpg', // Ajusta la extensión según el tipo de archivo
+              androidRelativePath: 'Pictures/t3aisat',
+              skipIfExists: false,
+            );
+            log.info('Image saved to gallery: $result');
           }
         } else if (Platform.isIOS) {
           // Use platform channel to save the image with EXIF metadata on iOS
@@ -423,6 +429,10 @@ T3AI-SAT App''';
   // Function to save the image to the gallery with EXIF metadata on iOS
   Future<void> _saveImageToGalleryWithExifIOS(String imagePath) async {
     try {
+      if (imagePath.isEmpty) {
+        log.severe('Invalid image path provided.');
+        return;
+      }
       // Create a method channel to interact with native iOS code
       const platform = MethodChannel('com.t3aisat/save_to_gallery');
       await platform
@@ -436,6 +446,11 @@ T3AI-SAT App''';
 
   // Function to write text in the video and save it in the gallery
   Future<void> _writeTextOnVideoAndSaveToGallery(String videoPath) async {
+    if (_currentPosition == null || _fontFilePath == null) {
+      log.severe('Location data or font path not available');
+      return;
+    }
+
     try {
       // Verify that the font file path is set
       if (_fontFilePath == null) {
@@ -558,15 +573,17 @@ T3AI-SAT App''';
         final outputFile = File(outputPath);
         if (await outputFile.exists()) {
           final result = await SaverGallery.saveFile(
-            file: outputPath,
-            name: 't3aisat_${DateFormat('yyyyMMdd_HHmmss').format(now)}.mp4',
+            filePath: outputPath,
+            fileName:
+                't3aisat_${DateFormat('yyyyMMdd_HHmmss').format(now)}.mp4',
             androidRelativePath: 'Movies/t3aisat',
-            androidExistNotSave: false,
+            skipIfExists: false,
           );
           log.info('Video saved to gallery: $result');
 
           setState(() {
             _updatedMediaPath = outputPath;
+            log.info('Video processed and saved at $outputPath');
           });
 
           // Initialize the video controller without auto-playing
@@ -588,6 +605,7 @@ T3AI-SAT App''';
           });
         }
       } else {
+        log.severe('Failed to process video');
         final logs = await session.getAllLogsAsString();
         log.severe('FFmpeg command failed with return code $returnCode');
         log.severe('FFmpeg logs:\n$logs');

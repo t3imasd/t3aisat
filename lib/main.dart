@@ -6,6 +6,7 @@ import 'package:logging/logging.dart';
 import 'screens/media_location_screen.dart';
 import 'screens/parcel_map_screen.dart';
 import 'package:camera/camera.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 List<CameraDescription> cameras = [];
 
@@ -16,6 +17,7 @@ Future<void> main() async {
 
   try {
     // Code from YouTube video https://www.youtube.com/watch?v=jMgrNw3_rZ0
+    // Load the .env file
     await dotenv.load(fileName: Environment.fileName);
     Logger.root.info('Loaded ${Environment.fileName} file successfully');
   } catch (e) {
@@ -24,12 +26,24 @@ Future<void> main() async {
   }
 
   try {
+    // Ensure permissions are granted before fetching cameras
+    await _requestPermissions();
     cameras = await availableCameras();
   } on CameraException catch (e) {
     Logger.root.severe('Error in fetching the cameras: $e');
   }
 
   runApp(const MyApp());
+}
+
+// Ensure required permissions are granted
+Future<void> _requestPermissions() async {
+  PermissionStatus cameraPermission = await Permission.camera.request();
+  PermissionStatus microphonePermission = await Permission.microphone.request();
+
+  if (cameraPermission.isDenied || microphonePermission.isDenied) {
+    throw Exception('Camera and microphone permissions are required');
+  }
 }
 
 void _setupLogging() {
@@ -166,9 +180,10 @@ class CameraScreenState extends State<CameraScreen>
     _initCamera();
   }
 
-  void _initCamera() async {
+  Future<void> _initCamera() async {
     if (cameras.isEmpty) {
       // No cameras available
+      Logger.root.severe('No cameras found');
       return;
     }
 
@@ -191,7 +206,8 @@ class CameraScreenState extends State<CameraScreen>
   }
 
   void _onTakePictureButtonPressed() async {
-    if (!controller!.value.isInitialized) {
+    if (controller == null || !controller!.value.isInitialized) {
+      Logger.root.severe('Camera is not initialized');
       return;
     }
 
@@ -217,7 +233,8 @@ class CameraScreenState extends State<CameraScreen>
   }
 
   void _onRecordVideoButtonPressed() async {
-    if (!controller!.value.isInitialized) {
+    if (controller == null || !controller!.value.isInitialized) {
+      Logger.root.severe('Camera is not initialized');
       return;
     }
 
@@ -281,10 +298,12 @@ class CameraScreenState extends State<CameraScreen>
               children: [
                 FloatingActionButton(
                   onPressed: _onTakePictureButtonPressed,
+                  heroTag: 'takePhotoFAB',
                   child: const Icon(Icons.photo_camera),
                 ),
                 FloatingActionButton(
                   onPressed: _onRecordVideoButtonPressed,
+                  heroTag: 'recordVideoFAB',
                   child: Icon(_isRecording ? Icons.stop : Icons.videocam),
                 ),
               ],
