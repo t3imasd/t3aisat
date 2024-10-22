@@ -796,7 +796,7 @@ T3AI-SAT App''';
                                     .shrink() // Do not show anything if not initialized
                             : Image.file(
                                 File(_updatedMediaPath!),
-                                fit: BoxFit.cover,
+                                fit: BoxFit.contain,
                                 width: double.infinity,
                               ),
                       ),
