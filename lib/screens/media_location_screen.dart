@@ -86,9 +86,9 @@ class MediaLocationScreenState extends State<MediaLocationScreen> {
         ]);
       } else if (Platform.isIOS) {
         await FFmpegKitConfig.setFontDirectoryList(
-          [_tempDir!.path],  // Temporary Directory where the font is
-          {}  // Empty map for mapping to avoid NSNull issue
-        );
+            [_tempDir!.path], // Temporary Directory where the font is
+            {} // Empty map for mapping to avoid NSNull issue
+            );
       }
     } catch (e) {
       log.severe('Error initializing fonts: $e');
@@ -444,7 +444,7 @@ T3AI-SAT App''';
     }
   }
 
-  // Function to write text in the video and save it in the gallery
+  // Function to write text on the video and save it in the gallery
   Future<void> _writeTextOnVideoAndSaveToGallery(String videoPath) async {
     if (_currentPosition == null || _fontFilePath == null) {
       log.severe('Location data or font path not available');
@@ -475,7 +475,7 @@ T3AI-SAT App''';
 
       // Verify that the input video exists
       if (!await inputMp4File.exists()) {
-        log.severe('Input video file does not exist at path: $inputMp4Path');
+        log.severe('Converted MP4 file does not exist at path: $inputMp4Path');
         return;
       }
 
@@ -488,7 +488,7 @@ T3AI-SAT App''';
         return;
       }
 
-      // Convert coordinates to Degrees, Minutes, Seconds (DMS) format
+      // Convert coordinates to DMS (degrees, minutes, seconds) format
       final latitudeDMS = _convertToDMS(_currentPosition!.latitude);
       final longitudeDMS = _convertToDMS(_currentPosition!.longitude);
 
@@ -507,17 +507,32 @@ T3AI-SAT App''';
           '${DateFormat('dd MMM yyyy HH:mm:ss').format(now)} $timeZoneName';
 
       final formattedLocation = 'Lat: $latitudeDMS\nLon: $longitudeDMS';
-      log.info('Formatted location: $formattedLocation');
+      final descriptionLocationDMS = formattedLocation
+          .replaceAll('"', r'˝') // Escape double quotes
+          .replaceAll(':', r'.') // Escape colons
+          .replaceAll('\n', ' '); // Replace new lines with spaces
+      log.info('Formatted location: $descriptionLocationDMS');
 
       // Format the address and location for displaying on the video
-      final formattedAddress = _address ?? '';
+      String formattedAddress = _address ?? 'Sin direccion';
+
+      // Escape special characters
+      formattedAddress = formattedAddress
+          .replaceAll('"', r'˝') // Escape double quotes
+          .replaceAll(':', r'\:') // Escape colons
+          .replaceAll('%', r'\%'); // Escape percent signs
+
+      // Flatten formattedAddress to be a single line and escape special characters
+      final String escapedAddress = formattedAddress.replaceAll(
+          '\n', ' '); // Replace new lines with spaces
 
       // Build the text that will be drawn on the video
+      final appName = 'T3-AI SAT';
       final formattedText = '''Network: $formattedNetworkTime
 Local: $formattedLocalTime
 $latitudeDMS $longitudeDMS
 $formattedAddress
-T3AI-SAT App''';
+$appName App''';
 
       // Escape special characters for FFmpeg command
       String escapedText = formattedText
@@ -559,6 +574,10 @@ T3AI-SAT App''';
         ffmpegCommand,
         '-codec:a',
         'copy',
+        '-metadata',
+        'description="$descriptionLocationDMS"', // Escaped metadata for coordinates
+        '-metadata',
+        'comment="$escapedAddress $appName"', // Escaped metadata for address
         outputPath,
       ];
 
