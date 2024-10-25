@@ -554,7 +554,7 @@ $appName App''';
       await Directory(dirPath).create(recursive: true);
       final String outputPath = path.join(
         dirPath,
-        't3aisat_${DateFormat('yyyyMMdd_HHmmss').format(now)}_temp.mp4',
+        't3aisat_${DateFormat('yyyyMMdd_HHmmss').format(now)}.mp4',
       );
 
       // Log the paths for debugging
@@ -594,7 +594,7 @@ $appName App''';
           final result = await SaverGallery.saveFile(
             filePath: outputPath,
             fileName:
-                't3aisat_${DateFormat('yyyyMMdd_HHmmss').format(now)}.mp4',
+                't3aisat_${DateFormat('yyyyMMdd_HHmmss').format(now)}_data.mp4',
             androidRelativePath: 'Movies/t3aisat',
             skipIfExists: false,
           );
