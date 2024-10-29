@@ -18,6 +18,8 @@ import 'package:ffmpeg_kit_flutter_full_gpl/ffmpeg_kit_config.dart';
 import 'package:ffmpeg_kit_flutter_full_gpl/return_code.dart';
 import 'package:video_player/video_player.dart';
 import 'package:saver_gallery/saver_gallery.dart';
+import 'package:photo_manager/photo_manager.dart';
+import 'gallery_screen.dart'; // Import the GalleryScreen class
 
 class MediaLocationScreen extends StatefulWidget {
   final String mediaPath;
@@ -30,13 +32,15 @@ class MediaLocationScreen extends StatefulWidget {
   MediaLocationScreenState createState() => MediaLocationScreenState();
 }
 
-class MediaLocationScreenState extends State<MediaLocationScreen> {
+class MediaLocationScreenState extends State<MediaLocationScreen>
+    with WidgetsBindingObserver {
   Position? _currentPosition;
   String? _address;
   final Logger log = Logger('MediaLocationScreen');
   String?
       _updatedMediaPath; // Variable to store the updated media (image/video) path
   bool _isLoading = true; // Variable to manage the loading spinner
+  bool _openedSettings = false; // Flag to check if user went to settings
 
   VideoPlayerController? _videoController;
   bool _isMuted = false; // Variable to track mute state
@@ -46,15 +50,93 @@ class MediaLocationScreenState extends State<MediaLocationScreen> {
 
   Directory? _tempDir;
   String? _fontFilePath;
+  AssetEntity? _lastAsset; // Variable to store the last media asset
+  AssetEntity? _lastCapturedAsset; // Variable to store the last captured media
 
   @override
   void initState() {
     super.initState();
-
+    WidgetsBinding.instance
+        .addObserver(this); // Add observer to track app lifecycle changes
     _initializeFonts(); // Method to initialize fonts
     _listFFmpegFilters(); // Method to list the filters available
+    _requestPermission(); // Request permissions when starting
+    _getCurrentLocation(); // Get current location
+  }
 
-    _getCurrentLocation();
+  @override
+  void dispose() {
+    WidgetsBinding.instance
+        .removeObserver(this); // Remove observer when widget is disposed
+    _videoController?.removeListener(_videoListener);
+    _videoController?.dispose();
+    _hideControlsTimer?.cancel();
+    super.dispose();
+  }
+
+  // Detect app lifecycle state changes
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _openedSettings) {
+      // Only check permissions if we came back from the settings screen
+      _checkPermissionStatus();
+      _openedSettings = false; // Reset the flag once we've checked
+    }
+  }
+
+  Future<void> _checkPermissionStatus() async {
+    var result = await PhotoManager.requestPermissionExtend();
+    if (result == PermissionState.authorized ||
+        result == PermissionState.limited) {
+      // Permission granted, proceed with loading the gallery
+      _loadGalleryAssets();
+    } else {
+      // Permission still denied, show the permission dialog again if necessary
+      log.severe("Permission denied even after returning from settings");
+    }
+  }
+
+  Future<void> _requestPermission() async {
+    var result = await PhotoManager.requestPermissionExtend();
+    if (result == PermissionState.authorized ||
+        result == PermissionState.limited) {
+      // Permission granted or limited access, continue
+      _loadGalleryAssets(); // Load photos and videos of the gallery
+    } else if (result == PermissionState.denied) {
+      // Permission is denied, show a dialog to guide user to settings
+      _showPermissionDeniedDialog();
+    } else {
+      log.severe("Permission denied to access the gallery");
+    }
+  }
+
+  Future<void> _loadGalleryAssets() async {
+    final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
+      type: RequestType.all, // To get both photos and videos
+    );
+
+    // Specify page and size explicitly
+    final List<AssetEntity> mediaFiles =
+        await albums[0].getAssetListPaged(page: 0, size: 100);
+
+    // Get the last media file
+    if (mediaFiles.isNotEmpty) {
+      _lastAsset = mediaFiles.first;
+    }
+
+    setState(() {
+      // TODO: Update state to show the files in the UI
+      // Example: _mediaFiles = mediaFiles;
+    });
+  }
+
+  void _showGallery() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const GalleryScreen(),
+      ),
+    );
   }
 
   Future<void> _initializeFonts() async {
@@ -239,7 +321,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen> {
         'DateTimeOriginal':
             DateFormat('yyyy:MM:dd HH:mm:ss').format(DateTime.now()),
         'UserComment':
-            't3AI-SAT App. Direccion donde se tomó la foto: ${_address ?? 'Sin direccion'}',
+            'T3AI-SAT App. Direccion donde se toma la foto: ${_address ?? 'Sin direccion'}',
         'ProfileDescription': 'sRGB', // Add color profile description
         'ColorSpace': '1', // Add color space as sRGB (value 1 means sRGB)
       });
@@ -411,6 +493,9 @@ T3AI-SAT App''';
       } else {
         log.severe('Permission denied to access photos');
       }
+
+      // Call _onCaptureCompleted after saving the image
+      await _onCaptureCompleted(updatedImagePath);
 
       // Update the state to reflect the new image path in the UI
       setState(() {
@@ -600,6 +685,9 @@ $appName App''';
           );
           log.info('Video saved to gallery: $result');
 
+          // Call _onCaptureCompleted after saving the video
+          await _onCaptureCompleted(outputPath);
+
           setState(() {
             _updatedMediaPath = outputPath;
             log.info('Video processed and saved at $outputPath');
@@ -652,14 +740,6 @@ $appName App''';
     }
   }
 
-  @override
-  void dispose() {
-    _videoController?.removeListener(_videoListener);
-    _videoController?.dispose();
-    _hideControlsTimer?.cancel();
-    super.dispose();
-  }
-
   // Function to toggle play and pause
   void _togglePlayPause() {
     if (_videoController == null) return;
@@ -695,6 +775,56 @@ $appName App''';
         _showControls = false;
       });
     });
+  }
+
+  void _showPermissionDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Acceso Galería Fotos'),
+          content: Text('Permite el acceso a tus fotos en Ajustes, por favor'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _openedSettings = true; // Set flag before going to setting
+                PhotoManager
+                    .openSetting(); // Open app settings to allow user to grant permission
+              },
+              child: Text('Abrir Ajustes'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancelar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Function that handles the completion of image or video capture
+  Future<void> _onCaptureCompleted(String filePath) async {
+    // Save the reference of the last captured file in `_lastCapturedAsset`
+    final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
+      type: RequestType.all,
+    );
+    if (albums.isNotEmpty) {
+      // Get the most recent assets
+      final List<AssetEntity> recentAssets = await albums[0].getAssetListRange(
+        start: 0,
+        end: 1,
+      );
+      if (recentAssets.isNotEmpty) {
+        setState(() {
+          _lastCapturedAsset =
+              recentAssets.first; // Store the most recent media
+        });
+      }
+    }
   }
 
   @override
@@ -842,6 +972,42 @@ $appName App''';
                                     color: Color(0xFF424242)), // Dark gray
                               ),
                             ),
+                            if (_lastAsset !=
+                                null) // Show thumbnail if there is a last asset
+                              GestureDetector(
+                                onTap:
+                                    _showGallery, // Show the gallery when tapped
+                                child: FutureBuilder<Uint8List?>(
+                                  future:
+                                      _lastCapturedAsset!.thumbnailDataWithSize(
+                                    const ThumbnailSize.square(100),
+                                  ),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState ==
+                                            ConnectionState.done &&
+                                        snapshot.hasData) {
+                                      return SizedBox(
+                                        width: 50, // Small size
+                                        height: 50, // Small and square size
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                              8.0), // Rounded edges
+                                          child: Image.memory(
+                                            snapshot.data!,
+                                            fit: BoxFit
+                                                .cover, // The image fills the square container
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                    return Container(
+                                      width: 50,
+                                      height: 50,
+                                      color: Colors.grey, // Placeholder color
+                                    );
+                                  },
+                                ),
+                              ),
                           ],
                         ),
                       ),
