@@ -5,6 +5,7 @@ import 'package:native_exif/native_exif.dart'; // For EXIF data
 import 'package:ffmpeg_kit_flutter_full_gpl/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_full_gpl/return_code.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'media_viewer_screen.dart'; // Import the new MediaViewerScreen
 
 // Gallery Screen
 class GalleryScreen extends StatelessWidget {
@@ -14,14 +15,14 @@ class GalleryScreen extends StatelessWidget {
   Future<List<AssetEntity>> _loadAndFilterMedia() async {
     // Fetch the list of media albums (both photos and videos)
     final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
-      type: RequestType.all, // To fetch both photos and videos
+      type: RequestType.all, // Fetch both photos and videos
     );
 
     if (albums.isNotEmpty) {
       // Load the first 100 media files from the first album
       final List<AssetEntity> mediaFiles = await albums[0].getAssetListPaged(
         page: 0,
-        size: 100, // Limit the number of files to 100
+        size: 100, // Limit to 100 files
       );
 
       // Filter media based on metadata
@@ -43,7 +44,7 @@ class GalleryScreen extends StatelessWidget {
         }
       }
 
-      // Sort filtered media by creation date (newest first)
+      // Sort media by creation date (newest first)
       filteredMedia
           .sort((a, b) => b.createDateTime.compareTo(a.createDateTime));
 
@@ -60,10 +61,8 @@ class GalleryScreen extends StatelessWidget {
 
     // Use native_exif to extract EXIF data from the image
     final exif = await Exif.fromPath(file.path);
-
     // Get the 'UserComment' field from the EXIF data
     final userComment = await exif.getAttribute('UserComment');
-
     // Close the EXIF reader after reading attributes
     await exif.close();
 
@@ -86,7 +85,6 @@ class GalleryScreen extends StatelessWidget {
 
     if (returnCode != null && ReturnCode.isSuccess(returnCode)) {
       final output = await session.getAllLogsAsString();
-
       // Updated regex to capture the 'comment' field properly including quotes
       final RegExp commentRegex = RegExp(r'comment\s*:\s*"(.+)"');
       final match = output != null ? commentRegex.firstMatch(output) : null;
@@ -122,31 +120,50 @@ class GalleryScreen extends StatelessWidget {
               ),
               itemCount: mediaFiles.length, // Total number of media files
               itemBuilder: (context, index) {
-                return FutureBuilder<Uint8List?>(
-                  future: mediaFiles[index].thumbnailDataWithSize(
-                    const ThumbnailSize.square(
-                        200), // Request square thumbnails (200x200)
-                  ),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.done &&
-                        snapshot.hasData) {
-                      return Image.memory(
-                        snapshot.data!, // Display the image thumbnail
-                        fit: BoxFit
-                            .cover, // Ensure the image covers the square thumbnail space
+                return GestureDetector(
+                  onTap: () async {
+                    final file = await mediaFiles[index].file;
+                    if (file != null) {
+                      // Navigate to MediaViewerScreen on tap
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MediaViewerScreen(
+                            mediaPath: file.path,
+                            isVideo: mediaFiles[index].type == AssetType.video,
+                          ),
+                        ),
                       );
                     }
-                    return const SizedBox(
-                        child:
-                            CircularProgressIndicator()); // Placeholder while loading
                   },
+                  child: FutureBuilder<Uint8List?>(
+                    future: mediaFiles[index].thumbnailDataWithSize(
+                      const ThumbnailSize.square(
+                          200), // Request square thumbnails (200x200)
+                    ),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done &&
+                          snapshot.hasData) {
+                        return Image.memory(
+                          snapshot.data!, // Display the image thumbnail
+                          fit: BoxFit
+                              .cover, // Ensure the image covers the square thumbnail space
+                        );
+                      }
+                      return const SizedBox(
+                        child:
+                            CircularProgressIndicator(), // Show loading while fetching thumbnail
+                      );
+                    },
+                  ),
                 );
               },
             );
           }
           return const Center(
-              child:
-                  CircularProgressIndicator()); // Show a loading indicator while fetching media
+            child:
+                CircularProgressIndicator(), // Show loading indicator while fetching media
+          );
         },
       ),
     );
