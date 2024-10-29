@@ -7,6 +7,8 @@ import 'screens/media_location_screen.dart';
 import 'screens/parcel_map_screen.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:photo_manager/photo_manager.dart';
+import 'screens/gallery_screen.dart';
 
 List<CameraDescription> cameras = [];
 
@@ -173,11 +175,13 @@ class CameraScreenState extends State<CameraScreen>
   CameraController? controller;
   bool _isCameraInitialized = false;
   bool _isRecording = false;
+  AssetEntity? _lastCapturedAsset; // Variable to store the last captured media
 
   @override
   void initState() {
     super.initState();
     _initCamera();
+    _loadLastCapturedAsset(); // Load the last captured asset
   }
 
   Future<void> _initCamera() async {
@@ -271,6 +275,65 @@ class CameraScreenState extends State<CameraScreen>
     }
   }
 
+  // Load the last captured media from the app's gallery
+  Future<void> _loadLastCapturedAsset() async {
+    final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
+      type: RequestType.all,
+      filterOption: FilterOptionGroup(
+        createTimeCond: DateTimeCond(
+          min: DateTime.now().subtract(const Duration(days: 365)), // 1 year ago
+          max: DateTime.now(), // Current date
+        ),
+      ),
+    );
+
+    if (albums.isNotEmpty) {
+      final List<AssetEntity> mediaFiles = await albums[0].getAssetListRange(
+        start: 0,
+        end: 1,
+      );
+
+      if (mediaFiles.isNotEmpty) {
+        setState(() {
+          _lastCapturedAsset = mediaFiles.first;
+        });
+      }
+    }
+  }
+
+  void _navigateToLastCapturedMedia(BuildContext context) async {
+    // Retrieve the actual file from _lastCapturedAsset
+    final file = await _lastCapturedAsset!.file;
+
+    if (file != null) {
+      // Navigate to MediaLocationScreen once the file is resolved
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MediaLocationScreen(
+            mediaPath: file.path, // Access the file path
+            isVideo: _lastCapturedAsset!.type == AssetType.video,
+          ),
+        ),
+      );
+    } else {
+      // Handle the case where the file could not be loaded
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No se pudo cargar el archivo")),
+      );
+    }
+  }
+
+  void _navigateToGallery(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const GalleryScreen(), // Navigate to GalleryScreen
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isCameraInitialized || controller == null) {
@@ -306,6 +369,56 @@ class CameraScreenState extends State<CameraScreen>
                   heroTag: 'recordVideoFAB',
                   child: Icon(_isRecording ? Icons.stop : Icons.videocam),
                 ),
+                // Third button showing the thumbnail of the last captured media
+                if (_lastCapturedAsset != null)
+                  FutureBuilder<Uint8List?>(
+                    future: _lastCapturedAsset!
+                        .thumbnailDataWithSize(ThumbnailSize(100, 100)),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done &&
+                          snapshot.hasData) {
+                        return FloatingActionButton(
+                          onPressed: () {
+                            _navigateToGallery(
+                                context); // Navigate to the gallery screen instead of MediaLocationScreen
+                          },
+                          heroTag: 'lastCapturedMediaFAB',
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(
+                                8.0), // Rounded edges to match the button shape
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(
+                                  8.0), // Rounded edges to match the button shape
+                              child: FutureBuilder<Uint8List?>(
+                                future: _lastCapturedAsset!
+                                    .thumbnailDataWithSize(
+                                        const ThumbnailSize.square(200)),
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState ==
+                                          ConnectionState.done &&
+                                      snapshot.hasData) {
+                                    return Image.memory(
+                                      snapshot.data!,
+                                      fit: BoxFit
+                                          .cover, // This makes the image cover the entire button area
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                    );
+                                  }
+                                  return const CircularProgressIndicator(); // Show a loading indicator while the image loads
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      return const FloatingActionButton(
+                        onPressed: null,
+                        heroTag: 'lastCapturedMediaFAB',
+                        child: Icon(Icons.photo_library),
+                      );
+                    },
+                  ),
               ],
             ),
           ),
