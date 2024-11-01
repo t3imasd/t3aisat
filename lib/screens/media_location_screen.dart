@@ -20,13 +20,20 @@ import 'package:video_player/video_player.dart';
 import 'package:saver_gallery/saver_gallery.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'gallery_screen.dart'; // Import the GalleryScreen class
+import '../model/photo_model.dart';
+import '../main.dart';
+import '../objectbox.g.dart';
 
 class MediaLocationScreen extends StatefulWidget {
   final String mediaPath;
   final bool isVideo;
+  final Store store; // Add the store parameter
 
   const MediaLocationScreen(
-      {super.key, required this.mediaPath, required this.isVideo});
+      {super.key,
+      required this.mediaPath,
+      required this.isVideo,
+      required this.store});
 
   @override
   MediaLocationScreenState createState() => MediaLocationScreenState();
@@ -130,11 +137,51 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
     });
   }
 
+  Future<void> _savePhotoToDatabase() async {
+    if (!widget.isVideo) {
+      final box = widget.store.box<Photo>();
+
+      // After saving to gallery, retrieve the latest asset by creation date
+      List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
+        type: RequestType.image,
+      );
+
+      if (albums.isNotEmpty) {
+        List<AssetEntity> recentAssets = await albums[0].getAssetListRange(
+          start: 0,
+          end: 1,
+        );
+
+        if (recentAssets.isNotEmpty) {
+          final asset =
+              recentAssets.first; // Assume this is the latest captured photo
+
+          // Check if the galleryId already exists in the box to avoid duplicates
+          final existingPhotos = box.getAll();
+          final exists =
+              existingPhotos.any((photo) => photo.galleryId == asset.id);
+
+          if (!exists) {
+            final photo = Photo(
+              galleryId: asset.id, // Store gallery ID
+              captureDate: DateTime.now(),
+            );
+            box.put(photo); // Save photo info in ObjectBox
+
+            // Update the ValueNotifier with the new list of photos
+            photoNotifier.value =
+                box.getAll(); // This notifies the photoNotifier listeners
+          }
+        }
+      }
+    }
+  }
+
   void _showGallery() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const GalleryScreen(),
+        builder: (context) => GalleryScreen(store: widget.store),
       ),
     );
   }
@@ -321,7 +368,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
         'DateTimeOriginal':
             DateFormat('yyyy:MM:dd HH:mm:ss').format(DateTime.now()),
         'UserComment':
-            'T3AI-SAT App. Direccion donde se toma la foto: ${_address ?? 'Sin direccion'}',
+            'Desarrollado por Think Tank InnoTech. Direccion donde se toma la foto: ${_address ?? 'Sin direccion'}',
         'ProfileDescription': 'sRGB', // Add color profile description
         'ColorSpace': '1', // Add color space as sRGB (value 1 means sRGB)
       });
@@ -381,8 +428,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
 
       // Get the current date and time
       final now = DateTime.now();
-      final timeZoneName =
-          now.timeZoneName; // Detects the time zone name (e.g., CEST, CET)
+      final timeZoneName = now.timeZoneName; // Detects the time zone name (e.g., CEST, CET)
 
       // Add 1 second to the network time to simulate network synchronization
       final networkTime = now.add(const Duration(seconds: 1));
@@ -404,7 +450,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
 Local: $formattedLocalTime
 $latitudeDMS $longitudeDMS
 $formattedAddress
-T3AI-SAT App''';
+Think Tank InnoTech''';
 
       // Calculate text size
       final numLineBreaks = countLinesInText(formattedText);
@@ -447,7 +493,7 @@ T3AI-SAT App''';
         return;
       }
 
-      // Save the updated image to the specified path
+      // Save the modified image to the specified path
       final updatedImageFile = File(updatedImagePath);
       log.info('Updated image path: $updatedImagePath');
       log.info('Updated image file path: ${updatedImageFile.path}');
@@ -478,16 +524,18 @@ T3AI-SAT App''';
           if (await updatedImageFile.exists()) {
             final result = await SaverGallery.saveFile(
               filePath: updatedImageFile.path,
-              fileName:
-                  't3aisat_${DateFormat('yyyyMMdd_HHmmss').format(now)}.jpg', // Ajusta la extensión según el tipo de archivo
+              fileName: 't3aisat_$formattedDate.jpg',
               androidRelativePath: 'Pictures/t3aisat',
               skipIfExists: false,
             );
             log.info('Image saved to gallery: $result');
           }
         } else if (Platform.isIOS) {
+          // For iOS, save to gallery and then update ObjectBox
           // Use platform channel to save the image with EXIF metadata on iOS
           await _saveImageToGalleryWithExifIOS(updatedImagePath);
+          // Update ObjectBox with the new gallery ID
+          await _savePhotoToDatabase();
           log.info('Updated image saved to gallery on iOS');
         }
       } else {
@@ -612,12 +660,12 @@ T3AI-SAT App''';
           '\n', ' '); // Replace new lines with spaces
 
       // Build the text that will be drawn on the video
-      final appName = 'T3-AI SAT';
+      final appName = 'Think Tank InnoTech';
       final formattedText = '''Network: $formattedNetworkTime
 Local: $formattedLocalTime
 $latitudeDMS $longitudeDMS
 $formattedAddress
-$appName App''';
+$appName''';
 
       // Escape special characters for FFmpeg command
       String escapedText = formattedText

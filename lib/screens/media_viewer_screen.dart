@@ -150,7 +150,7 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
         ),
         // Mute/Unmute Button
         Positioned(
-          bottom: 30,
+          bottom: 80,
           right: 30,
           child: GestureDetector(
             onTap: _toggleMute,
@@ -169,12 +169,16 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
           ),
         ),
         // Video Progress Bar
-        VideoProgressIndicator(
-          _videoController!,
-          allowScrubbing: true,
-          colors: const VideoProgressColors(
-            playedColor: Colors.red, // Progress bar color
-            backgroundColor: Colors.black38, // Background color
+        Padding(
+          padding:
+              const EdgeInsets.only(bottom: 50.0), // Espacio desde el borde
+          child: VideoProgressIndicator(
+            _videoController!,
+            allowScrubbing: true,
+            colors: const VideoProgressColors(
+              playedColor: Colors.red, // Color de la barra de progreso
+              backgroundColor: Colors.black38, // Color de fondo
+            ),
           ),
         ),
       ],

@@ -3,14 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logging/logging.dart';
-import 'screens/media_location_screen.dart';
-import 'screens/parcel_map_screen.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:path_provider/path_provider.dart';
+import 'screens/media_location_screen.dart';
+import 'screens/parcel_map_screen.dart';
 import 'screens/gallery_screen.dart';
+import 'model/photo_model.dart';
+import 'objectbox.g.dart'; // Import ObjectBox generated code
 
 List<CameraDescription> cameras = [];
+late Store store; // ObjectBox store
+late ValueNotifier<List<Photo>> photoNotifier;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,19 +40,34 @@ Future<void> main() async {
     Logger.root.severe('Error in fetching the cameras: $e');
   }
 
+  store = await openStore(); // Initialize ObjectBox store
+  photoNotifier = ValueNotifier<List<Photo>>(
+      _getPhotosFromStore()); // Initialize the ValueNotifier after store
+
   runApp(const MyApp());
+
+  // Close the store when the app terminates
+  WidgetsBinding.instance.addObserver(
+    LifecycleEventHandler(
+      onDetached: () async {
+        store.close();
+      },
+    ),
+  );
 }
 
-// Ensure required permissions are granted
-Future<void> _requestPermissions() async {
-  PermissionStatus cameraPermission = await Permission.camera.request();
-  PermissionStatus microphonePermission = await Permission.microphone.request();
-
-  if (cameraPermission.isDenied || microphonePermission.isDenied) {
-    throw Exception('Camera and microphone permissions are required');
-  }
+// Método auxiliar para obtener fotos desde el store
+List<Photo> _getPhotosFromStore() {
+  final box = store.box<Photo>();
+  return box.getAll();
 }
 
+Future<Store> openStore() async {
+  final dir = await getApplicationDocumentsDirectory();
+  return Store(getObjectBoxModel(), directory: '${dir.path}/objectbox');
+}
+
+// Set up logging for the app
 void _setupLogging() {
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) {
@@ -55,6 +75,19 @@ void _setupLogging() {
       print('${record.level.name}: ${record.time}: ${record.message}');
     }
   });
+}
+
+// Request necessary permissions for the app
+Future<void> _requestPermissions() async {
+  PermissionStatus cameraPermission = await Permission.camera.request();
+  PermissionStatus microphonePermission = await Permission.microphone.request();
+  PermissionStatus photoPermission = await Permission.photos.request();
+
+  if (cameraPermission.isDenied ||
+      microphonePermission.isDenied ||
+      photoPermission.isDenied) {
+    throw Exception('Camera, microphone, and photos permissions are required');
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -108,7 +141,7 @@ class MyHomePage extends StatelessWidget {
       backgroundColor: const Color(0xFFE6E6E6), // Light gray
       appBar: AppBar(
         title: Text(
-          'T3 AI Sat',
+          'Think Tank InnoTech',
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
@@ -160,6 +193,19 @@ class MyHomePage extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class LifecycleEventHandler extends WidgetsBindingObserver {
+  final Future<void> Function()? onDetached;
+
+  LifecycleEventHandler({this.onDetached});
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.detached) {
+      onDetached?.call();
+    }
   }
 }
 
@@ -228,6 +274,7 @@ class CameraScreenState extends State<CameraScreen>
           builder: (context) => MediaLocationScreen(
             mediaPath: picture.path,
             isVideo: false,
+            store: store, // Pass the ObjectBox store to MediaLocationScreen
           ),
         ),
       );
@@ -255,6 +302,7 @@ class CameraScreenState extends State<CameraScreen>
             builder: (context) => MediaLocationScreen(
               mediaPath: videoFile.path,
               isVideo: true,
+              store: store, // Pass the ObjectBox store to MediaLocationScreen
             ),
           ),
         );
@@ -313,6 +361,7 @@ class CameraScreenState extends State<CameraScreen>
           builder: (context) => MediaLocationScreen(
             mediaPath: file.path, // Access the file path
             isVideo: _lastCapturedAsset!.type == AssetType.video,
+            store: store, // Pass the ObjectBox store to MediaLocationScreen
           ),
         ),
       );
@@ -329,7 +378,7 @@ class CameraScreenState extends State<CameraScreen>
       context,
       MaterialPageRoute(
         builder: (context) =>
-            const GalleryScreen(), // Navigate to GalleryScreen
+            GalleryScreen(store: store), // Navigate to GalleryScreen with store
       ),
     );
   }
