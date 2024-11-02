@@ -76,7 +76,7 @@ class GalleryScreen extends StatelessWidget {
 
       // Check if 'UserComment' starts with 'Think Tank InnoTech'
       return userComment != null &&
-          userComment.startsWith('Think Tank InnoTech');
+          userComment.contains('Think Tank InnoTech');
     } else if (Platform.isIOS) {
       // iOS: Check if gallery ID exists in ObjectBox
       final List<Photo> savedPhotos = box.getAll();

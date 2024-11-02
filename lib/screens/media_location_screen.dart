@@ -368,7 +368,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
         'DateTimeOriginal':
             DateFormat('yyyy:MM:dd HH:mm:ss').format(DateTime.now()),
         'UserComment':
-            'Desarrollado por Think Tank InnoTech. Direccion donde se toma la foto: ${_address ?? 'Sin direccion'}',
+            'Desarrollado por Think Tank InnoTech. Direccion donde se toma la foto: ${_address?.replaceAll('\n', ' ') ?? 'Sin direccion'}',
         'ProfileDescription': 'sRGB', // Add color profile description
         'ColorSpace': '1', // Add color space as sRGB (value 1 means sRGB)
       });
