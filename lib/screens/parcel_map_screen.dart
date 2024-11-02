@@ -513,14 +513,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
     final screenCoordinate = clickContext.touchPosition;
 
     try {
-      // Create RenderedQueryGeometry with properly formatted ScreenCoordinate
-      final renderedQueryGeometry = mapbox.RenderedQueryGeometry(
-        value: jsonEncode([
-          screenCoordinate.x,
-          screenCoordinate.y
-        ]), // A list of doubles for x and y coordinates
-        type: mapbox.Type.SCREEN_COORDINATE,
-      );
+      // Crear RenderedQueryGeometry usando el método actualizado
+      final renderedQueryGeometry = mapbox.RenderedQueryGeometry.fromScreenCoordinate(screenCoordinate);
 
       // Query rendered features at the clicked point to find the parcel
       final features = await _mapboxMap.queryRenderedFeatures(
