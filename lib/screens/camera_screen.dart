@@ -6,6 +6,7 @@ import 'package:logging/logging.dart';
 import '../objectbox.g.dart';
 import 'media_location_screen.dart';
 import 'gallery_screen.dart';
+import '../helpers/media_helpers.dart'; // Added import
 
 class CameraScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -17,7 +18,8 @@ class CameraScreen extends StatefulWidget {
   CameraScreenState createState() => CameraScreenState();
 }
 
-class CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver {
+class CameraScreenState extends State<CameraScreen>
+    with WidgetsBindingObserver {
   CameraController? controller;
   bool _isCameraInitialized = false;
   bool _isRecording = false;
@@ -74,7 +76,8 @@ class CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver 
           builder: (context) => MediaLocationScreen(
             mediaPath: picture.path,
             isVideo: false,
-            store: widget.store, // Pass the ObjectBox store to MediaLocationScreen
+            store:
+                widget.store, // Pass the ObjectBox store to MediaLocationScreen
           ),
         ),
       );
@@ -102,7 +105,8 @@ class CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver 
             builder: (context) => MediaLocationScreen(
               mediaPath: videoFile.path,
               isVideo: true,
-              store: widget.store, // Pass the ObjectBox store to MediaLocationScreen
+              store: widget
+                  .store, // Pass the ObjectBox store to MediaLocationScreen
             ),
           ),
         );
@@ -142,9 +146,20 @@ class CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver 
       );
 
       if (mediaFiles.isNotEmpty) {
-        setState(() {
-          _lastCapturedAsset = mediaFiles.first;
-        });
+        final AssetEntity asset = mediaFiles.first;
+        bool isValid = false;
+
+        if (asset.type == AssetType.image) {
+          isValid = await isValidPhoto(asset, widget.store);
+        } else if (asset.type == AssetType.video) {
+          isValid = await isValidVideo(asset);
+        }
+
+        if (isValid) {
+          setState(() {
+            _lastCapturedAsset = asset;
+          });
+        }
       }
     }
   }
@@ -161,7 +176,8 @@ class CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver 
           builder: (context) => MediaLocationScreen(
             mediaPath: file.path, // Access the file path
             isVideo: _lastCapturedAsset!.type == AssetType.video,
-            store: widget.store, // Pass the ObjectBox store to MediaLocationScreen
+            store:
+                widget.store, // Pass the ObjectBox store to MediaLocationScreen
           ),
         ),
       );
@@ -177,8 +193,8 @@ class CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver 
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            GalleryScreen(store: widget.store), // Navigate to GalleryScreen with store
+        builder: (context) => GalleryScreen(
+            store: widget.store), // Navigate to GalleryScreen with store
       ),
     );
   }
@@ -267,6 +283,14 @@ class CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver 
                         child: Icon(Icons.photo_library),
                       );
                     },
+                  ),
+                if (_lastCapturedAsset == null)
+                  FloatingActionButton(
+                    onPressed: () {
+                      _navigateToGallery(context);
+                    },
+                    heroTag: 'lastCapturedMediaFAB',
+                    child: const Icon(Icons.photo_library),
                   ),
               ],
             ),

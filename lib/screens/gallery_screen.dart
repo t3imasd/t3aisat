@@ -25,7 +25,7 @@ class GalleryScreen extends StatelessWidget {
       // Load the first 100 media files from the first album
       final List<AssetEntity> mediaFiles = await albums[0].getAssetListPaged(
         page: 0,
-        size: 10, // Limit to 100 files
+        size: 100, // Limit to 100 files
       );
 
       // Filter media based on metadata
