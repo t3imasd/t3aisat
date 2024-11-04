@@ -158,70 +158,37 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
     if (shouldDelete == true) {
       try {
         if (Platform.isIOS) {
-          if (!widget.isVideo) {
-            // For iOS, find the AssetEntity that matches the mediaPath
-            final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(type: RequestType.image);
-            AssetEntity? photoAsset;
+          final requestType =
+              widget.isVideo ? RequestType.video : RequestType.image;
+          final List<AssetPathEntity> albums =
+              await PhotoManager.getAssetPathList(type: requestType);
+          AssetEntity? targetAsset;
 
-            for (final album in albums) {
-              final List<AssetEntity> assets = await album.getAssetListPaged(page: 0, size: 100);
-              for (final asset in assets) {
-                final file = await asset.file;
-                if (file != null && file.path == widget.mediaPath) {
-                  photoAsset = asset;
-                  break;
-                }
-              }
-              if (photoAsset != null) {
+          for (final album in albums) {
+            final List<AssetEntity> assets =
+                await album.getAssetListPaged(page: 0, size: 100);
+            for (final asset in assets) {
+              final file = await asset.file;
+              if (file?.path == widget.mediaPath) {
+                targetAsset = asset;
                 break;
               }
             }
-
-            if (photoAsset != null) {
-              final result = await PhotoManager.editor.deleteWithIds([photoAsset.id]);
-              if (result.isNotEmpty) {
-                Navigator.of(context).pop(true); // Indicate successful elimination
-                return;
-              }
-            }
-
-            throw Exception('No se pudo eliminar el archivo de la biblioteca de fotos');
-          } else {
-            // For iOS, use the original method to remove a video of the iOS Photo Library
-            final List<AssetPathEntity> albums =
-                await PhotoManager.getAssetPathList(
-              type: RequestType.video,
-            );
-
-            AssetEntity? videoAsset;
-
-            for (final album in albums) {
-              final List<AssetEntity> assets =
-                  await album.getAssetListPaged(page: 0, size: 100);
-              for (final asset in assets) {
-                final file = await asset.file;
-                if (file != null && file.path == widget.mediaPath) {
-                  videoAsset = asset;
-                  break;
-                }
-              }
-              if (videoAsset != null) {
-                break;
-              }
-            }
-
-            if (videoAsset != null) {
-              final result =
-                  await PhotoManager.editor.deleteWithIds([videoAsset.id]);
-              if (result.isNotEmpty) {
-                Navigator.of(context).pop(true); // Indicate successful elimination
-                return;
-              }
-            }
-
-            throw Exception(
-                'No se pudo eliminar el archivo de la biblioteca de fotos');
+            if (targetAsset != null) break;
           }
+
+          if (targetAsset != null) {
+            final result =
+                await PhotoManager.editor.deleteWithIds([targetAsset.id]);
+            if (result.isNotEmpty) {
+              Navigator.of(context).pop(true);
+              return;
+            }
+          }
+
+          throw Exception(widget.isVideo
+              ? 'No se pudo eliminar el vídeo de la biblioteca de fotos'
+              : 'No se pudo eliminar la foto de la biblioteca de fotos');
         } else {
           // For Android, save photo or video in the gallery
           final file = File(widget.mediaPath);
