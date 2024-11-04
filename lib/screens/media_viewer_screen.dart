@@ -126,16 +126,51 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
   }
 
   Future<void> _deleteMedia() async {
-    try {
-      final file = File(widget.mediaPath);
-      if (await file.exists()) {
-        await file.delete();
-        // Optionally, refresh gallery here if needed
-        Navigator.of(context).pop(true); // Return true to indicate deletion
+    // Show confirmation dialog
+    final bool? shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text(widget.isVideo ? 'Eliminar vídeo' : 'Eliminar foto'),
+        content: Text(
+          widget.isVideo 
+          ? '¿Estás seguro de que deseas eliminar este vídeo? Esta acción no se puede deshacer.'
+          : '¿Estás seguro de que deseas eliminar esta foto? Esta acción no se puede deshacer.'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      try {
+        final file = File(widget.mediaPath);
+        if (await file.exists()) {
+          await file.delete();
+          Navigator.of(context).pop(true); // Return true to indicate deletion
+        }
+      } catch (e) {
+        // Show error message if deletion fails
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Error al eliminar el archivo'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        Navigator.of(context).pop(false);
       }
-    } catch (e) {
-      // Handle errors if necessary
-      Navigator.of(context).pop(false); // Return false if deletion failed
     }
   }
 
