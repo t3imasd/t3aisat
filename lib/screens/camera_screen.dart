@@ -159,9 +159,18 @@ class CameraScreenState extends State<CameraScreen>
           setState(() {
             _lastCapturedAsset = asset;
           });
-          break; // Exit the loop after finding the first valid asset
+          return; // Exit after setting the new asset
         }
       }
+
+      // If no valid asset is found, set _lastCapturedAsset to null
+      setState(() {
+        _lastCapturedAsset = null;
+      });
+    } else {
+      setState(() {
+        _lastCapturedAsset = null;
+      });
     }
   }
 
@@ -170,18 +179,21 @@ class CameraScreenState extends State<CameraScreen>
     final file = await _lastCapturedAsset!.file;
 
     if (file != null) {
-      // Navigate to MediaLocationScreen once the file is resolved
-      Navigator.push(
+      // Navigate to GalleryScreen once the file is resolved
+      final deleted = await Navigator.push<bool>(
         context,
         MaterialPageRoute(
-          builder: (context) => MediaLocationScreen(
-            mediaPath: file.path, // Access the file path
-            isVideo: _lastCapturedAsset!.type == AssetType.video,
-            store:
-                widget.store, // Pass the ObjectBox store to MediaLocationScreen
+          builder: (context) => GalleryScreen(
+            store: widget.store, // Pass the ObjectBox store to GalleryScreen
           ),
         ),
       );
+
+      if (deleted == true) {
+        // If media was deleted, reload the last captured asset
+        await _loadLastCapturedAsset();
+        setState(() {});
+      }
     } else {
       // Handle the case where the file could not be loaded
       ScaffoldMessenger.of(context).showSnackBar(
@@ -190,12 +202,11 @@ class CameraScreenState extends State<CameraScreen>
     }
   }
 
-  void _navigateToGallery(BuildContext context) {
-    Navigator.push(
+  void _navigateToGallery(BuildContext context) async {
+    await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (context) => GalleryScreen(
-            store: widget.store), // Navigate to GalleryScreen with store
+        builder: (context) => GalleryScreen(store: widget.store),
       ),
     );
   }
@@ -245,8 +256,8 @@ class CameraScreenState extends State<CameraScreen>
                           snapshot.hasData) {
                         return FloatingActionButton(
                           onPressed: () {
-                            _navigateToGallery(
-                                context); // Navigate to the gallery screen instead of MediaLocationScreen
+                            _navigateToLastCapturedMedia(
+                                context); // Navigate and handle deletion
                           },
                           heroTag: 'lastCapturedMediaFAB',
                           child: ClipRRect(

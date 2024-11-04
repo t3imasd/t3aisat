@@ -9,11 +9,17 @@ import '../objectbox.g.dart'; // Generated ObjectBox file
 import '../main.dart'; // ValueNotifier imports from main.dart
 import '../helpers/media_helpers.dart';
 
-class GalleryScreen extends StatelessWidget {
+class GalleryScreen extends StatefulWidget {
+  // Changed from StatelessWidget to StatefulWidget
   final Store store;
 
   const GalleryScreen({super.key, required this.store});
 
+  @override
+  GalleryScreenState createState() => GalleryScreenState();
+}
+
+class GalleryScreenState extends State<GalleryScreen> {
   // Method to load and filter media based on EXIF and metadata
   Future<List<AssetEntity>> _loadAndFilterMedia(List<Photo> photoList) async {
     // Fetch the list of media albums (both photos and videos)
@@ -87,8 +93,8 @@ class GalleryScreen extends StatelessWidget {
                         onTap: () async {
                           final file = await mediaFiles[index].file;
                           if (file != null) {
-                            // Navigate to MediaViewerScreen on tap
-                            Navigator.push(
+                            // Navigate to MediaViewerScreen on tap and await the result
+                            final deleted = await Navigator.push<bool>(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => MediaViewerScreen(
@@ -98,6 +104,15 @@ class GalleryScreen extends StatelessWidget {
                                 ),
                               ),
                             );
+
+                            if (deleted == true) {
+                              // If a media was deleted, refresh the gallery
+                              setState(() {
+                                // Trigger a rebuild to reload media files
+                              });
+                              // Notify the parent that a deletion occurred
+                              Navigator.of(context).pop(true); // Pop with true
+                            }
                           }
                         },
                         child: FutureBuilder<Uint8List?>(

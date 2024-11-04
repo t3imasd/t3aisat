@@ -131,10 +131,11 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
       if (await file.exists()) {
         await file.delete();
         // Optionally, refresh gallery here if needed
-        Navigator.of(context).pop(); // Return to previous screen
+        Navigator.of(context).pop(true); // Return true to indicate deletion
       }
     } catch (e) {
       // Handle errors if necessary
+      Navigator.of(context).pop(false); // Return false if deletion failed
     }
   }
 
