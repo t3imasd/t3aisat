@@ -4,8 +4,6 @@ import 'package:video_player/video_player.dart';
 import 'dart:async'; // For Timer
 import 'package:photo_manager/photo_manager.dart'; // Import photo_manager
 import 'package:objectbox/objectbox.dart'; // Import ObjectBox
-import '../main.dart'; // Import the main.dart where Store is declared
-import '../model/photo_model.dart'; // Import your Photo model
 import '../objectbox.g.dart'; // Import the generated ObjectBox code
 
 class MediaViewerScreen extends StatefulWidget {
@@ -161,25 +159,33 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
       try {
         if (Platform.isIOS) {
           if (!widget.isVideo) {
-            // For iOS, use photo_manager to delete the asset which is a photo of the iOS Photo Library
-            final assetId = await _getAssetIdFromPath(widget.mediaPath);
-            if (assetId != null) {
-              final result = await PhotoManager.editor.deleteWithIds([assetId]);
+            // For iOS, find the AssetEntity that matches the mediaPath
+            final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(type: RequestType.image);
+            AssetEntity? photoAsset;
 
-              if (result.isNotEmpty) {
-                // Delete from ObjectBox store if it is a photo
-                final photoBox = widget.store.box<Photo>();
-                final photoToDelete = photoBox
-                    .query(Photo_.galleryId.equals(assetId))
-                    .build()
-                    .findFirst();
-                if (photoToDelete != null) {
-                  photoBox.remove(photoToDelete.id);
+            for (final album in albums) {
+              final List<AssetEntity> assets = await album.getAssetListPaged(page: 0, size: 100);
+              for (final asset in assets) {
+                final file = await asset.file;
+                if (file != null && file.path == widget.mediaPath) {
+                  photoAsset = asset;
+                  break;
                 }
               }
-              Navigator.of(context).pop(true); // Indicate successful elimination
-              return;
+              if (photoAsset != null) {
+                break;
+              }
             }
+
+            if (photoAsset != null) {
+              final result = await PhotoManager.editor.deleteWithIds([photoAsset.id]);
+              if (result.isNotEmpty) {
+                Navigator.of(context).pop(true); // Indicate successful elimination
+                return;
+              }
+            }
+
+            throw Exception('No se pudo eliminar el archivo de la biblioteca de fotos');
           } else {
             // For iOS, use the original method to remove a video of the iOS Photo Library
             final List<AssetPathEntity> albums =
@@ -216,8 +222,6 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
             throw Exception(
                 'No se pudo eliminar el archivo de la biblioteca de fotos');
           }
-          throw Exception(
-              'No se pudo eliminar el archivo de la biblioteca de fotos');
         } else {
           // For Android, save photo or video in the gallery
           final file = File(widget.mediaPath);
@@ -240,17 +244,6 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
         Navigator.of(context).pop(false);
       }
     }
-  }
-
-  Future<String?> _getAssetIdFromPath(String path) async {
-    final fileName = path.split('/').last;
-    final fileGalleryId = fileName.split('_').first;
-    final photoBox = widget.store.box<Photo>();
-    final photo = photoBox
-        .query(Photo_.galleryId.startsWith(fileGalleryId))
-        .build()
-        .findFirst();
-    return photo?.galleryId;
   }
 
   Widget _buildZoomableImage() {
