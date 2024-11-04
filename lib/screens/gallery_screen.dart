@@ -101,6 +101,7 @@ class GalleryScreenState extends State<GalleryScreen> {
                                   mediaPath: file.path,
                                   isVideo:
                                       mediaFiles[index].type == AssetType.video,
+                                  store: widget.store, // Pass the store
                                 ),
                               ),
                             );

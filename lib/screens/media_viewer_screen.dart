@@ -2,15 +2,22 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:video_player/video_player.dart';
 import 'dart:async'; // For Timer
+import 'package:photo_manager/photo_manager.dart'; // Import photo_manager
+import 'package:objectbox/objectbox.dart'; // Import ObjectBox
+import '../main.dart'; // Import the main.dart where Store is declared
+import '../model/photo_model.dart'; // Import your Photo model
+import '../objectbox.g.dart'; // Import the generated ObjectBox code
 
 class MediaViewerScreen extends StatefulWidget {
   final String mediaPath;
   final bool isVideo;
+  final Store store; // Add Store parameter
 
   const MediaViewerScreen({
     super.key,
     required this.mediaPath,
     required this.isVideo,
+    required this.store, // Initialize Store
   });
 
   @override
@@ -131,11 +138,9 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
       context: context,
       builder: (BuildContext context) => AlertDialog(
         title: Text(widget.isVideo ? 'Eliminar vídeo' : 'Eliminar foto'),
-        content: Text(
-          widget.isVideo 
-          ? '¿Estás seguro de que deseas eliminar este vídeo? Esta acción no se puede deshacer.'
-          : '¿Estás seguro de que deseas eliminar esta foto? Esta acción no se puede deshacer.'
-        ),
+        content: Text(widget.isVideo
+            ? '¿Estás seguro de que deseas eliminar este vídeo? Esta acción no se puede deshacer.'
+            : '¿Estás seguro de que deseas eliminar esta foto? Esta acción no se puede deshacer.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -154,13 +159,76 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
 
     if (shouldDelete == true) {
       try {
-        final file = File(widget.mediaPath);
-        if (await file.exists()) {
-          await file.delete();
-          Navigator.of(context).pop(true); // Return true to indicate deletion
+        if (Platform.isIOS) {
+          if (!widget.isVideo) {
+            // For iOS, use photo_manager to delete the asset which is a photo of the iOS Photo Library
+            final assetId = await _getAssetIdFromPath(widget.mediaPath);
+            if (assetId != null) {
+              final result = await PhotoManager.editor.deleteWithIds([assetId]);
+
+              if (result.isNotEmpty) {
+                // Delete from ObjectBox store if it is a photo
+                final photoBox = widget.store.box<Photo>();
+                final photoToDelete = photoBox
+                    .query(Photo_.galleryId.equals(assetId))
+                    .build()
+                    .findFirst();
+                if (photoToDelete != null) {
+                  photoBox.remove(photoToDelete.id);
+                }
+              }
+              Navigator.of(context).pop(true); // Indicate successful elimination
+              return;
+            }
+          } else {
+            // For iOS, use the original method to remove a video of the iOS Photo Library
+            final List<AssetPathEntity> albums =
+                await PhotoManager.getAssetPathList(
+              type: RequestType.video,
+            );
+
+            AssetEntity? videoAsset;
+
+            for (final album in albums) {
+              final List<AssetEntity> assets =
+                  await album.getAssetListPaged(page: 0, size: 100);
+              for (final asset in assets) {
+                final file = await asset.file;
+                if (file != null && file.path == widget.mediaPath) {
+                  videoAsset = asset;
+                  break;
+                }
+              }
+              if (videoAsset != null) {
+                break;
+              }
+            }
+
+            if (videoAsset != null) {
+              final result =
+                  await PhotoManager.editor.deleteWithIds([videoAsset.id]);
+              if (result.isNotEmpty) {
+                Navigator.of(context).pop(true); // Indicate successful elimination
+                return;
+              }
+            }
+
+            throw Exception(
+                'No se pudo eliminar el archivo de la biblioteca de fotos');
+          }
+          throw Exception(
+              'No se pudo eliminar el archivo de la biblioteca de fotos');
+        } else {
+          // For Android, save photo or video in the gallery
+          final file = File(widget.mediaPath);
+          if (await file.exists()) {
+            await file.delete();
+            Navigator.of(context).pop(true); // Indicate successful elimination
+            return;
+          }
         }
       } catch (e) {
-        // Show error message if deletion fails
+        // Show error message if elimination fails
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -172,6 +240,17 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
         Navigator.of(context).pop(false);
       }
     }
+  }
+
+  Future<String?> _getAssetIdFromPath(String path) async {
+    final fileName = path.split('/').last;
+    final fileGalleryId = fileName.split('_').first;
+    final photoBox = widget.store.box<Photo>();
+    final photo = photoBox
+        .query(Photo_.galleryId.startsWith(fileGalleryId))
+        .build()
+        .findFirst();
+    return photo?.galleryId;
   }
 
   Widget _buildZoomableImage() {
