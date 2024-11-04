@@ -142,11 +142,11 @@ class CameraScreenState extends State<CameraScreen>
     if (albums.isNotEmpty) {
       final List<AssetEntity> mediaFiles = await albums[0].getAssetListRange(
         start: 0,
-        end: 1,
+        end: 50, // Fetch the last 50 media files
       );
 
-      if (mediaFiles.isNotEmpty) {
-        final AssetEntity asset = mediaFiles.first;
+      // Iterate through the media files to find the first valid asset
+      for (final AssetEntity asset in mediaFiles) {
         bool isValid = false;
 
         if (asset.type == AssetType.image) {
@@ -159,6 +159,7 @@ class CameraScreenState extends State<CameraScreen>
           setState(() {
             _lastCapturedAsset = asset;
           });
+          break; // Exit the loop after finding the first valid asset
         }
       }
     }
