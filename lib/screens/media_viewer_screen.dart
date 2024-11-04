@@ -89,6 +89,18 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isVideo ? 'Ver Vídeo' : 'Ver Foto'),
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.delete,
+              color: Colors.grey, // Subtle color
+              size: 24,
+            ),
+            onPressed: _deleteMedia,
+            splashColor: Colors.red, // Highlight color on press
+            tooltip: 'Eliminar',
+          ),
+        ],
       ),
       body: Center(
         child: widget.isVideo
@@ -111,6 +123,19 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
             : _buildZoomableImage(), // Add zoom functionality for images
       ),
     );
+  }
+
+  Future<void> _deleteMedia() async {
+    try {
+      final file = File(widget.mediaPath);
+      if (await file.exists()) {
+        await file.delete();
+        // Optionally, refresh gallery here if needed
+        Navigator.of(context).pop(); // Return to previous screen
+      }
+    } catch (e) {
+      // Handle errors if necessary
+    }
   }
 
   Widget _buildZoomableImage() {
