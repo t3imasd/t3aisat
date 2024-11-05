@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // Añadido
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -19,11 +20,22 @@ class CameraScreen extends StatefulWidget {
 }
 
 class CameraScreenState extends State<CameraScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   CameraController? controller;
   bool _isCameraInitialized = false;
   bool _isRecording = false;
   AssetEntity? _lastCapturedAsset; // Variable to store the last captured media
+
+  // Variables para zoom
+  double _currentZoomLevel = 1.0;
+  double _minAvailableZoom = 1.0;
+  double _maxAvailableZoom = 1.0;
+
+  // Variables para flash, enfoque y exposición
+  FlashMode _flashMode = FlashMode.auto;
+  double _minAvailableExposureOffset = 0.0;
+  double _maxAvailableExposureOffset = 0.0;
+  double _currentExposureOffset = 0.0;
 
   @override
   void initState() {
@@ -43,6 +55,10 @@ class CameraScreenState extends State<CameraScreen>
 
     try {
       await controller?.initialize();
+      _maxAvailableZoom = await controller?.getMaxZoomLevel() ?? 1.0;
+      _minAvailableZoom = await controller?.getMinZoomLevel() ?? 1.0;
+      _maxAvailableExposureOffset = await controller?.getMaxExposureOffset() ?? 0.0;
+      _minAvailableExposureOffset = await controller?.getMinExposureOffset() ?? 0.0;
       setState(() {
         _isCameraInitialized = true;
       });
@@ -217,6 +233,43 @@ class CameraScreenState extends State<CameraScreen>
     }
   }
 
+  // Método para cambiar el modo de flash
+  void _onFlashModeButtonPressed() {
+    setState(() {
+      if (_flashMode == FlashMode.auto) {
+        _flashMode = FlashMode.always;
+      } else if (_flashMode == FlashMode.always) {
+        _flashMode = FlashMode.off;
+      } else {
+        _flashMode = FlashMode.auto;
+      }
+      controller?.setFlashMode(_flashMode);
+    });
+  }
+
+  // Método para manejar el gesto de zoom
+  void _onScaleStart(ScaleStartDetails details) {
+    // El nivel de zoom actual ya está almacenado en _currentZoomLevel
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails details) async {
+    // Calculamos el nuevo nivel de zoom
+    double zoom = _currentZoomLevel * details.scale;
+    zoom = zoom.clamp(_minAvailableZoom, _maxAvailableZoom);
+    await controller?.setZoomLevel(zoom);
+    _currentZoomLevel = zoom; // Actualizar _currentZoomLevel
+  }
+
+  // Método para manejar el enfoque manual
+  void _onViewFinderTap(TapDownDetails details, BoxConstraints constraints) {
+    final offset = Offset(
+      details.localPosition.dx / constraints.maxWidth,
+      details.localPosition.dy / constraints.maxHeight,
+    );
+    controller?.setExposurePoint(offset);
+    controller?.setFocusPoint(offset);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isCameraInitialized || controller == null) {
@@ -234,7 +287,59 @@ class CameraScreenState extends State<CameraScreen>
       ),
       body: Stack(
         children: [
-          CameraPreview(controller!),
+          GestureDetector(
+            onScaleStart: _onScaleStart,
+            onScaleUpdate: _onScaleUpdate,
+            onTapDown: (details) {
+              // Maneja el toque para enfoque manual
+              final size = MediaQuery.of(context).size;
+              _onViewFinderTap(details, BoxConstraints(
+                maxWidth: size.width,
+                maxHeight: size.height,
+              ));
+            },
+            child: CameraPreview(controller!),
+          ),
+          // Agregar controles de flash y exposición
+          Positioned(
+            top: 20,
+            right: 20,
+            child: Column(
+              children: [
+                IconButton(
+                  icon: Icon(
+                    _flashMode == FlashMode.always
+                        ? Icons.flash_on
+                        : _flashMode == FlashMode.off
+                            ? Icons.flash_off
+                            : Icons.flash_auto,
+                  ),
+                  color: Colors.white,
+                  onPressed: _onFlashModeButtonPressed,
+                ),
+                // Slider para control de exposición (excepto en web)
+                if (!kIsWeb)
+                  Column(
+                    children: [
+                      Icon(Icons.exposure, color: Colors.white),
+                      Slider(
+                        value: _currentExposureOffset,
+                        min: _minAvailableExposureOffset,
+                        max: _maxAvailableExposureOffset,
+                        activeColor: Colors.white,
+                        inactiveColor: Colors.grey,
+                        onChanged: (value) async {
+                          setState(() {
+                            _currentExposureOffset = value;
+                          });
+                          await controller?.setExposureOffset(value);
+                        },
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
           Positioned(
             bottom: 20,
             left: 0,
