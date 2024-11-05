@@ -177,13 +177,25 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
     }
   }
 
-  void _showGallery() {
-    Navigator.push(
+  void _showGallery() async {
+    final deleted = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (context) => GalleryScreen(store: widget.store),
+        builder: (context) => GalleryScreen(store: widget.store, cameras: cameras),
       ),
     );
+
+    if (deleted == true) {
+      final fileExists = await File(widget.mediaPath).exists();
+      if (!fileExists) {
+        Navigator.of(context).pop(true); // Return to CameraScreen
+      } else {
+        Navigator.of(context).pop(true); // Return to CameraScreen
+        // setState(() {
+        //   // Continue showing current media
+        // });
+      }
+    }
   }
 
   Future<void> _initializeFonts() async {

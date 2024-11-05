@@ -2,24 +2,30 @@ import 'dart:async'; // Import for Timer class
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:flutter/services.dart'; // For MethodChannel
+import 'package:camera/camera.dart'; // Import for CameraDescription
 import 'package:objectbox/objectbox.dart';
 import 'media_viewer_screen.dart';
 import '../model/photo_model.dart';
 import '../objectbox.g.dart'; // Generated ObjectBox file
 import '../main.dart'; // ValueNotifier imports from main.dart
 import '../helpers/media_helpers.dart';
+import '../screens/camera_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
   // Changed from StatelessWidget to StatefulWidget
   final Store store;
+  final List<CameraDescription> cameras;
 
-  const GalleryScreen({super.key, required this.store});
+  const GalleryScreen({super.key, required this.store, required this.cameras});
 
   @override
   GalleryScreenState createState() => GalleryScreenState();
 }
 
 class GalleryScreenState extends State<GalleryScreen> {
+  AssetEntity? _lastAsset; // Variable to store the last media asset
+  AssetEntity? _selectedAsset; // Variable to store the selected media asset
+
   // Method to load and filter media based on EXIF and metadata
   Future<List<AssetEntity>> _loadAndFilterMedia(List<Photo> photoList) async {
     // Fetch the list of media albums (both photos and videos)
@@ -57,6 +63,8 @@ class GalleryScreenState extends State<GalleryScreen> {
       filteredMedia
           .sort((a, b) => b.createDateTime.compareTo(a.createDateTime));
 
+      _lastAsset = filteredMedia.isNotEmpty ? filteredMedia[0] : null;
+
       return filteredMedia; // Return the filtered and sorted list
     }
 
@@ -91,6 +99,7 @@ class GalleryScreenState extends State<GalleryScreen> {
                     itemBuilder: (context, index) {
                       return GestureDetector(
                         onTap: () async {
+                          _selectedAsset = mediaFiles[index];
                           final file = await mediaFiles[index].file;
                           if (file != null) {
                             // Navigate to MediaViewerScreen on tap and await the result
@@ -107,12 +116,18 @@ class GalleryScreenState extends State<GalleryScreen> {
                             );
 
                             if (deleted == true) {
-                              // If a media was deleted, refresh the gallery
                               setState(() {
-                                // Trigger a rebuild to reload media files
+                                // Refresh the gallery
                               });
-                              // Notify the parent that a deletion occurred
-                              Navigator.of(context).pop(true); // Pop with true
+                              print('_lastAsset: $_lastAsset');
+                              // Verify if _lastAsset is contained in the mediaFiles list
+                              if (_lastAsset != null &&
+                                  _selectedAsset != null) {
+                                if (_lastAsset!.id == _selectedAsset!.id) {
+                                  // Navigate directly to CameraScreen
+                                  Navigator.of(context).pop(true);
+                                }
+                              }
                             }
                           }
                         },

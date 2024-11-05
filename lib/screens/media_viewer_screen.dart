@@ -211,6 +211,7 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
         Navigator.of(context).pop(false);
       }
     }
+    Navigator.pop(context, true); // Indicate that media was deleted
   }
 
   Widget _buildZoomableImage() {

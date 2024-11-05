@@ -185,6 +185,7 @@ class CameraScreenState extends State<CameraScreen>
         MaterialPageRoute(
           builder: (context) => GalleryScreen(
             store: widget.store, // Pass the ObjectBox store to GalleryScreen
+            cameras: widget.cameras, // Pass the cameras to GalleryScreen
           ),
         ),
       );
@@ -203,12 +204,17 @@ class CameraScreenState extends State<CameraScreen>
   }
 
   void _navigateToGallery(BuildContext context) async {
-    await Navigator.push<bool>(
+    final deleted = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (context) => GalleryScreen(store: widget.store),
+        builder: (context) => GalleryScreen(store: widget.store, cameras: widget.cameras),
       ),
     );
+
+    if (deleted == true) {
+      await _loadLastCapturedAsset(); // Update the thumbnail
+      setState(() {});
+    }
   }
 
   @override
