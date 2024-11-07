@@ -442,12 +442,6 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
       final now = DateTime.now();
       final timeZoneName = now.timeZoneName; // Detects the time zone name (e.g., CEST, CET)
 
-      // Add 1 second to the network time to simulate network synchronization
-      final networkTime = now.add(const Duration(seconds: 1));
-
-      // Format the network and local times
-      final formattedNetworkTime =
-          '${DateFormat('dd MMM yyyy HH:mm:ss').format(networkTime)} $timeZoneName';
       final formattedLocalTime =
           '${DateFormat('dd MMM yyyy HH:mm:ss').format(now)} $timeZoneName';
 
@@ -458,8 +452,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
       final formattedAddress = _address?.split(',').join('\n');
 
       // Build the text that will be drawn on the image
-      final formattedText = '''Network: $formattedNetworkTime
-Local: $formattedLocalTime
+      final formattedText = '''$formattedLocalTime
 $latitudeDMS $longitudeDMS
 $formattedAddress
 Think Tank InnoTech''';
@@ -642,12 +635,6 @@ Think Tank InnoTech''';
       final timeZoneName =
           now.timeZoneName; // Detects the time zone name (e.g., CEST, CET)
 
-      // Add 1 second to the network time to simulate network synchronization
-      final networkTime = now.add(const Duration(seconds: 1));
-
-      // Format the network and local times
-      final formattedNetworkTime =
-          '${DateFormat('dd MMM yyyy HH:mm:ss').format(networkTime)} $timeZoneName';
       final formattedLocalTime =
           '${DateFormat('dd MMM yyyy HH:mm:ss').format(now)} $timeZoneName';
 
@@ -673,8 +660,7 @@ Think Tank InnoTech''';
 
       // Build the text that will be drawn on the video
       final appName = 'Think Tank InnoTech';
-      final formattedText = '''Network: $formattedNetworkTime
-Local: $formattedLocalTime
+      final formattedText = '''$formattedLocalTime
 $latitudeDMS $longitudeDMS
 $formattedAddress
 $appName''';
