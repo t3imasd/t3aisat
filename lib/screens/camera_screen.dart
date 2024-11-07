@@ -10,7 +10,7 @@ import 'media_location_screen.dart';
 import 'gallery_screen.dart';
 import '../helpers/media_helpers.dart'; // Added import
 
-// Agregar una clase personalizada para el thumb del slider con el icono de sol
+// Add a personalized class for the Slider's Thumb with the sun icon
 class SunThumbShape extends SliderComponentShape {
   final double thumbRadius;
 
@@ -77,18 +77,18 @@ class CameraScreenState extends State<CameraScreen>
   bool _isRecording = false;
   AssetEntity? _lastCapturedAsset; // Variable to store the last captured media
 
-  // Variables para zoom
+  // Zoom variables
   double _currentZoomLevel = 1.0;
   double _minAvailableZoom = 1.0;
   double _maxAvailableZoom = 1.0;
 
-  // Variables para flash, enfoque y exposición
+  // Flash variables, focus and exposure
   FlashMode _flashMode = FlashMode.auto;
   double _minAvailableExposureOffset = 0.0;
   double _maxAvailableExposureOffset = 0.0;
   double _currentExposureOffset = 0.0;
 
-  // Variables for zoom indicator
+  // variables for Zoom Indicator
   double _lastZoomLevel = 1.0;
   bool _isZooming = false;
   Timer? _zoomIndicatorTimer;
@@ -99,7 +99,7 @@ class CameraScreenState extends State<CameraScreen>
   AnimationController? _focusAnimationController;
   Animation<double>? _focusAnimation;
 
-  // Variables for flash tooltip
+  // Variables for Flash Tooltip
   Timer? _flashTooltipTimer;
   String? _flashTooltipText;
   bool _showFlashTooltip = false;
@@ -108,7 +108,7 @@ class CameraScreenState extends State<CameraScreen>
   Timer? _exposureIndicatorTimer;
   bool _showExposureIndicator = false;
 
-  // Agregar variables de estado para el slider de exposición
+  // Add state variables for exposure slider
   bool _showExposureSlider = false;
   Timer? _exposureSliderTimer;
 
@@ -134,7 +134,7 @@ class CameraScreenState extends State<CameraScreen>
       ),
     );
 
-    // Mostrar el slider de exposición por 3 segundos al iniciar
+    // Show the exhibition slider for 3 seconds at the beginning
     _showExposureSlider = true;
     _exposureSliderTimer = Timer(const Duration(seconds: 3), () {
       setState(() {
@@ -156,8 +156,10 @@ class CameraScreenState extends State<CameraScreen>
       await controller?.initialize();
       _maxAvailableZoom = await controller?.getMaxZoomLevel() ?? 1.0;
       _minAvailableZoom = await controller?.getMinZoomLevel() ?? 1.0;
-      _maxAvailableExposureOffset = await controller?.getMaxExposureOffset() ?? 0.0;
-      _minAvailableExposureOffset = await controller?.getMinExposureOffset() ?? 0.0;
+      _maxAvailableExposureOffset =
+          await controller?.getMaxExposureOffset() ?? 0.0;
+      _minAvailableExposureOffset =
+          await controller?.getMinExposureOffset() ?? 0.0;
       setState(() {
         _isCameraInitialized = true;
       });
@@ -323,7 +325,8 @@ class CameraScreenState extends State<CameraScreen>
     final deleted = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (context) => GalleryScreen(store: widget.store, cameras: widget.cameras),
+        builder: (context) =>
+            GalleryScreen(store: widget.store, cameras: widget.cameras),
       ),
     );
 
@@ -358,7 +361,7 @@ class CameraScreenState extends State<CameraScreen>
     });
   }
 
-  // Método para manejar el gesto de zoom
+  // Method to handle Zoom's gesture
   void _onScaleStart(ScaleStartDetails details) {
     _lastZoomLevel = _currentZoomLevel;
   }
@@ -388,7 +391,7 @@ class CameraScreenState extends State<CameraScreen>
     }
   }
 
-  // Método para manejar el enfoque manual
+  // Method to handle the manual approach
   void _onViewFinderTap(TapDownDetails details, BoxConstraints constraints) {
     final offset = Offset(
       details.localPosition.dx / constraints.maxWidth,
@@ -447,25 +450,31 @@ class CameraScreenState extends State<CameraScreen>
               onTapDown: (details) {
                 // Maneja el toque para enfoque manual
                 final size = MediaQuery.of(context).size;
-                _onViewFinderTap(details, BoxConstraints(
-                  maxWidth: size.width,
-                  maxHeight: size.height,
-                ));
+                _onViewFinderTap(
+                    details,
+                    BoxConstraints(
+                      maxWidth: size.width,
+                      maxHeight: size.height,
+                    ));
               },
               onVerticalDragStart: (details) {
-                if (_pointerCount == 1) { // Show slider only for single-finger drag
+                if (_pointerCount == 1) {
+                  // Show slider only for single-finger drag
                   setState(() {
                     _showExposureSlider = true;
                   });
                 }
               },
               onVerticalDragUpdate: (details) {
-                if (_pointerCount == 1) { // Update exposure only for single-finger drag
+                if (_pointerCount == 1) {
+                  // Update exposure only for single-finger drag
                   // Actualizar el valor de exposición según el movimiento vertical
                   final double delta = details.primaryDelta ?? 0.0;
                   final double sensitivity = 0.005;
-                  double newValue = _currentExposureOffset - delta * sensitivity;
-                  newValue = newValue.clamp(_minAvailableExposureOffset, _maxAvailableExposureOffset);
+                  double newValue =
+                      _currentExposureOffset - delta * sensitivity;
+                  newValue = newValue.clamp(
+                      _minAvailableExposureOffset, _maxAvailableExposureOffset);
                   setState(() {
                     _currentExposureOffset = newValue;
                     _showExposureIndicator = true;
@@ -474,7 +483,8 @@ class CameraScreenState extends State<CameraScreen>
 
                   // Reiniciar el temporizador para ocultar el indicador
                   _exposureIndicatorTimer?.cancel();
-                  _exposureIndicatorTimer = Timer(const Duration(seconds: 1), () {
+                  _exposureIndicatorTimer =
+                      Timer(const Duration(seconds: 1), () {
                     setState(() {
                       _showExposureIndicator = false;
                     });
@@ -490,7 +500,8 @@ class CameraScreenState extends State<CameraScreen>
                 }
               },
               onVerticalDragEnd: (details) {
-                if (_pointerCount == 1) { // Hide slider after single-finger drag
+                if (_pointerCount == 1) {
+                  // Hide slider after single-finger drag
                   // Ocultar el slider después de 1 segundo
                   _exposureSliderTimer?.cancel();
                   _exposureSliderTimer = Timer(const Duration(seconds: 1), () {
@@ -568,9 +579,13 @@ class CameraScreenState extends State<CameraScreen>
             Positioned(
               right: 60,
               top: MediaQuery.of(context).size.height * 0.25 +
-                  (MediaQuery.of(context).size.height * 0.5 *
-                      (1 - (_currentExposureOffset - _minAvailableExposureOffset) /
-                          (_maxAvailableExposureOffset - _minAvailableExposureOffset))) -
+                  (MediaQuery.of(context).size.height *
+                      0.5 *
+                      (1 -
+                          (_currentExposureOffset -
+                                  _minAvailableExposureOffset) /
+                              (_maxAvailableExposureOffset -
+                                  _minAvailableExposureOffset))) -
                   10,
               child: Container(
                 padding: const EdgeInsets.all(4),
@@ -615,7 +630,8 @@ class CameraScreenState extends State<CameraScreen>
 
                       // Reiniciar el temporizador para ocultar el indicador
                       _exposureIndicatorTimer?.cancel();
-                      _exposureIndicatorTimer = Timer(const Duration(seconds: 1), () {
+                      _exposureIndicatorTimer =
+                          Timer(const Duration(seconds: 1), () {
                         setState(() {
                           _showExposureIndicator = false;
                         });
@@ -623,9 +639,24 @@ class CameraScreenState extends State<CameraScreen>
 
                       // Reiniciar el temporizador para ocultar el slider
                       _exposureSliderTimer?.cancel();
-                      _exposureSliderTimer = Timer(const Duration(seconds: 2), () {
+                      _exposureSliderTimer =
+                          Timer(const Duration(seconds: 2), () {
                         setState(() {
                           _showExposureSlider = false;
+                        });
+                      });
+                    },
+                    onChangeStart: (value) {
+                      setState(() {
+                        _showExposureIndicator = true;
+                      });
+                    },
+                    onChangeEnd: (value) {
+                      _exposureIndicatorTimer?.cancel();
+                      _exposureIndicatorTimer =
+                          Timer(const Duration(seconds: 1), () {
+                        setState(() {
+                          _showExposureIndicator = false;
                         });
                       });
                     },
