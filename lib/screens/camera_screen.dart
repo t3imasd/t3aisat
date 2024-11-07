@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart'; // Añadido
 import 'package:camera/camera.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:logging/logging.dart';
+import 'dart:async'; // For timers
+import 'package:vibration/vibration.dart'; // For haptic feedback
 import '../objectbox.g.dart';
 import 'media_location_screen.dart';
 import 'gallery_screen.dart';
@@ -36,11 +38,45 @@ class CameraScreenState extends State<CameraScreen>
   double _maxAvailableExposureOffset = 0.0;
   double _currentExposureOffset = 0.0;
 
+  // Variables for zoom indicator
+  double _lastZoomLevel = 1.0;
+  bool _isZooming = false;
+  Timer? _zoomIndicatorTimer;
+
+  // Variables for focus indicator
+  Offset? _focusPoint;
+  bool _isFocusing = false;
+  AnimationController? _focusAnimationController;
+  Animation<double>? _focusAnimation;
+
+  // Variables for flash tooltip
+  Timer? _flashTooltipTimer;
+  String? _flashTooltipText;
+  bool _showFlashTooltip = false;
+
+  // Variables for exposure value indicator
+  Timer? _exposureIndicatorTimer;
+  bool _showExposureIndicator = false;
+
   @override
   void initState() {
     super.initState();
     _initCamera();
     _loadLastCapturedAsset(); // Load the last captured asset
+
+    // Initialize focus animation controller
+    _focusAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    )..addListener(() {
+        setState(() {});
+      });
+    _focusAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _focusAnimationController!,
+        curve: Curves.easeOut,
+      ),
+    );
   }
 
   Future<void> _initCamera() async {
@@ -69,6 +105,7 @@ class CameraScreenState extends State<CameraScreen>
   @override
   void dispose() {
     controller?.dispose();
+    _focusAnimationController?.dispose();
     super.dispose();
   }
 
@@ -235,6 +272,7 @@ class CameraScreenState extends State<CameraScreen>
   // Método para cambiar el modo de flash
   void _onFlashModeButtonPressed() {
     setState(() {
+      // Cycle through flash modes
       if (_flashMode == FlashMode.auto) {
         _flashMode = FlashMode.always;
       } else if (_flashMode == FlashMode.always) {
@@ -243,20 +281,47 @@ class CameraScreenState extends State<CameraScreen>
         _flashMode = FlashMode.auto;
       }
       controller?.setFlashMode(_flashMode);
+
+      // Show flash tooltip
+      _flashTooltipText = 'Flash: ${_flashMode.toString().split('.').last}';
+      _showFlashTooltip = true;
+      _flashTooltipTimer?.cancel();
+      _flashTooltipTimer = Timer(const Duration(seconds: 1), () {
+        setState(() {
+          _showFlashTooltip = false;
+        });
+      });
     });
   }
 
   // Método para manejar el gesto de zoom
   void _onScaleStart(ScaleStartDetails details) {
-    // El nivel de zoom actual ya está almacenado en _currentZoomLevel
+    _lastZoomLevel = _currentZoomLevel;
   }
 
   void _onScaleUpdate(ScaleUpdateDetails details) async {
-    // Calculamos el nuevo nivel de zoom
-    double zoom = _currentZoomLevel * details.scale;
-    zoom = zoom.clamp(_minAvailableZoom, _maxAvailableZoom);
+    double zoom = (_lastZoomLevel * details.scale)
+        .clamp(_minAvailableZoom, _maxAvailableZoom);
     await controller?.setZoomLevel(zoom);
-    _currentZoomLevel = zoom; // Actualizar _currentZoomLevel
+    _currentZoomLevel = zoom;
+
+    // Show zoom indicator
+    setState(() {
+      _isZooming = true;
+    });
+
+    // Cancel previous timer and start a new one
+    _zoomIndicatorTimer?.cancel();
+    _zoomIndicatorTimer = Timer(const Duration(seconds: 1), () {
+      setState(() {
+        _isZooming = false;
+      });
+    });
+
+    // Haptic feedback at zoom limits
+    if ((zoom == _minAvailableZoom || zoom == _maxAvailableZoom)) {
+      Vibration.vibrate(duration: 50);
+    }
   }
 
   // Método para manejar el enfoque manual
@@ -267,6 +332,21 @@ class CameraScreenState extends State<CameraScreen>
     );
     controller?.setExposurePoint(offset);
     controller?.setFocusPoint(offset);
+
+    setState(() {
+      _focusPoint = details.localPosition;
+      _isFocusing = true;
+    });
+
+    // Start focus animation
+    _focusAnimationController?.forward(from: 0.0);
+
+    // Hide focus indicator after 1 second
+    Future.delayed(const Duration(seconds: 1), () {
+      setState(() {
+        _isFocusing = false;
+      });
+    });
   }
 
   @override
@@ -299,29 +379,112 @@ class CameraScreenState extends State<CameraScreen>
             },
             child: CameraPreview(controller!),
           ),
-          // Agregar controles de flash y exposición
-          Positioned(
-            top: 20,
-            right: 20,
-            child: Column(
-              children: [
-                IconButton(
-                  icon: Icon(
-                    _flashMode == FlashMode.always
-                        ? Icons.flash_on
-                        : _flashMode == FlashMode.off
-                            ? Icons.flash_off
-                            : Icons.flash_auto,
+
+          // Zoom indicator
+          if (_isZooming)
+            Positioned(
+              top: 20,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                color: Colors.black.withOpacity(0.3),
+                child: Text(
+                  '${_currentZoomLevel.toStringAsFixed(1)}x',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
                   ),
-                  color: Colors.white,
-                  onPressed: _onFlashModeButtonPressed,
                 ),
-                // Slider para control de exposición (excepto en web)
-                if (!kIsWeb)
-                  Column(
-                    children: [
-                      Icon(Icons.exposure, color: Colors.white),
-                      Slider(
+              ),
+            ),
+
+          // Focus indicator
+          if (_isFocusing && _focusPoint != null)
+            Positioned(
+              left: _focusPoint!.dx - 25,
+              top: _focusPoint!.dy - 25,
+              child: Opacity(
+                opacity: 1.0 - _focusAnimationController!.value,
+                child: Transform.scale(
+                  scale: _focusAnimation!.value,
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: const Color(0xFFFFD700),
+                        width: 2,
+                      ),
+                      shape: BoxShape.rectangle,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Flash tooltip
+          if (_showFlashTooltip && _flashTooltipText != null)
+            Positioned(
+              top: 80,
+              right: 20,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                color: Colors.black.withOpacity(0.4),
+                child: Text(
+                  _flashTooltipText!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+
+          // Exposure value indicator
+          if (_showExposureIndicator)
+            Positioned(
+              right: 60,
+              top: MediaQuery.of(context).size.height / 2 - 20,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                color: Colors.black.withOpacity(0.4),
+                child: Text(
+                  _currentExposureOffset.toStringAsFixed(1),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+
+          // Exposure slider
+          Positioned(
+            right: 20,
+            top: 100,
+            bottom: 100,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  '+2',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                ),
+                Expanded(
+                  child: RotatedBox(
+                    quarterTurns: 3,
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 2,
+                        thumbShape: RoundSliderThumbShape(
+                          enabledThumbRadius: 12,
+                          elevation: 0,
+                          pressedElevation: 0,
+                        ),
+                      ),
+                      child: Slider(
                         value: _currentExposureOffset,
                         min: _minAvailableExposureOffset,
                         max: _maxAvailableExposureOffset,
@@ -330,15 +493,55 @@ class CameraScreenState extends State<CameraScreen>
                         onChanged: (value) async {
                           setState(() {
                             _currentExposureOffset = value;
+                            _showExposureIndicator = true;
                           });
                           await controller?.setExposureOffset(value);
+
+                          // Timer to hide exposure indicator
+                          _exposureIndicatorTimer?.cancel();
+                          _exposureIndicatorTimer = Timer(const Duration(seconds: 1),
+                              () {
+                            setState(() {
+                              _showExposureIndicator = false;
+                            });
+                          });
                         },
                       ),
-                    ],
+                    ),
                   ),
+                ),
+                const Text(
+                  '-2',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
           ),
+
+          // Flash button
+          Positioned(
+            top: 20,
+            right: 20,
+            child: IconButton(
+              icon: Icon(
+                _flashMode == FlashMode.always
+                    ? Icons.flash_on
+                    : _flashMode == FlashMode.off
+                        ? Icons.flash_off
+                        : Icons.flash_auto,
+              ),
+              color: _flashMode == FlashMode.always
+                  ? const Color(0xFFFFD700)
+                  : Colors.white,
+              onPressed: _onFlashModeButtonPressed,
+              iconSize: 48,
+              padding: EdgeInsets.zero,
+            ),
+          ),
+
           Positioned(
             bottom: 20,
             left: 0,
