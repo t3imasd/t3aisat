@@ -9,7 +9,6 @@ import '../model/photo_model.dart';
 import '../objectbox.g.dart'; // Generated ObjectBox file
 import '../main.dart'; // ValueNotifier imports from main.dart
 import '../helpers/media_helpers.dart';
-import '../screens/camera_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
   // Changed from StatelessWidget to StatefulWidget
