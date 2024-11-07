@@ -19,7 +19,8 @@ class ParcelMapScreen extends StatefulWidget {
   ParcelMapScreenState createState() => ParcelMapScreenState();
 }
 
-class ParcelMapScreenState extends State<ParcelMapScreen> {
+class ParcelMapScreenState extends State<ParcelMapScreen>
+    with SingleTickerProviderStateMixin {
   late mapbox.MapboxMap _mapboxMap;
   geo.Position? _currentPosition;
   final List<String> _selectedParcelIds =
@@ -38,6 +39,9 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
   late Proj4d epsg25830;
   late Proj4d epsg4326;
 
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+
   @override
   void initState() {
     super.initState();
@@ -47,6 +51,25 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
     // Set Mapbox Access Token
     mapbox.MapboxOptions.setAccessToken(accessToken);
     _requestLocationPermission();
+
+    // Initialize animation controller for pulsating effect
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    _animation = Tween<double>(begin: 12.0, end: 24.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
 // Function to register the projections only once
@@ -160,6 +183,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
         // Update the map position
         _updateMapLocation(position.latitude, position.longitude);
       });
+      _addUserLocationLayer();
     }
   }
 
@@ -179,6 +203,22 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
       ),
     );
     _fetchParcelData(latitude, longitude);
+
+    setState(() {
+      _currentPosition = geo.Position(
+        latitude: latitude,
+        longitude: longitude,
+        timestamp: DateTime.now(),
+        accuracy: 0.0,
+        altitude: 0.0,
+        altitudeAccuracy: 0.0,
+        heading: 0.0,
+        headingAccuracy: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0,
+      );
+    });
+    _addUserLocationLayer();
   }
 
   // Genera datos GeoJSON a partir del XML
@@ -705,6 +745,48 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
         ],
       ),
     );
+  }
+
+  void _addUserLocationLayer() async {
+    if (_currentPosition == null) return;
+
+    final data = {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [_currentPosition!.longitude, _currentPosition!.latitude],
+      },
+    };
+
+    final sourceId = 'user-location-source';
+    final layerId = 'user-location-layer';
+
+    // Comprobar si la fuente ya existe
+    final isSourceExists = await _mapboxMap.style.styleSourceExists(sourceId);
+    if (!isSourceExists) {
+      // Crear la fuente GeoJSON
+      final geoJsonSource = mapbox.GeoJsonSource(
+        id: sourceId,
+        data: jsonEncode(data),
+      );
+      await _mapboxMap.style.addSource(geoJsonSource);
+    } else {
+      // Actualizar los datos de la fuente
+      await _mapboxMap.style.setStyleSourceProperty(sourceId, 'data', jsonEncode(data));
+    }
+
+    // Comprobar si la capa ya existe
+    final isLayerExists = await _mapboxMap.style.styleLayerExists(layerId);
+    if (!isLayerExists) {
+      // Añadir la capa de círculo
+      final circleLayer = mapbox.CircleLayer(
+        id: layerId,
+        sourceId: sourceId,
+        circleColor: const Color(0xFF007AFF).value, // Color azul
+        circleRadius: 8.0,
+      );
+      await _mapboxMap.style.addLayer(circleLayer);
+    }
   }
 
   @override
