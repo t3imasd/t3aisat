@@ -112,6 +112,8 @@ class CameraScreenState extends State<CameraScreen>
   bool _showExposureSlider = false;
   Timer? _exposureSliderTimer;
 
+  int _pointerCount = 0; // Add pointer count tracking
+
   @override
   void initState() {
     super.initState();
@@ -428,52 +430,70 @@ class CameraScreenState extends State<CameraScreen>
       ),
       body: Stack(
         children: [
-          GestureDetector(
-            onScaleStart: _onScaleStart,
-            onScaleUpdate: _onScaleUpdate,
-            onTapDown: (details) {
-              // Maneja el toque para enfoque manual
-              final size = MediaQuery.of(context).size;
-              _onViewFinderTap(details, BoxConstraints(
-                maxWidth: size.width,
-                maxHeight: size.height,
-              ));
-            },
-            onVerticalDragStart: (details) {
+          Listener(
+            onPointerDown: (_) {
               setState(() {
-                _showExposureSlider = true;
+                _pointerCount += 1;
               });
             },
-            onVerticalDragUpdate: (details) {
-              // Actualizar el valor de exposición según el movimiento vertical
-              final double delta = details.primaryDelta ?? 0.0;
-              final double sensitivity = 0.005;
-              double newValue = _currentExposureOffset - delta * sensitivity;
-              newValue = newValue.clamp(_minAvailableExposureOffset, _maxAvailableExposureOffset);
+            onPointerUp: (_) {
               setState(() {
-                _currentExposureOffset = newValue;
-                _showExposureIndicator = true;
+                _pointerCount -= 1;
               });
-              controller?.setExposureOffset(_currentExposureOffset);
+            },
+            child: GestureDetector(
+              onScaleStart: _onScaleStart,
+              onScaleUpdate: _onScaleUpdate,
+              onTapDown: (details) {
+                // Maneja el toque para enfoque manual
+                final size = MediaQuery.of(context).size;
+                _onViewFinderTap(details, BoxConstraints(
+                  maxWidth: size.width,
+                  maxHeight: size.height,
+                ));
+              },
+              onVerticalDragStart: (details) {
+                if (_pointerCount == 1) { // Show slider only for single-finger drag
+                  setState(() {
+                    _showExposureSlider = true;
+                  });
+                }
+              },
+              onVerticalDragUpdate: (details) {
+                if (_pointerCount == 1) { // Update exposure only for single-finger drag
+                  // Actualizar el valor de exposición según el movimiento vertical
+                  final double delta = details.primaryDelta ?? 0.0;
+                  final double sensitivity = 0.005;
+                  double newValue = _currentExposureOffset - delta * sensitivity;
+                  newValue = newValue.clamp(_minAvailableExposureOffset, _maxAvailableExposureOffset);
+                  setState(() {
+                    _currentExposureOffset = newValue;
+                    _showExposureIndicator = true;
+                  });
+                  controller?.setExposureOffset(_currentExposureOffset);
 
-              // Reiniciar el temporizador para ocultar el indicador
-              _exposureIndicatorTimer?.cancel();
-              _exposureIndicatorTimer = Timer(const Duration(seconds: 1), () {
-                setState(() {
-                  _showExposureIndicator = false;
-                });
-              });
-            },
-            onVerticalDragEnd: (details) {
-              // Ocultar el slider después de 2 segundos
-              _exposureSliderTimer?.cancel();
-              _exposureSliderTimer = Timer(const Duration(seconds: 2), () {
-                setState(() {
-                  _showExposureSlider = false;
-                });
-              });
-            },
-            child: CameraPreview(controller!),
+                  // Reiniciar el temporizador para ocultar el indicador
+                  _exposureIndicatorTimer?.cancel();
+                  _exposureIndicatorTimer = Timer(const Duration(seconds: 1), () {
+                    setState(() {
+                      _showExposureIndicator = false;
+                    });
+                  });
+                }
+              },
+              onVerticalDragEnd: (details) {
+                if (_pointerCount == 1) { // Hide slider after single-finger drag
+                  // Ocultar el slider después de 2 segundos
+                  _exposureSliderTimer?.cancel();
+                  _exposureSliderTimer = Timer(const Duration(seconds: 2), () {
+                    setState(() {
+                      _showExposureSlider = false;
+                    });
+                  });
+                }
+              },
+              child: CameraPreview(controller!),
+            ),
           ),
 
           // Zoom indicator
