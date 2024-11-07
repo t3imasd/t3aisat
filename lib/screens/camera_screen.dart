@@ -10,6 +10,56 @@ import 'media_location_screen.dart';
 import 'gallery_screen.dart';
 import '../helpers/media_helpers.dart'; // Added import
 
+// Agregar una clase personalizada para el thumb del slider con el icono de sol
+class SunThumbShape extends SliderComponentShape {
+  final double thumbRadius;
+
+  const SunThumbShape({required this.thumbRadius});
+
+  @override
+  Size getPreferredSize(bool isEnabled, bool isDiscrete) {
+    return Size(thumbRadius * 2, thumbRadius * 2);
+  }
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset center, {
+    required Animation<double> activationAnimation,
+    required Animation<double> enableAnimation,
+    required bool isDiscrete,
+    required TextPainter labelPainter,
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required TextDirection textDirection,
+    required double value,
+    required double textScaleFactor,
+    required Size sizeWithOverflow,
+  }) {
+    final Canvas canvas = context.canvas;
+    const IconData sunIcon = Icons.wb_sunny;
+    final TextSpan span = TextSpan(
+      text: String.fromCharCode(sunIcon.codePoint),
+      style: TextStyle(
+        fontSize: thumbRadius * 1.5,
+        fontFamily: sunIcon.fontFamily,
+        package: sunIcon.fontPackage,
+        color: Color(0xFFFFD700),
+      ),
+    );
+    final TextPainter tp = TextPainter(
+      text: span,
+      textAlign: TextAlign.center,
+      textDirection: textDirection,
+    );
+    tp.layout();
+    tp.paint(
+      canvas,
+      center - Offset(tp.width / 2, tp.height / 2),
+    );
+  }
+}
+
 class CameraScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
   final Store store;
@@ -58,6 +108,10 @@ class CameraScreenState extends State<CameraScreen>
   Timer? _exposureIndicatorTimer;
   bool _showExposureIndicator = false;
 
+  // Agregar variables de estado para el slider de exposición
+  bool _showExposureSlider = false;
+  Timer? _exposureSliderTimer;
+
   @override
   void initState() {
     super.initState();
@@ -77,6 +131,14 @@ class CameraScreenState extends State<CameraScreen>
         curve: Curves.easeOut,
       ),
     );
+
+    // Mostrar el slider de exposición por 3 segundos al iniciar
+    _showExposureSlider = true;
+    _exposureSliderTimer = Timer(const Duration(seconds: 3), () {
+      setState(() {
+        _showExposureSlider = false;
+      });
+    });
   }
 
   Future<void> _initCamera() async {
@@ -377,6 +439,40 @@ class CameraScreenState extends State<CameraScreen>
                 maxHeight: size.height,
               ));
             },
+            onVerticalDragStart: (details) {
+              setState(() {
+                _showExposureSlider = true;
+              });
+            },
+            onVerticalDragUpdate: (details) {
+              // Actualizar el valor de exposición según el movimiento vertical
+              final double delta = details.primaryDelta ?? 0.0;
+              final double sensitivity = 0.005;
+              double newValue = _currentExposureOffset - delta * sensitivity;
+              newValue = newValue.clamp(_minAvailableExposureOffset, _maxAvailableExposureOffset);
+              setState(() {
+                _currentExposureOffset = newValue;
+                _showExposureIndicator = true;
+              });
+              controller?.setExposureOffset(_currentExposureOffset);
+
+              // Reiniciar el temporizador para ocultar el indicador
+              _exposureIndicatorTimer?.cancel();
+              _exposureIndicatorTimer = Timer(const Duration(seconds: 1), () {
+                setState(() {
+                  _showExposureIndicator = false;
+                });
+              });
+            },
+            onVerticalDragEnd: (details) {
+              // Ocultar el slider después de 2 segundos
+              _exposureSliderTimer?.cancel();
+              _exposureSliderTimer = Timer(const Duration(seconds: 2), () {
+                setState(() {
+                  _showExposureSlider = false;
+                });
+              });
+            },
             child: CameraPreview(controller!),
           ),
 
@@ -443,7 +539,11 @@ class CameraScreenState extends State<CameraScreen>
           if (_showExposureIndicator)
             Positioned(
               right: 60,
-              top: MediaQuery.of(context).size.height / 2 - 20,
+              top: MediaQuery.of(context).size.height * 0.25 +
+                  (MediaQuery.of(context).size.height * 0.5 *
+                      (1 - (_currentExposureOffset - _minAvailableExposureOffset) /
+                          (_maxAvailableExposureOffset - _minAvailableExposureOffset))) -
+                  10,
               child: Container(
                 padding: const EdgeInsets.all(4),
                 color: Colors.black.withOpacity(0.4),
@@ -458,87 +558,76 @@ class CameraScreenState extends State<CameraScreen>
             ),
 
           // Exposure slider
-          Positioned(
-            right: 20,
-            top: 100,
-            bottom: 100,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  '+2',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
+          if (_showExposureSlider)
+            Positioned(
+              right: 20,
+              top: MediaQuery.of(context).size.height * 0.25,
+              bottom: MediaQuery.of(context).size.height * 0.25,
+              child: RotatedBox(
+                quarterTurns: 3,
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 2,
+                    activeTrackColor: const Color(0xFFB0B0B0),
+                    inactiveTrackColor: const Color(0xFFB0B0B0),
+                    thumbShape: const SunThumbShape(thumbRadius: 10),
+                    overlayShape: SliderComponentShape.noOverlay,
+                    thumbColor: Colors.transparent,
                   ),
-                ),
-                Expanded(
-                  child: RotatedBox(
-                    quarterTurns: 3,
-                    child: SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        trackHeight: 2,
-                        thumbShape: RoundSliderThumbShape(
-                          enabledThumbRadius: 12,
-                          elevation: 0,
-                          pressedElevation: 0,
-                        ),
-                      ),
-                      child: Slider(
-                        value: _currentExposureOffset,
-                        min: _minAvailableExposureOffset,
-                        max: _maxAvailableExposureOffset,
-                        activeColor: Colors.white,
-                        inactiveColor: Colors.grey,
-                        onChanged: (value) async {
-                          setState(() {
-                            _currentExposureOffset = value;
-                            _showExposureIndicator = true;
-                          });
-                          await controller?.setExposureOffset(value);
+                  child: Slider(
+                    value: _currentExposureOffset,
+                    min: _minAvailableExposureOffset,
+                    max: _maxAvailableExposureOffset,
+                    onChanged: (value) {
+                      setState(() {
+                        _currentExposureOffset = value;
+                        _showExposureIndicator = true;
+                      });
+                      controller?.setExposureOffset(value);
 
-                          // Timer to hide exposure indicator
-                          _exposureIndicatorTimer?.cancel();
-                          _exposureIndicatorTimer = Timer(const Duration(seconds: 1),
-                              () {
-                            setState(() {
-                              _showExposureIndicator = false;
-                            });
-                          });
-                        },
-                      ),
-                    ),
+                      // Reiniciar el temporizador para ocultar el indicador
+                      _exposureIndicatorTimer?.cancel();
+                      _exposureIndicatorTimer = Timer(const Duration(seconds: 1), () {
+                        setState(() {
+                          _showExposureIndicator = false;
+                        });
+                      });
+
+                      // Reiniciar el temporizador para ocultar el slider
+                      _exposureSliderTimer?.cancel();
+                      _exposureSliderTimer = Timer(const Duration(seconds: 2), () {
+                        setState(() {
+                          _showExposureSlider = false;
+                        });
+                      });
+                    },
                   ),
                 ),
-                const Text(
-                  '-2',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
 
           // Flash button
           Positioned(
             top: 20,
             right: 20,
-            child: IconButton(
-              icon: Icon(
-                _flashMode == FlashMode.always
-                    ? Icons.flash_on
-                    : _flashMode == FlashMode.off
-                        ? Icons.flash_off
-                        : Icons.flash_auto,
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: IconButton(
+                icon: Icon(
+                  _flashMode == FlashMode.always
+                      ? Icons.flash_on
+                      : _flashMode == FlashMode.off
+                          ? Icons.flash_off
+                          : Icons.flash_auto,
+                ),
+                color: _flashMode == FlashMode.always
+                    ? const Color(0xFFFFD700)
+                    : Colors.white,
+                onPressed: _onFlashModeButtonPressed,
+                iconSize: 24, // Ajustar el tamaño del icono
+                padding: EdgeInsets.zero,
               ),
-              color: _flashMode == FlashMode.always
-                  ? const Color(0xFFFFD700)
-                  : Colors.white,
-              onPressed: _onFlashModeButtonPressed,
-              iconSize: 48,
-              padding: EdgeInsets.zero,
             ),
           ),
 
