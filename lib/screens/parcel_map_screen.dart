@@ -298,6 +298,16 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
         ],
       ),
     );
+
+    // Añadir FillLayer para capturar clics dentro de las parcelas
+    _mapboxMap.style.addLayer(
+      mapbox.FillLayer(
+        id: 'parcel-fill',
+        sourceId: 'source-id',
+        fillColor: Colors.transparent.value, // Relleno transparente
+        fillOutlineColor: const Color(0xFFD32F2F).value, // Mismo color que las líneas
+      ),
+    );
   }
 
   // Fetch Parcel Data from WFS Service
@@ -520,7 +530,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen> {
       final features = await _mapboxMap.queryRenderedFeatures(
         renderedQueryGeometry,
         mapbox.RenderedQueryOptions(
-            layerIds: ['parcel-lines', 'parcel-labels']), // Keep both layers
+          layerIds: ['parcel-fill', 'parcel-lines', 'parcel-labels'],
+        ),
       );
 
       if (features.isNotEmpty) {
