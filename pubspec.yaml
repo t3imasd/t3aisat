@@ -33,6 +33,7 @@ dependencies:
   objectbox: ^4.0.3
   objectbox_flutter_libs: ^4.0.3
   vibration: ^2.0.1
+  share_plus: ^10.1.2
 
 dev_dependencies:
   flutter_test:

@@ -5,6 +5,7 @@ import 'dart:async'; // For Timer
 import 'package:photo_manager/photo_manager.dart'; // Import photo_manager
 import 'package:objectbox/objectbox.dart'; // Import ObjectBox
 import '../objectbox.g.dart'; // Import the generated ObjectBox code
+import 'package:share_plus/share_plus.dart';
 
 class MediaViewerScreen extends StatefulWidget {
   final String mediaPath;
@@ -95,6 +96,11 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
       appBar: AppBar(
         title: Text(widget.isVideo ? 'Ver Vídeo' : 'Ver Foto'),
         actions: [
+          IconButton(
+            icon: Icon(Icons.share),
+            onPressed: _shareMedia,
+            tooltip: 'Compartir',
+          ),
           IconButton(
             icon: Icon(
               Icons.delete,
@@ -212,6 +218,12 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
       }
     }
     Navigator.pop(context, true); // Indicate that media was deleted
+  }
+
+  void _shareMedia() async {
+    if (widget.mediaPath.isNotEmpty) {
+      await Share.shareXFiles([XFile(widget.mediaPath)]);
+    }
   }
 
   Widget _buildZoomableImage() {
