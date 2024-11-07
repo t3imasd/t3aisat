@@ -479,13 +479,21 @@ class CameraScreenState extends State<CameraScreen>
                       _showExposureIndicator = false;
                     });
                   });
+
+                  // Reiniciar el temporizador para ocultar el slider
+                  _exposureSliderTimer?.cancel();
+                  _exposureSliderTimer = Timer(const Duration(seconds: 1), () {
+                    setState(() {
+                      _showExposureSlider = false;
+                    });
+                  });
                 }
               },
               onVerticalDragEnd: (details) {
                 if (_pointerCount == 1) { // Hide slider after single-finger drag
-                  // Ocultar el slider después de 2 segundos
+                  // Ocultar el slider después de 1 segundo
                   _exposureSliderTimer?.cancel();
-                  _exposureSliderTimer = Timer(const Duration(seconds: 2), () {
+                  _exposureSliderTimer = Timer(const Duration(seconds: 1), () {
                     setState(() {
                       _showExposureSlider = false;
                     });
