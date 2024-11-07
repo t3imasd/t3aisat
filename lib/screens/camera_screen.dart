@@ -570,7 +570,7 @@ class CameraScreenState extends State<CameraScreen>
                     trackHeight: 2,
                     activeTrackColor: const Color(0xFFB0B0B0),
                     inactiveTrackColor: const Color(0xFFB0B0B0),
-                    thumbShape: const SunThumbShape(thumbRadius: 10),
+                    thumbShape: const SunThumbShape(thumbRadius: 15),
                     overlayShape: SliderComponentShape.noOverlay,
                     thumbColor: Colors.transparent,
                   ),
