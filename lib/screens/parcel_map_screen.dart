@@ -761,24 +761,24 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
     final sourceId = 'user-location-source';
     final layerId = 'user-location-layer';
 
-    // Comprobar si la fuente ya existe
+    // Check if the source already exists
     final isSourceExists = await _mapboxMap.style.styleSourceExists(sourceId);
     if (!isSourceExists) {
-      // Crear la fuente GeoJSON
+      // Create the GeoJSON source
       final geoJsonSource = mapbox.GeoJsonSource(
         id: sourceId,
         data: jsonEncode(data),
       );
       await _mapboxMap.style.addSource(geoJsonSource);
     } else {
-      // Actualizar los datos de la fuente
+      // Update the source data
       await _mapboxMap.style.setStyleSourceProperty(sourceId, 'data', jsonEncode(data));
     }
 
-    // Comprobar si la capa ya existe
+    // Check if the layer already exists
     final isLayerExists = await _mapboxMap.style.styleLayerExists(layerId);
     if (!isLayerExists) {
-      // Añadir la capa de círculo
+      // Add the circle layer to show the user location
       final circleLayer = mapbox.CircleLayer(
         id: layerId,
         sourceId: sourceId,
