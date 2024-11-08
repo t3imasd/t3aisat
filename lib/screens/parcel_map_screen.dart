@@ -21,7 +21,7 @@ class ParcelMapScreen extends StatefulWidget {
 }
 
 class ParcelMapScreenState extends State<ParcelMapScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late mapbox.MapboxMap _mapboxMap;
   geo.Position? _currentPosition;
   final List<String> _selectedParcelIds =
@@ -42,6 +42,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
 
   late AnimationController _animationController;
   late Animation<double> _animation;
+  late AnimationController _spinnerAnimationController;
+  late Animation<double> _spinnerAnimation;
 
   @override
   void initState() {
@@ -65,10 +67,22 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         curve: Curves.easeOut,
       ),
     );
+
+    // Initialize spinner animation controller
+    _spinnerAnimationController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat();
+
+    _spinnerAnimation = CurvedAnimation(
+      parent: _spinnerAnimationController,
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
   void dispose() {
+    _spinnerAnimationController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -346,7 +360,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         id: 'parcel-fill',
         sourceId: 'source-id',
         fillColor: Colors.transparent.value, // Relleno transparente
-        fillOutlineColor: const Color(0xFFD32F2F).value, // Mismo color que las líneas
+        fillOutlineColor:
+            const Color(0xFFD32F2F).value, // Mismo color que las líneas
       ),
     );
   }
@@ -355,17 +370,19 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   Future<void> _fetchParcelData(double latitude, double longitude) async {
     if (_isFetching) return; // Prevent multiple requests at the same time
 
-    _isFetching = true; // Set flag to true to indicate a request is ongoing
+    setState(() {
+      _isFetching = true; // Set flag to true to indicate a request is ongoing
+    });
 
     // Obtain the current state of the camera, including zoom
     mapbox.CameraState cameraState = await _mapboxMap.getCameraState();
 
-    // Use the camera status to calculate the bbox
-    final bbox = _calculateBBox(latitude, longitude, cameraState);
-    final url =
-        'http://ovc.catastro.meh.es/INSPIRE/wfsCP.aspx?service=WFS&version=2.0.0&request=GetFeature&typeNames=CP:CadastralParcel&srsName=EPSG:25830&bbox=$bbox';
-
     try {
+      // Use the camera status to calculate the bbox
+      final bbox = _calculateBBox(latitude, longitude, cameraState);
+      final url =
+          'http://ovc.catastro.meh.es/INSPIRE/wfsCP.aspx?service=WFS&version=2.0.0&request=GetFeature&typeNames=CP:CadastralParcel&srsName=EPSG:25830&bbox=$bbox';
+
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final xmlDocument = XmlDocument.parse(response.body);
@@ -395,6 +412,9 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
           // Add the layers again if the source did not exist
           _addParcelLayers();
         }
+
+        // Esperar un breve momento para asegurar que los datos se han renderizado
+        await Future.delayed(const Duration(milliseconds: 500));
       } else {
         log.warning(
             'Failed to load parcel data: Status code ${response.statusCode}');
@@ -402,7 +422,12 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
     } catch (e) {
       log.severe('Error fetching parcel data: $e');
     } finally {
-      _isFetching = false; // Reset the flag after the request is complete
+      if (mounted) {
+        setState(() {
+          _isFetching =
+              false; // Reset the flag after all operations are complete
+        });
+      }
     }
   }
 
@@ -565,7 +590,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
 
     try {
       // Crear RenderedQueryGeometry usando el método actualizado
-      final renderedQueryGeometry = mapbox.RenderedQueryGeometry.fromScreenCoordinate(screenCoordinate);
+      final renderedQueryGeometry =
+          mapbox.RenderedQueryGeometry.fromScreenCoordinate(screenCoordinate);
 
       // Query rendered features at the clicked point to find the parcel
       final features = await _mapboxMap.queryRenderedFeatures(
@@ -731,8 +757,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
                         final entry = _selectedParcels.entries.toList()[index];
                         return Padding(
                           padding: const EdgeInsets.symmetric(
-                              vertical: 4.0, // Vertical space 4px
-                              ),
+                            vertical: 4.0, // Vertical space 4px
+                          ),
                           child: Text(
                             entry.value,
                             style: const TextStyle(
@@ -754,7 +780,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
             child: IconButton(
               icon: const Icon(
                 Icons.copy,
-                color: Color(0xFF388E3C), // Verde oscuro para coincidir con el tema
+                color: Color(
+                    0xFF388E3C), // Verde oscuro para coincidir con el tema
               ),
               onPressed: _copyToClipboard,
               tooltip: 'Copiar al portapapeles',
@@ -772,7 +799,10 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       'type': 'Feature',
       'geometry': {
         'type': 'Point',
-        'coordinates': [_currentPosition!.longitude, _currentPosition!.latitude],
+        'coordinates': [
+          _currentPosition!.longitude,
+          _currentPosition!.latitude
+        ],
       },
     };
 
@@ -790,7 +820,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       await _mapboxMap.style.addSource(geoJsonSource);
     } else {
       // Update the source data
-      await _mapboxMap.style.setStyleSourceProperty(sourceId, 'data', jsonEncode(data));
+      await _mapboxMap.style
+          .setStyleSourceProperty(sourceId, 'data', jsonEncode(data));
     }
 
     // Check if the layer already exists
@@ -815,7 +846,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         buffer.writeln('${parts[0]} - ${parts[1]}');
       }
     });
-    
+
     Clipboard.setData(ClipboardData(text: buffer.toString())).then((_) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -880,7 +911,21 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
             },
             onTapListener: _onMapClick, // Handle map click
           ),
-          // Show the BottomSheet if there are selected plots
+          // Loading Spinner - Diseño minimalista
+          if (_isFetching)
+            Center(
+              child: SizedBox(
+                width: 60.0,
+                height: 60.0,
+                child: CircularProgressIndicator(
+                  strokeWidth: 6.0,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Colors.black.withOpacity(0.5),
+                  ),
+                ),
+              ),
+            ),
+          // Bottom Sheet
           if (_selectedParcels.isNotEmpty)
             Positioned(
               bottom: 0,
