@@ -2,7 +2,7 @@
 
 **Fecha de actualización:** 11 de noviembre de 2024
 
-**Empresa:** Think Tank InnoTech  
+**Empresa:** Think Tank InnoTech S.L.
 **Dirección:** Parque Científico de Murcia, Edificio S, 30100 Murcia  
 **Correo electrónico de contacto:** [info@t3imasd.eu](mailto:info@t3imasd.eu)
 
@@ -118,7 +118,7 @@ Tus datos personales serán conservados en tu teléfono móvil durante el tiempo
 
 ### 12. Uso de Cookies
 
-La Aplicación **no utiliza cookies** ni ningún otro mecanismo de seguimiento para recopilar información de los usuarios.
+Actualmente, la Aplicación **no utiliza cookies** ni tecnologías similares. En caso de que en el futuro se utilicen, se te informará debidamente y se actualizará esta Política de Privacidad.
 
 ### 13. Cambios en la Política de Privacidad
 
