@@ -826,6 +826,29 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
     });
   }
 
+  // Add this method to move the map to the current location
+  void _moveToCurrentLocation() async {
+    try {
+      geo.Position position = await geo.Geolocator.getCurrentPosition(
+        locationSettings: const geo.LocationSettings(
+          accuracy: geo.LocationAccuracy.high,
+        ),
+      );
+      setState(() {
+        _currentPosition = position;
+      });
+      _updateMapLocation(position.latitude, position.longitude);
+      _addUserLocationLayer();
+    } catch (e) {
+      log.severe('Error getting current location: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not get current location.'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -836,9 +859,9 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         elevation: 0, // No shadow in the AppBar
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_location),
+            icon: const Icon(Icons.my_location),
             onPressed: () {
-              // Show input fields for latitude and longitude
+              _moveToCurrentLocation();
             },
           ),
         ],
