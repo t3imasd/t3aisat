@@ -11,6 +11,7 @@ import 'package:geobase/geobase.dart';
 import 'package:geobase/projections_proj4d.dart'; // Import for EPSG:25830 projections
 import 'dart:convert'; // Import required for jsonEncode
 import 'dart:async'; // Import for Timer
+import 'package:flutter/services.dart'; // Añade este import para el clipboard
 
 class ParcelMapScreen extends StatefulWidget {
   const ParcelMapScreen({super.key});
@@ -666,82 +667,99 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
           ),
         ],
       ),
-      child: Column(
+      child: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              'Área Total: $totalArea m²',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black, // Main text in black
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            numSelected > 1
-                ? 'Registros Catastrales: $numSelected seleccionados'
-                : _selectedParcels.values.first,
-            style: const TextStyle(fontSize: 16, color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
-          if (numSelected > 1)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _isBottomSheetExpanded = !_isBottomSheetExpanded;
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF388E3C), // Verde Oscuro
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24.0,
-                    vertical: 12.0,
-                  ), // Internal Padding of the button
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                ),
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
                 child: Text(
-                  _isBottomSheetExpanded ? 'Ver menos' : 'Ver más detalles',
+                  'Área Total: $totalArea m²',
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Colors.black, // Main text in black
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                numSelected > 1
+                    ? 'Registros Catastrales: $numSelected'
+                    : _selectedParcels.values.first,
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+              if (numSelected > 1)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _isBottomSheetExpanded = !_isBottomSheetExpanded;
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF388E3C), // Verde Oscuro
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24.0,
+                        vertical: 12.0,
+                      ), // Internal Padding of the button
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                    ),
+                    child: Text(
+                      _isBottomSheetExpanded ? 'Ver menos' : 'Ver más detalles',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-          if (_isBottomSheetExpanded)
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0), // Lateral padding 16px
-                child: ListView.builder(
-                  itemCount: _selectedParcels.length,
-                  itemBuilder: (context, index) {
-                    final entry = _selectedParcels.entries.toList()[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 4.0, // Vertical space 4px
+              if (_isBottomSheetExpanded)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0), // Lateral padding 16px
+                    child: ListView.builder(
+                      itemCount: _selectedParcels.length,
+                      itemBuilder: (context, index) {
+                        final entry = _selectedParcels.entries.toList()[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 4.0, // Vertical space 4px
+                              ),
+                          child: Text(
+                            entry.value,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black,
+                            ),
                           ),
-                      child: Text(
-                        entry.value,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black,
-                        ),
-                      ),
-                    );
-                  },
+                        );
+                      },
+                    ),
+                  ),
                 ),
+            ],
+          ),
+          // Añade el botón de copiar en la esquina superior derecha
+          Positioned(
+            top: 8,
+            right: 8,
+            child: IconButton(
+              icon: const Icon(
+                Icons.copy,
+                color: Color(0xFF388E3C), // Verde oscuro para coincidir con el tema
               ),
+              onPressed: _copyToClipboard,
+              tooltip: 'Copiar al portapapeles',
             ),
+          ),
         ],
       ),
     );
@@ -787,6 +805,25 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       );
       await _mapboxMap.style.addLayer(circleLayer);
     }
+  }
+
+  void _copyToClipboard() {
+    final StringBuffer buffer = StringBuffer();
+    _selectedParcels.forEach((key, value) {
+      final parts = value.split(' - ');
+      if (parts.length == 2) {
+        buffer.writeln('${parts[0]} - ${parts[1]}');
+      }
+    });
+    
+    Clipboard.setData(ClipboardData(text: buffer.toString())).then((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Copiado al portapapeles'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    });
   }
 
   @override
