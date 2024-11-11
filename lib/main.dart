@@ -7,8 +7,10 @@ import 'package:logging/logging.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/parcel_map_screen.dart';
-import 'screens/camera_screen.dart'; // Import the new CameraScreen file
+import 'screens/camera_screen.dart';
+import 'screens/terms_and_conditions_screen.dart';
 import 'model/photo_model.dart';
 import 'objectbox.g.dart'; // Import ObjectBox generated code
 
@@ -35,9 +37,13 @@ Future<void> main() async {
         .severe('Could not load ${Environment.fileName} file. ERROR: $e');
   }
 
+  // Verify acceptance of terms
+  final termsAccepted = await _checkTermsAccepted();
+
   try {
     // Ensure permissions are granted before fetching cameras
     await _requestPermissions();
+    // Initialize cameras
     cameras = await availableCameras();
   } on CameraException catch (e) {
     Logger.root.severe('Error in fetching the cameras: $e');
@@ -47,7 +53,7 @@ Future<void> main() async {
   photoNotifier = ValueNotifier<List<Photo>>(
       _getPhotosFromStore()); // Initialize the ValueNotifier after store
 
-  runApp(const MyApp());
+  runApp(MyApp(termsAccepted: termsAccepted));
 
   // Close the store when the app terminates
   WidgetsBinding.instance.addObserver(
@@ -57,6 +63,11 @@ Future<void> main() async {
       },
     ),
   );
+}
+
+Future<bool> _checkTermsAccepted() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getBool('termsAccepted') ?? false;
 }
 
 /// Set the orientation of the Portrait screen
@@ -101,12 +112,14 @@ Future<void> _requestPermissions() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool termsAccepted;
+
+  const MyApp({super.key, required this.termsAccepted});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'T3AISat',
+      title: 'T3AISAT',
       theme: ThemeData(
         useMaterial3: true,
         elevatedButtonTheme: ElevatedButtonThemeData(
@@ -137,7 +150,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const MyHomePage(),
+      home: termsAccepted ? const MyHomePage() : const TermsAndConditionsScreen(),
     );
   }
 }

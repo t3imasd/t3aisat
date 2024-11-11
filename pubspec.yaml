@@ -34,6 +34,8 @@ dependencies:
   objectbox_flutter_libs: ^4.0.3
   vibration: ^2.0.1
   share_plus: ^10.1.2
+  shared_preferences: ^2.3.3
+  flutter_markdown: ^0.7.4+1
 
 dev_dependencies:
   flutter_test:
@@ -58,3 +60,4 @@ flutter:
     - assets/fonts/roboto_black/Roboto-Black_100_size_white_color.ttf.zip
     - assets/fonts/roboto_bold/Roboto-Bold-20-size-white-color.ttf.zip
     - assets/fonts/roboto/Roboto-Bold.ttf
+    - documentation/privacy_policy/privacy_policy_t3aisat.md
