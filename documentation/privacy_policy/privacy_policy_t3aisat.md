@@ -4,7 +4,7 @@
 
 **Empresa:** Think Tank InnoTech S.L.
 **Dirección:** Parque Científico de Murcia, Edificio S, 30100 Murcia  
-**Correo electrónico de contacto:** [info@t3imasd.eu](mailto:info@t3imasd.eu)
+**Correo electrónico de contacto:** [privacidad@t3imasd.eu](mailto:privacidad@t3imasd.eu)
 
 ## I. INFORMACIÓN GENERAL
 
@@ -102,7 +102,7 @@ Tus datos pueden ser transferidos y almacenados en servidores ubicados fuera del
 Aunque la Aplicación no recopila datos personales, informamos a los usuarios de sus derechos conforme al Reglamento General de Protección de Datos (RGPD) y la Ley Orgánica 3/2018 de Protección de Datos Personales y Garantía de los Derechos Digitales:
 
 - **Acceso, Rectificación y Supresión:** El Usuario puede ejercer sus derechos de acceso, rectificación o supresión de los datos personales que, en su caso, pudieran ser tratados.
-- **Contacto para Ejercicio de Derechos:** Para ejercer estos derechos, puede contactar a [info@t3imasd.eu](mailto:info@t3imasd.eu).
+- **Contacto para Ejercicio de Derechos:** Para ejercer estos derechos, puede contactar a [privacidad@t3imasd.eu](mailto:privacidad@t3imasd.eu).
 
 ### 9. Menores de Edad
 
@@ -150,5 +150,5 @@ Las presentes condiciones se rigen por la legislación española. Para cualquier
 
 Para cualquier duda, comentario o solicitud relacionada con estos **Términos y Condiciones de Uso**, **Política de Privacidad** o **Descargo de Responsabilidad**, puedes contactarnos en:
 
-- **Correo Electrónico:** [info@t3imasd.eu](mailto:info@t3imasd.eu)
+- **Correo Electrónico:** [privacidad@t3imasd.eu](mailto:privacidad@t3imasd.eu)
 - **Dirección Postal:** Think Tank InnoTech. Parque Científico de Murcia, Edificio S, 30100 Murcia
