@@ -34,7 +34,8 @@ class TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Aviso'),
-        content: const Text('Debe aceptar los términos y condiciones para usar la aplicación.'),
+        content: const Text(
+            'Debe aceptar los términos y condiciones para usar la aplicación.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -73,7 +74,8 @@ class TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Markdown(
-                        data: snapshot.data ?? 'No se pudieron cargar los términos.',
+                        data: snapshot.data ??
+                            'No se pudieron cargar los términos.',
                       ),
                     ),
                   ),

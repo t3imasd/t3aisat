@@ -40,15 +40,6 @@ Future<void> main() async {
   // Verify acceptance of terms
   final termsAccepted = await _checkTermsAccepted();
 
-  try {
-    // Ensure permissions are granted before fetching cameras
-    await _requestPermissions();
-    // Initialize cameras
-    cameras = await availableCameras();
-  } on CameraException catch (e) {
-    Logger.root.severe('Error in fetching the cameras: $e');
-  }
-
   store = await openStore(); // Initialize ObjectBox store
   photoNotifier = ValueNotifier<List<Photo>>(
       _getPhotosFromStore()); // Initialize the ValueNotifier after store
@@ -150,16 +141,65 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: termsAccepted ? const MyHomePage() : const TermsAndConditionsScreen(),
+      home:
+          termsAccepted ? const MyHomePage() : const TermsAndConditionsScreen(),
     );
   }
 }
 
-class MyHomePage extends StatelessWidget {
+class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
   @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  List<CameraDescription> _cameras = [];
+  bool _permissionsGranted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeCameras();
+  }
+
+  Future<void> _initializeCameras() async {
+    try {
+      // Request permissions
+      await _requestPermissions();
+      // Initialize cameras
+      _cameras = await availableCameras();
+      setState(() {
+        _permissionsGranted = true;
+      });
+    } catch (e) {
+      Logger.root.severe('Error initializing cameras: $e');
+    }
+  }
+
+  Future<void> _requestPermissions() async {
+    PermissionStatus cameraPermission = await Permission.camera.request();
+    PermissionStatus microphonePermission =
+        await Permission.microphone.request();
+    PermissionStatus photoPermission = await Permission.photos.request();
+
+    if (cameraPermission.isDenied ||
+        microphonePermission.isDenied ||
+        photoPermission.isDenied) {
+      throw Exception(
+          'Camera, microphone, and photos permissions are required');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!_permissionsGranted) {
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFE6E6E6), // Light gray
       appBar: AppBar(
