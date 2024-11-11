@@ -179,7 +179,7 @@ class GalleryScreenState extends State<GalleryScreen> {
           ),
           SizedBox(height: 16),
           Text(
-            'No hay fotos o videos de Think Tank InnoTech.',
+            'No hay fotos o videos de T3 AI SAT.',
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey,

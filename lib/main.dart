@@ -151,7 +151,7 @@ class MyHomePage extends StatelessWidget {
       backgroundColor: const Color(0xFFE6E6E6), // Light gray
       appBar: AppBar(
         title: Text(
-          'Think Tank InnoTech',
+          'T3 AI SAT',
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,

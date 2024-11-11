@@ -380,7 +380,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
         'DateTimeOriginal':
             DateFormat('yyyy:MM:dd HH:mm:ss').format(DateTime.now()),
         'UserComment':
-            'Desarrollado por Think Tank InnoTech. Direccion donde se toma la foto: ${_address?.replaceAll('\n', ' ') ?? 'Sin direccion'}',
+            'Desarrollado por T3 AI SAT. Direccion donde se toma la foto: ${_address?.replaceAll('\n', ' ') ?? 'Sin direccion'}',
         'ProfileDescription': 'sRGB', // Add color profile description
         'ColorSpace': '1', // Add color space as sRGB (value 1 means sRGB)
       });
@@ -455,7 +455,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
       final formattedText = '''$formattedLocalTime
 $latitudeDMS $longitudeDMS
 $formattedAddress
-Think Tank InnoTech''';
+T3 AI SAT''';
 
       // Calculate text size
       final numLineBreaks = countLinesInText(formattedText);
@@ -659,7 +659,7 @@ Think Tank InnoTech''';
           '\n', ' '); // Replace new lines with spaces
 
       // Build the text that will be drawn on the video
-      final appName = 'Think Tank InnoTech';
+      final appName = 'T3 AI SAT';
       final formattedText = '''$formattedLocalTime
 $latitudeDMS $longitudeDMS
 $formattedAddress

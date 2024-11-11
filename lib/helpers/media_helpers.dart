@@ -16,7 +16,7 @@ Future<bool> isValidPhoto(AssetEntity media, Store store) async {
     final exif = await Exif.fromPath(file.path);
     final userComment = await exif.getAttribute('UserComment');
     await exif.close();
-    return userComment != null && userComment.contains('Think Tank InnoTech');
+    return userComment != null && userComment.contains('T3 AI SAT');
   } else if (Platform.isIOS) {
     final List<Photo> savedPhotos = box.getAll();
     for (var photo in savedPhotos) {
@@ -43,7 +43,7 @@ Future<bool> isValidVideo(AssetEntity media) async {
 
     if (match != null) {
       final comment = match.group(1) ?? '';
-      return comment.trim().endsWith('Think Tank InnoTech');
+      return comment.trim().endsWith('T3 AI SAT');
     }
   }
 
