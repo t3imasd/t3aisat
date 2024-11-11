@@ -8,11 +8,13 @@ import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'screens/parcel_map_screen.dart';
 import 'screens/camera_screen.dart';
-import 'screens/terms_and_conditions_screen.dart';
+import 'helpers/terms_helpers.dart';
 import 'model/photo_model.dart';
 import 'objectbox.g.dart'; // Import ObjectBox generated code
+import 'package:url_launcher/url_launcher.dart';
 
 List<CameraDescription> cameras = [];
 late Store store; // ObjectBox store
@@ -37,14 +39,11 @@ Future<void> main() async {
         .severe('Could not load ${Environment.fileName} file. ERROR: $e');
   }
 
-  // Verify acceptance of terms
-  final termsAccepted = await _checkTermsAccepted();
-
   store = await openStore(); // Initialize ObjectBox store
   photoNotifier = ValueNotifier<List<Photo>>(
       _getPhotosFromStore()); // Initialize the ValueNotifier after store
 
-  runApp(MyApp(termsAccepted: termsAccepted));
+  runApp(const MyApp());
 
   // Close the store when the app terminates
   WidgetsBinding.instance.addObserver(
@@ -54,11 +53,6 @@ Future<void> main() async {
       },
     ),
   );
-}
-
-Future<bool> _checkTermsAccepted() async {
-  final prefs = await SharedPreferences.getInstance();
-  return prefs.getBool('termsAccepted') ?? false;
 }
 
 /// Set the orientation of the Portrait screen
@@ -90,9 +84,7 @@ void _setupLogging() {
 }
 
 class MyApp extends StatelessWidget {
-  final bool termsAccepted;
-
-  const MyApp({super.key, required this.termsAccepted});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -128,8 +120,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home:
-          termsAccepted ? const MyHomePage() : const TermsAndConditionsScreen(),
+      home: const MyHomePage(),
     );
   }
 }
@@ -144,18 +135,153 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   List<CameraDescription> _cameras = [];
   bool _permissionsGranted = false;
-  bool _initialized = false;
+  bool _termsAccepted = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_initialized) {
-      _initialized = true;
-      // Schedule the initialization after the first frame
+  void initState() {
+    super.initState();
+    _checkTermsAccepted();
+  }
+
+  void _checkTermsAccepted() async {
+    final prefs = await SharedPreferences.getInstance();
+    _termsAccepted = prefs.getBool('termsAccepted') ?? false;
+    if (!_termsAccepted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _initializeCameras();
+        _showTermsAndConditionsDialog();
       });
+    } else {
+      _initializeCameras();
     }
+  }
+
+  void _showTermsAndConditionsDialog() async {
+    String termsContent = await loadTermsFromFile();
+    bool isExpanded = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Evita cerrar el diálogo al tocar fuera
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 64),
+              title: const Text('Términos y Condiciones'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Para continuar usando la app, debes aceptar nuestros términos y condiciones. Pulsa en "Leer Términos Completos" para ver el contenido completo.',
+                    ),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          isExpanded = !isExpanded;
+                        });
+                      },
+                      child: Text(
+                        isExpanded
+                            ? 'Ocultar Términos Completos'
+                            : 'Leer Términos Completos',
+                        style: const TextStyle(color: Colors.blue),
+                      ),
+                    ),
+                    if (isExpanded)
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(8.0),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey),
+                          ),
+                          child: Scrollbar(
+                            thumbVisibility: true,
+                            child: Markdown(
+                              data: termsContent,
+                              selectable: true,
+                              styleSheet: MarkdownStyleSheet(
+                                h1: const TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.bold),
+                                h2: const TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.bold),
+                                p: const TextStyle(fontSize: 14),
+                                listBullet: const TextStyle(fontSize: 14),
+                              ),
+                              onTapLink: (text, href, title) {
+                              // Abrir enlaces externos si es necesario
+                              if (href != null) {
+                                launchUrl(Uri.parse(href));
+                              }
+                            },
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setBool('termsAccepted', true);
+                    setState(() {
+                      _termsAccepted = true;
+                    });
+                    Navigator.of(context).pop();
+                    _initializeCameras();
+                  },
+                  child: const Text('Acepto'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    _showMustAcceptDialog();
+                  },
+                  child: const Text('Cancelar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showMustAcceptDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Aviso'),
+          content: const Text(
+            'Debe aceptar los términos y condiciones para usar la aplicación.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _showTermsAndConditionsDialog();
+              },
+              child: const Text('Aceptar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                SystemNavigator.pop();
+              },
+              child: const Text('Salir'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _initializeCameras() async {
@@ -182,9 +308,37 @@ class _MyHomePageState extends State<MyHomePage> {
     if (cameraPermission.isDenied ||
         microphonePermission.isDenied ||
         photoPermission.isDenied) {
-      throw Exception(
-          'Camera, microphone, and photos permissions are required');
+      _showPermissionsDialog();
+    } else if (cameraPermission.isPermanentlyDenied ||
+        microphonePermission.isPermanentlyDenied ||
+        photoPermission.isPermanentlyDenied) {
+      await openAppSettings();
     }
+  }
+
+  void _showPermissionsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Permisos requeridos'),
+        content: const Text(
+            'La aplicación necesita permisos para acceder a la cámara, micrófono y fotos.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Volver a solicitar permisos
+              _requestPermissions();
+            },
+            child: const Text('Otorgar permisos'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -258,31 +412,6 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
-
-  void _showPermissionsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Permisos requeridos'),
-        content: const Text(
-            'La aplicación necesita permisos para acceder a la cámara, micrófono y fotos.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // Retry initializing cameras
-              _initializeCameras();
-            },
-            child: const Text('Otorgar permisos'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class LifecycleEventHandler extends WidgetsBindingObserver {
@@ -293,7 +422,9 @@ class LifecycleEventHandler extends WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.detached) {
-      onDetached?.call();
+      if (onDetached != null) {
+        onDetached!();
+      }
     }
   }
 }
