@@ -2,6 +2,7 @@ import 'package:t3aisat/model/environment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -17,6 +18,10 @@ late ValueNotifier<List<Photo>> photoNotifier;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Set Portrait Orientation for the app
+  await _lockOrientationToPortrait();
+
   // Set up the logger
   _setupLogging();
 
@@ -54,7 +59,14 @@ Future<void> main() async {
   );
 }
 
-// Método auxiliar para obtener fotos desde el store
+/// Set the orientation of the Portrait screen
+Future<void> _lockOrientationToPortrait() async {
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
+}
+
+// Auxiliary method to get photos from the store
 List<Photo> _getPhotosFromStore() {
   final box = store.box<Photo>();
   return box.getAll();
