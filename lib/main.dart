@@ -144,11 +144,18 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   List<CameraDescription> _cameras = [];
   bool _permissionsGranted = false;
+  bool _initialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    _initializeCameras();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      // Schedule the initialization after the first frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _initializeCameras();
+      });
+    }
   }
 
   Future<void> _initializeCameras() async {
@@ -162,6 +169,7 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     } catch (e) {
       Logger.root.severe('Error initializing cameras: $e');
+      // Optionally handle the error, e.g., show a dialog
     }
   }
 
@@ -181,12 +189,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_permissionsGranted) {
-      return Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
+    // Build the UI regardless of permissions
     return Scaffold(
       backgroundColor: const Color(0xFFE6E6E6), // Light gray
       appBar: AppBar(
@@ -219,24 +222,31 @@ class _MyHomePageState extends State<MyHomePage> {
                 height: 60), // Spacing between the title and the first button
             ElevatedButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
+                if (_permissionsGranted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
                       builder: (context) => CameraScreen(
-                            cameras: cameras,
-                            store: store,
-                          )),
-                );
+                        cameras: _cameras,
+                        store: store,
+                      ),
+                    ),
+                  );
+                } else {
+                  _showPermissionsDialog();
+                }
               },
               child: const Text('Captura con Ubicación'),
             ),
             const SizedBox(height: 40), // Spacing between the buttons
             ElevatedButton(
               onPressed: () {
+                // Assuming no permissions are needed for this screen
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => const ParcelMapScreen()),
+                    builder: (context) => const ParcelMapScreen(),
+                  ),
                 );
               },
               child: const Text('Mapa de Parcelas'),
@@ -245,6 +255,31 @@ class _MyHomePageState extends State<MyHomePage> {
                 height: 60), // Spacing to center the content vertically
           ],
         ),
+      ),
+    );
+  }
+
+  void _showPermissionsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Permisos requeridos'),
+        content: const Text(
+            'La aplicación necesita permisos para acceder a la cámara, micrófono y fotos.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Retry initializing cameras
+              _initializeCameras();
+            },
+            child: const Text('Otorgar permisos'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+        ],
       ),
     );
   }
