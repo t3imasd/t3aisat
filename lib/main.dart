@@ -89,19 +89,6 @@ void _setupLogging() {
   });
 }
 
-// Request necessary permissions for the app
-Future<void> _requestPermissions() async {
-  PermissionStatus cameraPermission = await Permission.camera.request();
-  PermissionStatus microphonePermission = await Permission.microphone.request();
-  PermissionStatus photoPermission = await Permission.photos.request();
-
-  if (cameraPermission.isDenied ||
-      microphonePermission.isDenied ||
-      photoPermission.isDenied) {
-    throw Exception('Camera, microphone, and photos permissions are required');
-  }
-}
-
 class MyApp extends StatelessWidget {
   final bool termsAccepted;
 
