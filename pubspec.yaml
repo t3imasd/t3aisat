@@ -37,6 +37,7 @@ dependencies:
   shared_preferences: ^2.3.3
   flutter_markdown: ^0.7.4+1
   url_launcher: ^6.3.1
+  flutter_native_splash: ^2.4.2
 
 dev_dependencies:
   flutter_test:
@@ -53,6 +54,8 @@ dev_dependencies:
   vm_service: ^14.2.5
   build_runner: ^2.4.13
   objectbox_generator: ^4.0.3
+  flutter_launcher_icons: ^0.14.1
+
 flutter:
   uses-material-design: true
   assets:
@@ -62,3 +65,17 @@ flutter:
     - assets/fonts/roboto_bold/Roboto-Bold-20-size-white-color.ttf.zip
     - assets/fonts/roboto/Roboto-Bold.ttf
     - documentation/privacy_policy/privacy_policy_t3aisat.md
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: "assets/icon/app_icon.png"
+  android: true
+  ios: true
+  fullscreen: true

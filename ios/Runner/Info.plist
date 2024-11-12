@@ -1,65 +1,69 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
-	<key>CFBundleDisplayName</key>
-	<string>t3 AI Sat</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>t3aisat</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>$(FLUTTER_BUILD_NAME)</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
-	<key>CFBundleVersion</key>
-	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
-	<key>UIMainStoryboardFile</key>
-	<string>Main</string>
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>La App necesita tener acceso a tu ubicación mientras la aplicación está en uso.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>La App necesita tener acceso a tu ubicación mientras la aplicación está en uso y en segundo plano.</string>
-	<key>NSLocationUsageDescription</key>
-	<string>Los dispositivos más antiguos necesitan la ubicación.</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>La App necesita tener acceso a tu ubicación incluso cuando la aplicación está en segundo plano.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>La App necesita tener permiso a tu cámara para hacer fotos.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>La App necesita permiso de acceso a tu librería de fotos.</string>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Necesitamos añadir fotos a tu libería de Fotos.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>La aplicación necesita acceso al micrófono para grabar videos.</string>
-</dict>
+	<dict>
+		<key>CFBundleDevelopmentRegion</key>
+		<string>$(DEVELOPMENT_LANGUAGE)</string>
+		<key>CFBundleDisplayName</key>
+		<string>t3 AI Sat</string>
+		<key>CFBundleExecutable</key>
+		<string>$(EXECUTABLE_NAME)</string>
+		<key>CFBundleIdentifier</key>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+		<key>CFBundleInfoDictionaryVersion</key>
+		<string>6.0</string>
+		<key>CFBundleName</key>
+		<string>t3aisat</string>
+		<key>CFBundlePackageType</key>
+		<string>APPL</string>
+		<key>CFBundleShortVersionString</key>
+		<string>$(FLUTTER_BUILD_NAME)</string>
+		<key>CFBundleSignature</key>
+		<string>????</string>
+		<key>CFBundleVersion</key>
+		<string>$(FLUTTER_BUILD_NUMBER)</string>
+		<key>LSRequiresIPhoneOS</key>
+		<true/>
+		<key>UIApplicationSupportsIndirectInputEvents</key>
+		<true/>
+		<key>UILaunchStoryboardName</key>
+		<string>LaunchScreen</string>
+		<key>UIMainStoryboardFile</key>
+		<string>Main</string>
+		<key>UISupportedInterfaceOrientations</key>
+		<array>
+			<string>UIInterfaceOrientationPortrait</string>
+			<string>UIInterfaceOrientationLandscapeLeft</string>
+			<string>UIInterfaceOrientationLandscapeRight</string>
+		</array>
+		<key>UISupportedInterfaceOrientations~ipad</key>
+		<array>
+			<string>UIInterfaceOrientationPortrait</string>
+			<string>UIInterfaceOrientationPortraitUpsideDown</string>
+			<string>UIInterfaceOrientationLandscapeLeft</string>
+			<string>UIInterfaceOrientationLandscapeRight</string>
+		</array>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>La App necesita tener acceso a tu ubicación mientras la aplicación está en uso.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>La App necesita tener acceso a tu ubicación mientras la aplicación está en uso y en segundo plano.</string>
+		<key>NSLocationUsageDescription</key>
+		<string>Los dispositivos más antiguos necesitan la ubicación.</string>
+		<key>NSLocationAlwaysUsageDescription</key>
+		<string>La App necesita tener acceso a tu ubicación incluso cuando la aplicación está en segundo plano.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>La App necesita tener permiso a tu cámara para hacer fotos.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>La App necesita permiso de acceso a tu librería de fotos.</string>
+		<key>CADisableMinimumFrameDurationOnPhone</key>
+		<true/>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>Necesitamos añadir fotos a tu libería de Fotos.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>La aplicación necesita acceso al micrófono para grabar videos.</string>
+		<key>UIStatusBarHidden</key>
+		<true/>
+		<key>UIViewControllerBasedStatusBarAppearance</key>
+		<false/>
+	</dict>
 </plist>

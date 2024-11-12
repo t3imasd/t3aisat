@@ -276,7 +276,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
     try {
       _currentPosition = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
+          accuracy: LocationAccuracy.best,
         ),
       );
       log.info('Current position: $_currentPosition');
