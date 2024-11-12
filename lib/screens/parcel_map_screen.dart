@@ -862,7 +862,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
     try {
       geo.Position position = await geo.Geolocator.getCurrentPosition(
         locationSettings: const geo.LocationSettings(
-          accuracy: geo.LocationAccuracy.high,
+          accuracy: geo.LocationAccuracy.best,
         ),
       );
       setState(() {
