@@ -45,6 +45,13 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   late AnimationController _spinnerAnimationController;
   late Animation<double> _spinnerAnimation;
 
+  // Add this variable to hold the timer
+  Timer? _locationUpdateTimer;
+
+  StreamSubscription<geo.Position>? _positionStreamSubscription;
+
+  final List<geo.Position> _positionHistory = [];
+
   @override
   void initState() {
     super.initState();
@@ -78,12 +85,24 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       parent: _spinnerAnimationController,
       curve: Curves.easeInOut,
     );
+
+    // Set up a timer to update the user's location every 30 seconds
+    _locationUpdateTimer =
+        Timer.periodic(const Duration(seconds: 30), (Timer timer) {
+      _updateUserLocation();
+    });
+
+    _startLocationUpdates();
   }
 
   @override
   void dispose() {
+    // Cancel the timer when the widget is disposed
+    _locationUpdateTimer?.cancel();
+
     _spinnerAnimationController.dispose();
     _animationController.dispose();
+    _positionStreamSubscription?.cancel();
     super.dispose();
   }
 
@@ -122,7 +141,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       }
     } else if (status.isGranted) {
       // Permission already granted, get current location
-      _getCurrentLocation();
+        _getCurrentLocation();
     } else if (status.isPermanentlyDenied) {
       log.severe(
           'Location permission permanently denied. You need to enable it manually in settings.');
@@ -133,19 +152,24 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   void _onMapCreated(mapbox.MapboxMap mapboxMap) {
     _mapboxMap = mapboxMap;
 
-    // Load satellite view map style and wait for it to be fully loaded
+    // Cargar el estilo satelital y esperar a que se cargue completamente
     _mapboxMap.loadStyleURI(mapbox.MapboxStyles.SATELLITE).then((_) {
-      log.info('Mapbox style fully loaded and ready.');
-      // Here you can enable the click listener or perform other necessary operations
+      log.info('Estilo de Mapbox cargado y listo.');
+
+      // Ahora que el estilo está cargado, podemos agregar la capa de ubicación del usuario
+      _addUserLocationLayer();
+
+      // Opcionalmente, mover el mapa a la ubicación actual
+      _moveToCurrentLocation();
+
+      // Establecer la posición inicial de la cámara si es necesario
+      _setInitialCameraPosition();
+
+      // Configurar escuchadores si es necesario
+      _mapboxMap.setOnMapMoveListener(_onMapMove);
     }).catchError((e) {
-      log.severe('Failed to load style: $e');
+      log.severe('Error al cargar el estilo: $e');
     });
-
-    // Set the initial camera position
-    _setInitialCameraPosition();
-
-    // Add scroll listener to detect when user scrolls the map
-    _mapboxMap.setOnMapMoveListener(_onMapMove);
   }
 
   // Set Initial Camera Position after Map is Created
@@ -190,7 +214,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         permission == geo.LocationPermission.always) {
       geo.Position position = await geo.Geolocator.getCurrentPosition(
         locationSettings: const geo.LocationSettings(
-          accuracy: geo.LocationAccuracy.high,
+          accuracy: geo.LocationAccuracy.best,
         ),
       );
       setState(() {
@@ -795,46 +819,53 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   void _addUserLocationLayer() async {
     if (_currentPosition == null) return;
 
-    final data = {
-      'type': 'Feature',
-      'geometry': {
-        'type': 'Point',
-        'coordinates': [
-          _currentPosition!.longitude,
-          _currentPosition!.latitude
-        ],
+    const String sourceId = 'user-location-source';
+    const String layerId = 'user-location-layer';
+
+    Map<String, dynamic> geoJson = {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [_currentPosition!.longitude, _currentPosition!.latitude],
       },
     };
 
-    final sourceId = 'user-location-source';
-    final layerId = 'user-location-layer';
+    try {
+      // Verificar si el estilo está cargado
+      bool isStyleLoaded = await _mapboxMap.style.isStyleLoaded();
+      if (!isStyleLoaded) return;
 
-    // Check if the source already exists
-    final isSourceExists = await _mapboxMap.style.styleSourceExists(sourceId);
-    if (!isSourceExists) {
-      // Create the GeoJSON source
-      final geoJsonSource = mapbox.GeoJsonSource(
-        id: sourceId,
-        data: jsonEncode(data),
-      );
-      await _mapboxMap.style.addSource(geoJsonSource);
-    } else {
-      // Update the source data
-      await _mapboxMap.style
-          .setStyleSourceProperty(sourceId, 'data', jsonEncode(data));
-    }
+      // Comprobar si la fuente ya existe
+      bool sourceExists = await _mapboxMap.style.styleSourceExists(sourceId);
+      if (sourceExists) {
+        // Actualizar los datos de la fuente
+        await _mapboxMap.style.setStyleSourceProperty(
+          sourceId,
+          'data',
+          jsonEncode(geoJson),
+        );
+      } else {
+        // Agregar la fuente
+        await _mapboxMap.style.addSource(
+          mapbox.GeoJsonSource(
+            id: sourceId,
+            data: jsonEncode(geoJson),
+          ),
+        );
 
-    // Check if the layer already exists
-    final isLayerExists = await _mapboxMap.style.styleLayerExists(layerId);
-    if (!isLayerExists) {
-      // Add the circle layer to show the user location
-      final circleLayer = mapbox.CircleLayer(
-        id: layerId,
-        sourceId: sourceId,
-        circleColor: const Color(0xFF007AFF).value, // Color azul
-        circleRadius: 8.0,
-      );
-      await _mapboxMap.style.addLayer(circleLayer);
+        // Agregar la capa de círculo
+        await _mapboxMap.style.addLayer(
+          mapbox.CircleLayer(
+            id: layerId,
+            sourceId: sourceId,
+            circleColor: const Color(0xFF007AFF).value, // Azul
+            circleRadius: 8.0,
+            circleOpacity: 0.7,
+          ),
+        );
+      }
+    } catch (e) {
+      log.severe('Error al actualizar la capa de ubicación del usuario: $e');
     }
   }
 
@@ -878,6 +909,73 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         ),
       );
     }
+  }
+
+  // Implement the _updateUserLocation method
+  void _updateUserLocation() async {
+    try {
+      geo.Position position = await geo.Geolocator.getCurrentPosition(
+        locationSettings: const geo.LocationSettings(
+          accuracy: geo.LocationAccuracy.high,
+        ),
+      );
+      log.info('📍 Posición obtenida: ${position.latitude}, ${position.longitude}, precisión: ${position.accuracy} metros');
+      
+      if (position.accuracy <= 10) {
+        setState(() {
+          _currentPosition = position;
+        });
+        _addUserLocationLayer();
+      } else {
+        log.warning('Precisión insuficiente (${position.accuracy}m), no se actualiza la ubicación');
+      }
+    } catch (e) {
+      log.severe('Error al actualizar la ubicación del usuario: $e');
+    }
+  }
+
+  void _startLocationUpdates() {
+    const locationSettings = geo.LocationSettings(
+      accuracy: geo.LocationAccuracy.high,
+      distanceFilter: 0, // Recibir todas las actualizaciones
+    );
+
+    _positionStreamSubscription = geo.Geolocator.getPositionStream(locationSettings: locationSettings)
+      .listen((geo.Position position) {
+        log.info('Posición: ${position.latitude}, ${position.longitude}, precisión: ${position.accuracy} metros');
+        if (position.accuracy <= 10) {
+          _updateUserLocationWithSmoothing(position);
+        } else {
+          log.warning('Precisión insuficiente (${position.accuracy}m), no se actualiza la ubicación');
+        }
+      });
+  }
+
+  void _updateUserLocationWithSmoothing(geo.Position newPosition) {
+    _positionHistory.add(newPosition);
+    if (_positionHistory.length > 5) {
+      _positionHistory.removeAt(0); // Mantener solo las últimas 5 lecturas
+    }
+
+    double avgLatitude = _positionHistory.map((p) => p.latitude).reduce((a, b) => a + b) / _positionHistory.length;
+    double avgLongitude = _positionHistory.map((p) => p.longitude).reduce((a, b) => a + b) / _positionHistory.length;
+
+    setState(() {
+      _currentPosition = geo.Position(
+        latitude: avgLatitude,
+        longitude: avgLongitude,
+        timestamp: newPosition.timestamp,
+        accuracy: newPosition.accuracy,
+        altitude: newPosition.altitude,
+        altitudeAccuracy: newPosition.altitudeAccuracy,
+        heading: newPosition.heading,
+        headingAccuracy: newPosition.headingAccuracy,
+        speed: newPosition.speed,
+        speedAccuracy: newPosition.speedAccuracy,
+      );
+    });
+
+    _addUserLocationLayer();
   }
 
   @override
