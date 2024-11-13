@@ -166,7 +166,8 @@ class _MyHomePageState extends State<MyHomePage> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 64),
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 64),
               title: const Text('Términos y Condiciones'),
               content: SizedBox(
                 width: double.maxFinite,
@@ -213,11 +214,11 @@ class _MyHomePageState extends State<MyHomePage> {
                                 listBullet: const TextStyle(fontSize: 14),
                               ),
                               onTapLink: (text, href, title) {
-                              // Abrir enlaces externos si es necesario
-                              if (href != null) {
-                                launchUrl(Uri.parse(href));
-                              }
-                            },
+                                // Abrir enlaces externos si es necesario
+                                if (href != null) {
+                                  launchUrl(Uri.parse(href));
+                                }
+                              },
                             ),
                           ),
                         ),
@@ -286,13 +287,20 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _initializeCameras() async {
     try {
-      // Request permissions
-      await _requestPermissions();
-      // Initialize cameras
-      _cameras = await availableCameras();
-      setState(() {
-        _permissionsGranted = true;
-      });
+      PermissionStatus cameraPermission = await Permission.camera.request();
+      PermissionStatus microphonePermission =
+          await Permission.microphone.request();
+      PermissionStatus photoPermission = await Permission.photos.request();
+
+      if (cameraPermission.isGranted &&
+          photoPermission.isGranted &&
+          microphonePermission.isGranted) {
+        // Initialize cameras
+        _cameras = await availableCameras();
+        setState(() {
+          _permissionsGranted = true;
+        });
+      }
     } catch (e) {
       Logger.root.severe('Error initializing cameras: $e');
       // Optionally handle the error, e.g., show a dialog
@@ -308,7 +316,7 @@ class _MyHomePageState extends State<MyHomePage> {
     if (cameraPermission.isDenied ||
         microphonePermission.isDenied ||
         photoPermission.isDenied) {
-      _showPermissionsDialog();
+      await _showPermissionsDialog();
     } else if (cameraPermission.isPermanentlyDenied ||
         microphonePermission.isPermanentlyDenied ||
         photoPermission.isPermanentlyDenied) {
@@ -316,13 +324,50 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _showPermissionsDialog() {
+  Future<void> _showPermissionsDialog() async {
+    PermissionStatus cameraPermission = await Permission.camera.request();
+    PermissionStatus photoPermission = await Permission.photos.request();
+    PermissionStatus microphonePermission =
+        await Permission.microphone.request();
+
+    String cameraMessage =
+        cameraPermission.isPermanentlyDenied || cameraPermission.isDenied
+            ? 'Cámara'
+            : '';
+    String photoMessage =
+        photoPermission.isPermanentlyDenied || photoPermission.isDenied
+            ? 'Galería de fotos'
+            : '';
+    String microphoneMessage = microphonePermission.isPermanentlyDenied ||
+            microphonePermission.isDenied
+        ? 'Micrófono'
+        : '';
+    String microphoneAdditionalMessage = microphonePermission
+                .isPermanentlyDenied ||
+            microphonePermission.isDenied
+        ? ' Algunas funcionalidades pueden estar limitadas sin el permiso del micrófono.'
+        : '';
+
+    String message = '';
+    if (cameraMessage.isNotEmpty ||
+        photoMessage.isNotEmpty ||
+        microphoneMessage.isNotEmpty) {
+      List<String> messages = [];
+      if (cameraMessage.isNotEmpty) messages.add(cameraMessage);
+      if (photoMessage.isNotEmpty) messages.add(photoMessage);
+      if (microphoneMessage.isNotEmpty) messages.add(microphoneMessage);
+
+      if (messages.isNotEmpty) {
+        message =
+            'La aplicación necesita permisos de acceso a ${messages.join(', ').replaceFirst(RegExp(r', (?=[^,]*$)'), ' y ')} para continuar.$microphoneAdditionalMessage';
+      }
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Permisos requeridos'),
-        content: const Text(
-            'La aplicación necesita permisos para acceder a la cámara, micrófono y fotos.'),
+        content: Text(message),
         actions: [
           TextButton(
             onPressed: () {
@@ -375,8 +420,19 @@ class _MyHomePageState extends State<MyHomePage> {
             const SizedBox(
                 height: 60), // Spacing between the title and the first button
             ElevatedButton(
-              onPressed: () {
-                if (_permissionsGranted) {
+              onPressed: () async {
+                bool cameraPermissionGranted =
+                    await Permission.camera.isGranted;
+                bool microphonePermissionGranted =
+                    await Permission.microphone.isGranted;
+                bool photoPermissionGranted = await Permission.photos.isGranted;
+
+                if (cameraPermissionGranted &&
+                    microphonePermissionGranted &&
+                    photoPermissionGranted) {
+                  if (_cameras.isEmpty) {
+                    await _initializeCameras();
+                  }
                   Navigator.push(
                     context,
                     MaterialPageRoute(
