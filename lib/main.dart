@@ -382,6 +382,45 @@ class MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  // New method to show location permission dialog
+  Future<void> _showLocationPermissionDialog() async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Permiso de Localización'),
+          content: Text(
+              'El permiso de localización es necesario para mostrar el mapa de parcelas.'),
+          actions: [
+            TextButton(
+              child: Text('Otorgar permisos'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                // Request permission again
+                PermissionStatus status = await Permission.location.request();
+                if (status.isGranted) {
+                  // Permission granted, navigate to ParcelMapScreen
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => ParcelMapScreen()),
+                  );
+                } else if (status.isPermanentlyDenied) {
+                  // Open app settings
+                  await openAppSettings();
+                }
+              },
+            ),
+            TextButton(
+              child: Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Build the UI regardless of permissions
@@ -446,14 +485,30 @@ class MyHomePageState extends State<MyHomePage> {
             ),
             const SizedBox(height: 40), // Spacing between the buttons
             ElevatedButton(
-              onPressed: () {
-                // Assuming no permissions are needed for this screen
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ParcelMapScreen(),
-                  ),
-                );
+              onPressed: () async {
+                // Check current permission status
+                PermissionStatus status = await Permission.location.status;
+                if (status.isGranted) {
+                  // Navigate to ParcelMapScreen
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => ParcelMapScreen()),
+                  );
+                } else {
+                  // Request permission
+                  PermissionStatus newStatus = await Permission.location.request();
+                  if (newStatus.isGranted) {
+                    // Permission granted, navigate to ParcelMapScreen
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => ParcelMapScreen()),
+                    );
+                  } else if (newStatus.isDenied) {
+                    // Show permission dialog
+                    await _showLocationPermissionDialog();
+                  } else if (newStatus.isPermanentlyDenied) {
+                    // Open app settings
+                    await openAppSettings();
+                  }
+                }
               },
               child: const Text('Mapa de Parcelas'),
             ),
