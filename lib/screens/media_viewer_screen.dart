@@ -197,12 +197,48 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
               : 'No se pudo eliminar la foto de la biblioteca de fotos');
         } else {
           // For Android, save photo or video in the gallery
-          final file = File(widget.mediaPath);
-          if (await file.exists()) {
-            await file.delete();
-            Navigator.of(context).pop(true); // Indicate successful elimination
-            return;
+          final requestType =
+              widget.isVideo ? RequestType.video : RequestType.image;
+          final List<AssetPathEntity> albums =
+              await PhotoManager.getAssetPathList(type: requestType);
+          AssetEntity? targetAsset;
+
+          for (final album in albums) {
+            int page = 0;
+            bool assetFound = false;
+
+            while (true) {
+              final List<AssetEntity> assets =
+                  await album.getAssetListPaged(page: page, size: 100);
+              if (assets.isEmpty) {
+                break;
+              }
+              for (final asset in assets) {
+                final file = await asset.file;
+                if (file?.path == widget.mediaPath) {
+                  targetAsset = asset;
+                  assetFound = true;
+                  break;
+                }
+              }
+              if (assetFound) break;
+              page++;
+            }
+            if (targetAsset != null) break;
           }
+
+          if (targetAsset != null) {
+            final result =
+                await PhotoManager.editor.deleteWithIds([targetAsset.id]);
+            if (result.isNotEmpty) {
+              Navigator.of(context).pop(true);
+              return;
+            }
+          }
+
+          throw Exception(widget.isVideo
+              ? 'No se pudo eliminar el vídeo de la biblioteca de fotos'
+              : 'No se pudo eliminar la foto de la biblioteca de fotos');
         }
       } catch (e) {
         // Show error message if elimination fails
