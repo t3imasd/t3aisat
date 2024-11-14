@@ -286,10 +286,16 @@ class MyHomePageState extends State<MyHomePage> {
 
   Future<void> _initializeCameras() async {
     try {
-      PermissionStatus cameraPermission = await Permission.camera.request();
+      PermissionStatus cameraPermission = await Permission.camera.isGranted
+          ? PermissionStatus.granted
+          : await Permission.camera.request();
       PermissionStatus microphonePermission =
-          await Permission.microphone.request();
-      PermissionStatus photoPermission = await Permission.photos.request();
+          await Permission.microphone.isGranted
+              ? PermissionStatus.granted
+              : await Permission.microphone.request();
+      PermissionStatus photoPermission = await Permission.photos.isGranted
+          ? PermissionStatus.granted
+          : await Permission.photos.request();
 
       if (cameraPermission.isGranted &&
           photoPermission.isGranted &&
@@ -304,10 +310,16 @@ class MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _requestPermissions() async {
-    PermissionStatus cameraPermission = await Permission.camera.request();
+    PermissionStatus cameraPermission = await Permission.camera.isGranted
+        ? PermissionStatus.granted
+        : await Permission.camera.request();
     PermissionStatus microphonePermission =
-        await Permission.microphone.request();
-    PermissionStatus photoPermission = await Permission.photos.request();
+        await Permission.microphone.isGranted
+            ? PermissionStatus.granted
+            : await Permission.microphone.request();
+    PermissionStatus photoPermission = await Permission.photos.isGranted
+        ? PermissionStatus.granted
+        : await Permission.photos.request();
 
     if (cameraPermission.isDenied ||
         microphonePermission.isDenied ||
@@ -321,10 +333,16 @@ class MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _showPermissionsDialog() async {
-    PermissionStatus cameraPermission = await Permission.camera.request();
-    PermissionStatus photoPermission = await Permission.photos.request();
+    PermissionStatus cameraPermission = await Permission.camera.isGranted
+        ? PermissionStatus.granted
+        : await Permission.camera.request();
     PermissionStatus microphonePermission =
-        await Permission.microphone.request();
+        await Permission.microphone.isGranted
+            ? PermissionStatus.granted
+            : await Permission.microphone.request();
+    PermissionStatus photoPermission = await Permission.photos.isGranted
+        ? PermissionStatus.granted
+        : await Permission.photos.request();
 
     String cameraMessage =
         cameraPermission.isPermanentlyDenied || cameraPermission.isDenied
@@ -495,11 +513,13 @@ class MyHomePageState extends State<MyHomePage> {
                   );
                 } else {
                   // Request permission
-                  PermissionStatus newStatus = await Permission.location.request();
+                  PermissionStatus newStatus =
+                      await Permission.location.request();
                   if (newStatus.isGranted) {
                     // Permission granted, navigate to ParcelMapScreen
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => ParcelMapScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => ParcelMapScreen()),
                     );
                   } else if (newStatus.isDenied) {
                     // Show permission dialog
