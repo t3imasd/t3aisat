@@ -129,12 +129,11 @@ class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  MyHomePageState createState() => MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class MyHomePageState extends State<MyHomePage> {
   List<CameraDescription> _cameras = [];
-  bool _permissionsGranted = false;
   bool _termsAccepted = false;
 
   @override
@@ -297,9 +296,6 @@ class _MyHomePageState extends State<MyHomePage> {
           microphonePermission.isGranted) {
         // Initialize cameras
         _cameras = await availableCameras();
-        setState(() {
-          _permissionsGranted = true;
-        });
       }
     } catch (e) {
       Logger.root.severe('Error initializing cameras: $e');
