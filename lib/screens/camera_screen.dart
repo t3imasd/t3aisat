@@ -114,6 +114,10 @@ class CameraScreenState extends State<CameraScreen>
 
   int _pointerCount = 0; // Add pointer count tracking
 
+  // Add this to your state class
+  Timer? _recordingTimer;
+  Duration _recordingDuration = Duration.zero;
+
   @override
   void initState() {
     super.initState();
@@ -214,6 +218,7 @@ class CameraScreenState extends State<CameraScreen>
       // Stop recording
       try {
         XFile videoFile = await controller!.stopVideoRecording();
+        _stopRecordingTimer();
         setState(() {
           _isRecording = false;
         });
@@ -236,6 +241,7 @@ class CameraScreenState extends State<CameraScreen>
       try {
         await controller!.prepareForVideoRecording();
         await controller!.startVideoRecording();
+        _startRecordingTimer();
         setState(() {
           _isRecording = true;
         });
@@ -414,6 +420,63 @@ class CameraScreenState extends State<CameraScreen>
         _isFocusing = false;
       });
     });
+  }
+
+  // Add this widget to show the timer
+  Widget _buildRecordingTimer() {
+    return Positioned(
+      top: 40,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: AnimatedOpacity(
+          opacity: _isRecording ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 200),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _formatDuration(_recordingDuration),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'SF Pro Display',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Add this helper method
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String hours = twoDigits(duration.inHours);
+    String minutes = twoDigits(duration.inMinutes.remainder(60));
+    String seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$hours:$minutes:$seconds";
+  }
+
+  // Add these methods to handle timer
+  void _startRecordingTimer() {
+    _recordingDuration = Duration.zero;
+    _isRecording = true;
+    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        _recordingDuration += const Duration(seconds: 1);
+      });
+    });
+  }
+
+  void _stopRecordingTimer() {
+    _recordingTimer?.cancel();
+    _recordingTimer = null;
+    _isRecording = false;
   }
 
   @override
@@ -768,6 +831,7 @@ class CameraScreenState extends State<CameraScreen>
               ],
             ),
           ),
+          _buildRecordingTimer(),
         ],
       ),
     );
