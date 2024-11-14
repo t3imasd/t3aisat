@@ -1,6 +1,6 @@
-# Build and Release an Android App
+# [Build and Release an Android App](https://docs.flutter.dev/deployment/android)
 
-> **Ruta:** Deployment > Android
+> **Ruta:** [Deployment](https://docs.flutter.dev/deployment) > Android
 
 To test an app, you can use `flutter run` at the command line, or the **Run** and **Debug** options in your IDE.
 
