@@ -49,6 +49,8 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
   bool _isLoading = true; // Variable to manage the initial loading spinner
   bool _isProcessingVideo =
       false; // Variable to manage video processing spinner
+  bool _isProcessingImage =
+      false; // Variable to manage image processing spinner
   bool _openedSettings = false; // Flag to check if user went to settings
 
   VideoPlayerController? _videoController;
@@ -322,8 +324,17 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
           });
         });
       } else {
-        // If it's an image, process it directly
-        await _writeTextOnImageAndSaveToGallery(widget.mediaPath);
+        // If it's an image, process it directly with spinner
+        setState(() {
+          _isProcessingImage = true; // Show image processing spinner
+        });
+
+        Future(() async {
+          await _writeTextOnImageAndSaveToGallery(widget.mediaPath);
+          setState(() {
+            _isProcessingImage = false; // Hide image processing spinner
+          });
+        });
       }
     } catch (e) {
       log.severe('Failed to obtain location or process media: $e');
@@ -596,6 +607,7 @@ T3 AI SAT''';
       log.severe('Failed to process image: $e');
       setState(() {
         _isLoading = false;
+        _isProcessingImage = false;
       });
     }
   }
@@ -974,6 +986,14 @@ $appName''';
 
                         // Overlay para el spinner de procesamiento de video
                         if (widget.isVideo && _isProcessingVideo)
+                          const Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF1976D2), // Navy blue spinner
+                            ),
+                          ),
+
+                        // Overlay para el spinner de procesamiento de imagen
+                        if (!widget.isVideo && _isProcessingImage)
                           const Center(
                             child: CircularProgressIndicator(
                               color: Color(0xFF1976D2), // Navy blue spinner
