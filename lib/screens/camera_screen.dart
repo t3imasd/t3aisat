@@ -813,10 +813,10 @@ class CameraScreenState extends State<CameraScreen>
                           ),
                         );
                       }
-                      return const FloatingActionButton(
+                      return FloatingActionButton(
                         onPressed: null,
                         heroTag: 'lastCapturedMediaFAB',
-                        child: Icon(Icons.photo_library),
+                        child: Icon(_isRecording ? Icons.videocam : Icons.photo_library),
                       );
                     },
                   ),

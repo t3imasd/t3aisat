@@ -40,7 +40,7 @@ class MediaLocationScreen extends StatefulWidget {
 }
 
 class MediaLocationScreenState extends State<MediaLocationScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   Position? _currentPosition;
   String? _address;
   final Logger log = Logger('MediaLocationScreen');
@@ -59,6 +59,16 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
       true; // Variable to manage visibility of play/pause button
   Timer? _hideControlsTimer; // Timer to hide controls after 2 seconds
 
+  // Variables for the Progress Bar
+  double _videoProcessingProgress = 0.0;
+  Timer? _videoProgressTimer;
+  Duration _videoDuration = Duration.zero;
+  Duration _videoTotalDuration = Duration.zero;
+
+  // Controller for text animation
+  late AnimationController _textAnimationController;
+  late Animation<double> _textOpacityAnimation;
+
   Directory? _tempDir;
   String? _fontFilePath;
   AssetEntity? _lastAsset; // Variable to store the last media asset
@@ -73,6 +83,15 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
     _listFFmpegFilters(); // Method to list the filters available
     _requestPermission(); // Request permissions when starting
     _getCurrentLocation(); // Get current location
+
+    // Initialize the animation controller for the text
+    _textAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    _textOpacityAnimation =
+        Tween<double>(begin: 0.5, end: 1.0).animate(_textAnimationController);
   }
 
   @override
@@ -82,6 +101,8 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
     _hideControlsTimer?.cancel();
+    _videoProgressTimer?.cancel();
+    _textAnimationController.dispose();
     super.dispose();
   }
 
@@ -310,17 +331,29 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
         _isLoading = false;
       });
 
-      // Start processing video in a separate thread
+      // Start processing video or image in a separate thread
       if (widget.isVideo) {
+        // Get the video duration
+        await _getVideoDuration(widget.mediaPath);
+
         setState(() {
           _isProcessingVideo = true; // Show video processing spinner
         });
+
+        // Start the timer for the progress bar
+        _startVideoProgressTimer();
 
         // Run the video processing in a separate Future
         Future(() async {
           await _writeTextOnVideoAndSaveToGallery(widget.mediaPath);
           setState(() {
             _isProcessingVideo = false; // Hide video processing spinner
+          });
+
+          // Detener el Timer y asegurar que la barra de progreso llegue al 100%
+          _videoProgressTimer?.cancel();
+          setState(() {
+            _videoProcessingProgress = 1.0;
           });
         });
       } else {
@@ -342,6 +375,40 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
         _isLoading = false;
       });
     }
+  }
+
+  // Function to get the duration of the video
+  Future<void> _getVideoDuration(String videoPath) async {
+    final tempController = VideoPlayerController.file(File(videoPath));
+    await tempController.initialize();
+    _videoDuration = tempController.value.duration;
+    tempController.dispose();
+
+    // Calculate the estimated total duration (video duration + 40%)
+    _videoTotalDuration = _videoDuration * 1.4;
+  }
+
+  // Function to start the timer for the progress bar
+  void _startVideoProgressTimer() {
+    _videoProcessingProgress = 0.0;
+    const tickDuration = Duration(milliseconds: 500); // Update every 500ms
+    final totalTicks =
+        (_videoTotalDuration.inMilliseconds / tickDuration.inMilliseconds)
+            .ceil();
+
+    int tick = 0;
+
+    _videoProgressTimer = Timer.periodic(tickDuration, (timer) {
+      tick++;
+      setState(() {
+        _videoProcessingProgress =
+            (tick / totalTicks).clamp(0.0, 1.0).toDouble();
+      });
+
+      if (_videoProcessingProgress >= 1.0) {
+        timer.cancel();
+      }
+    });
   }
 
   // Function to get the address from the coordinates
@@ -986,9 +1053,42 @@ $appName''';
 
                         // Overlay para el spinner de procesamiento de video
                         if (widget.isVideo && _isProcessingVideo)
-                          const Center(
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF1976D2), // Navy blue spinner
+                          Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Progress bar
+                                Container(
+                                  width:
+                                      MediaQuery.of(context).size.width * 0.8,
+                                  child: LinearProgressIndicator(
+                                    value: _videoProcessingProgress,
+                                    backgroundColor: Colors.grey[300],
+                                    color: const Color(0xFF1976D2), // Navy blue
+                                    minHeight: 8,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                // Informative text with pulsating opacity animation
+                                FadeTransition(
+                                  opacity: _textOpacityAnimation,
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal:
+                                            MediaQuery.of(context).size.width *
+                                                0.10),
+                                    child: Text(
+                                      'Escribiendo metadatos en los fotogramas del vídeo. Puedes continuar usando la aplicación mientras se completa el procesamiento.',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        color: Color(0xFF1976D2), // Navy blue
+                                        fontSize: 16,
+                                        fontFamily: 'Roboto',
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
 
