@@ -80,16 +80,7 @@ To create your app signing key, use Play App Signing as described in the [offici
 
 To sign your app, use the following instructions.
 
-## Create an Upload Keystore
-
-If you have an existing keystore, skip to the next step. If not, create one using one of the following methods:
-
-1. Follow the [Android Studio key generation steps](https://docs.flutter.dev/deployment/android#sign-the-app:~:text=Android%20Studio%20key%20generation%20steps).
-2. Run the following command at the command line:
-
-   - On macOS or Linux, use the following command:
-
-### Generate an Upload Keystore
+### Create an Upload Keystore
 
 If you have an existing keystore, skip to the next step. If not, create one using one of the following methods:
 
@@ -110,7 +101,7 @@ This command stores the `upload-keystore.jks` file in your home directory. If yo
 > - If your path includes space-separated names, such as Program Files, use platform-appropriate notation for the names. For example, on macOS/Linux use `Program\ Files`, and on Windows use `"Program Files"`.
 > - The `-storetype JKS` tag is only required for Java 9 or newer. As of the Java 9 release, the keystore type defaults to PKS12.
 
-## Reference the Keystore from the App
+### Reference the Keystore from the App
 
 Create a file named `[project]/android/key.properties` that contains a reference to your keystore. Don’t include the angle brackets (`< >`). They indicate that the text serves as a placeholder for your values.
 
@@ -127,11 +118,9 @@ The `storeFile` might be located at `/Users/<user name>/upload-keystore.jks` on 
 >
 > Keep the `key.properties` file private; don’t check it into public source control.
 
-## Configure Signing in Gradle
+### Configure Signing in Gradle
 
 When building your app in release mode, configure Gradle to use your upload key. To configure Gradle, edit the `<project>/android/app/build.gradle` file.
-
-### Configure Signing in Gradle (Continued)
 
 1. Define and load the keystore properties file before the `android` property block.
 
@@ -328,7 +317,7 @@ android {
 }
 ```
 
-## Properties to Adjust in `build.gradle`
+### Properties to Adjust in `build.gradle`
 
 | Property             | Purpose                                                                                                                                                                                                                                                                   | Default Value              |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
@@ -358,7 +347,7 @@ You have two possible release formats when publishing to the Play Store:
 >
 > The Google Play Store prefers the app bundle format. To learn more, check out [About Android App Bundles](https://developer.android.com/guide/app-bundle).
 
-## Build an App Bundle
+### Build an App Bundle
 
 This section describes how to build a release app bundle. If you completed the signing steps, the app bundle will be signed. At this point, you might consider [obfuscating your Dart code](https://developer.android.com/guide/app-bundle) to make it more difficult to reverse engineer. Obfuscating your code involves adding a couple of flags to your build command and maintaining additional files to de-obfuscate stack traces.
 
@@ -372,22 +361,22 @@ The release bundle for your app is created at `[project]/build/app/outputs/bundl
 
 By default, the app bundle contains your Dart code and the Flutter runtime compiled for [armeabi-v7a](https://developer.android.com/ndk/guides/abis#v7a) (ARM 32-bit), [arm64-v8a](https://developer.android.com/ndk/guides/abis#arm64-v8a) (ARM 64-bit), and [x86-64](https://developer.android.com/ndk/guides/abis#86-64) (x86 64-bit).
 
-## Test the App Bundle
+### Test the App Bundle
 
 An app bundle can be tested in multiple ways. This section describes two.
 
-### Offline Using the Bundle Tool
+#### Offline Using the Bundle Tool
 
 1. If you haven’t done so already, download `bundletool` from the [GitHub repository](https://github.com/google/bundletool/releases/latest).
 2. [Generate a set of APKs](https://developer.android.com/studio/command-line/bundletool#generate_apks) from your app bundle.
 3. [Deploy the APKs](https://developer.android.com/studio/command-line/bundletool#deploy_with_bundletool) to connected devices.
 
-### Online Using Google Play
+#### Online Using Google Play
 
 1. Upload your bundle to Google Play to test it. You can use the internal test track, or the alpha or beta channels to test the bundle before releasing it in production.
 2. Follow [these steps to upload your bundle](https://developer.android.com/studio/publish/upload-bundle) to the Play Store.
 
-## Build an APK
+### Build an APK
 
 Although app bundles are preferred over APKs, there are stores that don’t yet support app bundles. In this case, build a release APK for each target ABI (Application Binary Interface).
 
@@ -406,7 +395,7 @@ This command results in three APK files:
 
 Removing the `--split-per-abi` flag results in a fat APK that contains your code compiled for **all** the target ABIs. Such APKs are larger in size than their split counterparts, causing the user to download native binaries that are not applicable to their device's architecture.
 
-## Install an APK on a Device
+### Install an APK on a Device
 
 Follow these steps to install the APK on a connected Android device.
 
