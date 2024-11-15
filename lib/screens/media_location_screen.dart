@@ -181,7 +181,8 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
     final deleted = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (context) => GalleryScreen(store: widget.store, cameras: cameras),
+        builder: (context) =>
+            GalleryScreen(store: widget.store, cameras: cameras),
       ),
     );
 
@@ -440,7 +441,8 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
 
       // Get the current date and time
       final now = DateTime.now();
-      final timeZoneName = now.timeZoneName; // Detects the time zone name (e.g., CEST, CET)
+      final timeZoneName =
+          now.timeZoneName; // Detects the time zone name (e.g., CEST, CET)
 
       final formattedLocalTime =
           '${DateFormat('dd MMM yyyy HH:mm:ss').format(now)} $timeZoneName';
