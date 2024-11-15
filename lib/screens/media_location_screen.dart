@@ -46,7 +46,9 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
   final Logger log = Logger('MediaLocationScreen');
   String?
       _updatedMediaPath; // Variable to store the updated media (image/video) path
-  bool _isLoading = true; // Variable to manage the loading spinner
+  bool _isLoading = true; // Variable to manage the initial loading spinner
+  bool _isProcessingVideo =
+      false; // Variable to manage video processing spinner
   bool _openedSettings = false; // Flag to check if user went to settings
 
   VideoPlayerController? _videoController;
@@ -250,6 +252,10 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
 
   // Function to obtain the current location
   Future<void> _getCurrentLocation() async {
+    setState(() {
+      _isLoading = true; // Show initial loading spinner
+    });
+
     bool serviceEnabled;
     LocationPermission permission;
 
@@ -257,6 +263,9 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       log.severe('Location services are disabled.');
+      setState(() {
+        _isLoading = false;
+      });
       return;
     }
 
@@ -265,12 +274,18 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
         log.severe('Location permissions are denied');
+        setState(() {
+          _isLoading = false;
+        });
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
       log.severe('Location permissions are permanently denied');
+      setState(() {
+        _isLoading = false;
+      });
       return;
     }
 
@@ -288,14 +303,33 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
             _currentPosition!.latitude, _currentPosition!.longitude);
       }
 
-      // Write the text on the image or video and save it in the gallery
+      // Update state to hide initial loading spinner
+      setState(() {
+        _isLoading = false;
+      });
+
+      // Start processing video in a separate thread
       if (widget.isVideo) {
-        await _writeTextOnVideoAndSaveToGallery(widget.mediaPath);
+        setState(() {
+          _isProcessingVideo = true; // Show video processing spinner
+        });
+
+        // Run the video processing in a separate Future
+        Future(() async {
+          await _writeTextOnVideoAndSaveToGallery(widget.mediaPath);
+          setState(() {
+            _isProcessingVideo = false; // Hide video processing spinner
+          });
+        });
       } else {
+        // If it's an image, process it directly
         await _writeTextOnImageAndSaveToGallery(widget.mediaPath);
       }
     } catch (e) {
       log.severe('Failed to obtain location or process media: $e');
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -413,7 +447,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
       return externalDir.path;
     } else {
       // If the directory doesn't exist, create it
-      externalDir.create(recursive: true);
+      await externalDir.create(recursive: true);
       return externalDir.path;
     }
   }
@@ -555,7 +589,7 @@ T3 AI SAT''';
       // Update the state to reflect the new image path in the UI
       setState(() {
         _updatedMediaPath = updatedImagePath;
-        _isLoading = false; // Hide the spinner after processing the image
+        // _isLoading is already false; no need to set here
       });
     } catch (e) {
       // Log any errors that occur during the image processing
@@ -750,13 +784,13 @@ $appName''';
 
           // Update the state to hide the spinner
           setState(() {
-            _isLoading = false;
+            // _isProcessingVideo will be set to false in the calling Future
             _showControls = true; // Show play button initially
           });
         } else {
           log.severe('Processed video file does not exist.');
           setState(() {
-            _isLoading = false;
+            // _isProcessingVideo will be set to false in the calling Future
           });
         }
       } else {
@@ -765,13 +799,13 @@ $appName''';
         log.severe('FFmpeg command failed with return code $returnCode');
         log.severe('FFmpeg logs:\n$logs');
         setState(() {
-          _isLoading = false;
+          // _isProcessingVideo will be set to false in the calling Future
         });
       }
     } catch (e) {
       log.severe('Error processing video: $e');
       setState(() {
-        _isLoading = false;
+        // _isProcessingVideo will be set to false in the calling Future
       });
     }
   }
@@ -830,8 +864,9 @@ $appName''';
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Acceso Galería Fotos'),
-          content: Text('Permite el acceso a tus fotos en Ajustes, por favor'),
+          title: const Text('Acceso Galería Fotos'),
+          content:
+              const Text('Permite el acceso a tus fotos en Ajustes, por favor'),
           actions: [
             TextButton(
               onPressed: () {
@@ -840,13 +875,13 @@ $appName''';
                 PhotoManager
                     .openSetting(); // Open app settings to allow user to grant permission
               },
-              child: Text('Abrir Ajustes'),
+              child: const Text('Abrir Ajustes'),
             ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Cancelar'),
+              child: const Text('Cancelar'),
             ),
           ],
         );
@@ -899,17 +934,22 @@ $appName''';
           foregroundColor: const Color(0xFF1976D2), // Navy blue for text
           elevation: 0, // No shadow in the AppBar
         ),
-        body: Center(
-          child: _isLoading
-              ? const CircularProgressIndicator(
+        body: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
                   color: Color(0xFF1976D2), // Navy blue spinner
-                )
-              : Column(
-                  children: [
-                    if (_updatedMediaPath != null)
-                      Expanded(
-                        child: widget.isVideo
-                            ? _videoController != null &&
+                ),
+              )
+            : Column(
+                children: [
+                  // Media area with Expanded to take available space
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        // Mostrar video o imagen
+                        widget.isVideo
+                            ? _updatedMediaPath != null &&
+                                    _videoController != null &&
                                     _videoController!.value.isInitialized
                                 ? GestureDetector(
                                     behavior: HitTestBehavior.opaque,
@@ -919,175 +959,191 @@ $appName''';
                                         _startHideControlsTimer();
                                       });
                                     },
-                                    child: Stack(
-                                      alignment: Alignment.center,
-                                      children: [
-                                        AspectRatio(
-                                          aspectRatio: _videoController!
-                                              .value.aspectRatio,
-                                          child: VideoPlayer(_videoController!),
-                                        ),
-                                        // Play/Pause Button
-                                        if (_showControls)
-                                          GestureDetector(
-                                            onTap: _togglePlayPause,
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: Colors.black
-                                                    .withOpacity(0.5),
-                                              ),
-                                              padding: const EdgeInsets.all(12),
-                                              child: Icon(
-                                                _videoController!
-                                                        .value.isPlaying
-                                                    ? Icons.pause
-                                                    : Icons.play_arrow,
-                                                color: Colors.white,
-                                                size: 48,
-                                              ),
-                                            ),
-                                          ),
-                                        // Mute/Unmute Button
-                                        Positioned(
-                                          bottom: 50,
-                                          right: 20,
-                                          child: GestureDetector(
-                                            onTap: _toggleMute,
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: Colors.black
-                                                    .withOpacity(0.5),
-                                              ),
-                                              padding: const EdgeInsets.all(8),
-                                              child: Icon(
-                                                _isMuted
-                                                    ? Icons.volume_off
-                                                    : Icons.volume_up,
-                                                color: Colors.white,
-                                                size: 24,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        // Video Progress Indicator
-                                        Positioned(
-                                          bottom: 20,
-                                          left: 20,
-                                          right: 20,
-                                          child: VideoProgressIndicator(
-                                            _videoController!,
-                                            allowScrubbing: true,
-                                            colors: const VideoProgressColors(
-                                              playedColor: Colors.blue,
-                                              bufferedColor: Colors.grey,
-                                              backgroundColor: Colors.black,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                    child: VideoPlayer(_videoController!),
                                   )
                                 : const SizedBox
                                     .shrink() // Do not show anything if not initialized
-                            : Image.file(
-                                File(_updatedMediaPath!),
-                                fit: BoxFit.contain,
-                                width: double.infinity,
-                              ),
-                      ),
-                    const SizedBox(height: 20),
-                    if (_currentPosition != null)
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.location_on,
-                              color: Color(0xFF388E3C), // Dark green
-                              size: 30, // Increased icon size
+                            : _updatedMediaPath != null
+                                ? Image.file(
+                                    File(_updatedMediaPath!),
+                                    fit: BoxFit.contain,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  )
+                                : const SizedBox.shrink(), // No media to show
+
+                        // Overlay para el spinner de procesamiento de video
+                        if (widget.isVideo && _isProcessingVideo)
+                          const Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF1976D2), // Navy blue spinner
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Latitud: ${_currentPosition?.latitude}\nLongitud: ${_currentPosition?.longitude}',
-                                textAlign: TextAlign.left,
-                                style: const TextStyle(
-                                    fontFamily: 'Roboto',
-                                    fontSize: 16,
-                                    color: Color(0xFF424242)), // Dark gray
-                              ),
-                            ),
-                            if (_lastAsset !=
-                                null) // Show thumbnail if there is a last asset
-                              GestureDetector(
-                                onTap:
-                                    _showGallery, // Show the gallery when tapped
-                                child: FutureBuilder<Uint8List?>(
-                                  future:
-                                      _lastCapturedAsset!.thumbnailDataWithSize(
-                                    const ThumbnailSize.square(100),
-                                  ),
-                                  builder: (context, snapshot) {
-                                    if (snapshot.connectionState ==
-                                            ConnectionState.done &&
-                                        snapshot.hasData) {
-                                      return SizedBox(
-                                        width: 50, // Small size
-                                        height: 50, // Small and square size
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                              8.0), // Rounded edges
-                                          child: Image.memory(
-                                            snapshot.data!,
-                                            fit: BoxFit
-                                                .cover, // The image fills the square container
-                                          ),
+                          ),
+
+                        // Overlay para los controles de video
+                        if (widget.isVideo &&
+                            _videoController != null &&
+                            _videoController!.value.isInitialized)
+                          if (!_isProcessingVideo)
+                            Align(
+                              alignment: Alignment.center,
+                              child: _showControls
+                                  ? GestureDetector(
+                                      onTap: _togglePlayPause,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.black.withOpacity(0.5),
                                         ),
-                                      );
-                                    }
-                                    return Container(
-                                      width: 50,
-                                      height: 50,
-                                      color: Colors.grey, // Placeholder color
-                                    );
-                                  },
+                                        padding: const EdgeInsets.all(12),
+                                        child: Icon(
+                                          _videoController!.value.isPlaying
+                                              ? Icons.pause
+                                              : Icons.play_arrow,
+                                          color: Colors.white,
+                                          size: 48,
+                                        ),
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                        if (widget.isVideo &&
+                            _videoController != null &&
+                            _videoController!.value.isInitialized)
+                          if (!_isProcessingVideo)
+                            Positioned(
+                              bottom: 50,
+                              right: 20,
+                              child: GestureDetector(
+                                onTap: _toggleMute,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.black.withOpacity(0.5),
+                                  ),
+                                  padding: const EdgeInsets.all(8),
+                                  child: Icon(
+                                    _isMuted
+                                        ? Icons.volume_off
+                                        : Icons.volume_up,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
                                 ),
                               ),
-                          ],
-                        ),
-                      ),
-                    if (_address != null)
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.home,
-                              color: Color(0xFF388E3C), // Dark green
-                              size: 30, // Increased icon size
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                '$_address',
-                                textAlign: TextAlign.left,
-                                style: const TextStyle(
-                                    fontFamily: 'Roboto',
-                                    fontSize: 16,
-                                    color: Color(0xFF424242)), // Dark gray
+                        if (widget.isVideo &&
+                            _videoController != null &&
+                            _videoController!.value.isInitialized)
+                          if (!_isProcessingVideo)
+                            Positioned(
+                              bottom: 20,
+                              left: 20,
+                              right: 20,
+                              child: VideoProgressIndicator(
+                                _videoController!,
+                                allowScrubbing: true,
+                                colors: const VideoProgressColors(
+                                  playedColor: Colors.blue,
+                                  bufferedColor: Colors.grey,
+                                  backgroundColor: Colors.black,
+                                ),
                               ),
                             ),
-                          ],
-                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Información de ubicación
+                  if (_currentPosition != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.location_on,
+                            color: Color(0xFF388E3C), // Dark green
+                            size: 30, // Increased icon size
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Latitud: ${_currentPosition?.latitude}\nLongitud: ${_currentPosition?.longitude}',
+                              textAlign: TextAlign.left,
+                              style: const TextStyle(
+                                  fontFamily: 'Roboto',
+                                  fontSize: 16,
+                                  color: Color(0xFF424242)), // Dark gray
+                            ),
+                          ),
+                          if (_lastCapturedAsset != null)
+                            GestureDetector(
+                              onTap:
+                                  _showGallery, // Show the gallery when tapped
+                              child: FutureBuilder<Uint8List?>(
+                                future: (_lastCapturedAsset ?? _lastAsset)!
+                                    .thumbnailDataWithSize(
+                                  const ThumbnailSize.square(100),
+                                ),
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState ==
+                                          ConnectionState.done &&
+                                      snapshot.hasData) {
+                                    return SizedBox(
+                                      width: 50, // Small size
+                                      height: 50, // Small and square size
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(
+                                            8.0), // Rounded edges
+                                        child: Image.memory(
+                                          snapshot.data!,
+                                          fit: BoxFit
+                                              .cover, // The image fills the square container
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return Container(
+                                    width: 50,
+                                    height: 50,
+                                    color: Colors.grey, // Placeholder color
+                                  );
+                                },
+                              ),
+                            ),
+                        ],
                       ),
-                    const SizedBox(height: 20),
-                  ],
-                ),
-        ),
+                    ),
+                  if (_address != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 8.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.home,
+                            color: Color(0xFF388E3C), // Dark green
+                            size: 30, // Increased icon size
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '$_address',
+                              textAlign: TextAlign.left,
+                              style: const TextStyle(
+                                  fontFamily: 'Roboto',
+                                  fontSize: 16,
+                                  color: Color(0xFF424242)), // Dark gray
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                ],
+              ),
       ),
     );
   }
