@@ -76,7 +76,7 @@ Android uses two signing keys: **upload key** and **app signing key**.
 - Developers upload an `.aab` or `.apk` file signed with an **upload key** to the Play Store.
 - The end-users download the `.apk` file signed with an **app signing key**.
 
-To create your app signing key, use Play App Signing as described in the [official Play Store documentation](https://support.google.com/googleplay/android-developer/answer/7384423?hl=en).
+To create your app signing key, use Play App Signing as described in the [official Play Store documentation](https://support.google.com/googleplay/android-developer/answer/7384423?hl=en) o you can see the same document written in [use_play_app.signing.md](use_play_app_signing.md).
 
 To sign your app, use the following instructions.
 
