@@ -129,12 +129,12 @@ When building your app in release mode, configure Gradle to use your upload key.
    En el archivo `[project]/android/app/build.gradle`:
 
    ```kotlin
-   + def keystoreProperties = new Properties()
-   + def keystorePropertiesFile = rootProject.file('key.properties')
-   + if (keystorePropertiesFile.exists()) {
-   +     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-   + }
-   +
+   def keystoreProperties = new Properties()
+   def keystorePropertiesFile = rootProject.file('key.properties')
+   if (keystorePropertiesFile.exists()) {
+       keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+   }
+
    android {
    ...
    }
@@ -145,17 +145,17 @@ When building your app in release mode, configure Gradle to use your upload key.
    En el archivo `[project]/android/app/build.gradle`:
 
    ```kotlin
-   + android {
-   +     // ...
-   +
-   +     signingConfigs {
-   +         release {
-   +             keyAlias = keystoreProperties['keyAlias']
-   +             keyPassword = keystoreProperties['keyPassword']
-   +             storeFile = keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-   +             storePassword = keystoreProperties['storePassword']
-   +         }
-   +     }
+   android {
+       // ...
+
+       signingConfigs {
+           release {
+               keyAlias = keystoreProperties['keyAlias']
+               keyPassword = keystoreProperties['keyPassword']
+               storeFile = keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+               storePassword = keystoreProperties['storePassword']
+           }
+       }
        buildTypes {
            release {
                // TODO: Add your own signing config for the release build.
