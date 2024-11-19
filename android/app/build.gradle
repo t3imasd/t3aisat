@@ -58,6 +58,8 @@ android {
             ndk {
                 debugSymbolLevel 'SYMBOL_TABLE' // Or 'FULL' if you prefer more detailed information
             }
+            shrinkResources false
+            minifyEnabled false
         }
     }
 
