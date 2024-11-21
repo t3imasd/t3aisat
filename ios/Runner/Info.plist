@@ -39,7 +39,7 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>La aplicación necesita acceso al micrófono para grabar videos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Necesitamos añadir fotos a tu libería de Fotos.</string>
+	<string>Necesitamos añadir fotos a tu librería de Fotos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>La App necesita permiso de acceso a tu librería de fotos.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
