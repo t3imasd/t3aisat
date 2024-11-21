@@ -29,7 +29,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.t3aisat.t3aisat"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -50,19 +49,27 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Configuración específica para el modo Debug
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            debuggable true                                                                                        
+        }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            // signingConfig = signingConfigs.debug
+            // APP firm configuration
             signingConfig = signingConfigs.release
+            // Enable the reduction and obfuscation of code
+            minifyEnabled true
+            shrinkResources true
+            // ProGuard rules file
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Native symbols level
             ndk {
-                debugSymbolLevel 'SYMBOL_TABLE' // Or 'FULL' if you prefer more detailed information
+                debugSymbolLevel 'SYMBOL_TABLE' // O 'FULL' if you need more detailed information
             }
-            shrinkResources false
-            minifyEnabled false
         }
     }
-
+ 
     // This is used by ffmpeg.kit to load the native libraries.
     packagingOptions {
         pickFirst 'lib/x86/libc++_shared.so'
