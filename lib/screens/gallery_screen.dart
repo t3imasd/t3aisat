@@ -84,8 +84,10 @@ class GalleryScreenState extends State<GalleryScreen> {
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.done &&
                   snapshot.hasData) {
-                if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                  final mediaFiles = snapshot.data!;
+                final mediaFiles = snapshot.data!;
+                if (snapshot.hasData &&
+                    snapshot.data!.isNotEmpty &&
+                    mediaFiles.isNotEmpty) {
                   return GridView.builder(
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
@@ -155,8 +157,22 @@ class GalleryScreenState extends State<GalleryScreen> {
                     },
                   );
                 } else {
-                  // If there are no photos or videos, we show a message
-                  return _emptyGalleryMessage();
+                  // Display Icons.videocam_off when mediaFiles is empty
+                  return GridView(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 1, // Single column grid
+                    ),
+                    children: [
+                      Center(
+                        child: Icon(
+                          Icons.videocam_off,
+                          size: 100,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  );
                 }
               }
               return const Center(child: CircularProgressIndicator());
