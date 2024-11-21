@@ -15,6 +15,7 @@ import 'helpers/terms_helpers.dart';
 import 'model/photo_model.dart';
 import 'objectbox.g.dart'; // Import ObjectBox generated code
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
 
 List<CameraDescription> cameras = [];
 late Store store; // ObjectBox store
@@ -274,7 +275,11 @@ class MyHomePageState extends State<MyHomePage> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                SystemNavigator.pop();
+                if (Platform.isAndroid) {
+                  SystemNavigator.pop();
+                } else if (Platform.isIOS) {
+                  exit(0);
+                }
               },
               child: const Text('Salir'),
             ),
