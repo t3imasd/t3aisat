@@ -1189,7 +1189,7 @@ $appName''';
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Latitud: ${_currentPosition?.latitude}\nLongitud: ${_currentPosition?.longitude}',
+                              'Latitud: ${_currentPosition!.latitude.toStringAsFixed(6)}\nLongitud: ${_currentPosition!.longitude.toStringAsFixed(6)}',
                               textAlign: TextAlign.left,
                               style: const TextStyle(
                                   fontFamily: 'Roboto',
