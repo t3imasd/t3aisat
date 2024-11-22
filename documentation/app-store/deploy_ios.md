@@ -146,10 +146,9 @@ and update the `MinimumOSVersion` value to match.
 
 When a new Flutter app is created, a placeholder icon set is created. This step covers replacing these placeholder icons with your app's icons:
 
-1. Review the [iOS App Icon](https://developer.apple.com/design/human-interface-guidelines/app-icons/) guidelines and,
-   in particular, the advice on [creating light, dark, and tinted](https://developer.apple.com/design/human-interface-guidelines/app-icons#iOS-iPadOS) icons for your app.
-1. In the Xcode project navigator, select `Assets.xcassets` in the `Runner` folder. Update the placeholder icons with your own app icons.
-1. Verify the icon has been replaced by running your app using `flutter run`.
+1. Review the [iOS App Icon](https://developer.apple.com/design/human-interface-guidelines/app-icons/) guidelines and, in particular, the advice on [creating light, dark, and tinted](https://developer.apple.com/design/human-interface-guidelines/app-icons#iOS-iPadOS) icons for your app.
+2. In the Xcode project navigator, select `Assets.xcassets` in the `Runner` folder. Update the placeholder icons with your own app icons.
+3. Verify the icon has been replaced by running your app using `flutter run`.
 
 ## Add a launch image
 
@@ -201,17 +200,14 @@ Consider adding the `--obfuscate` and `--split-debug-info` flags to
 [obfuscate your Dart code](https://docs.flutter.dev/deployment/obfuscate) to make it more difficult
 to reverse engineer.
 
-If you are not distributing to the App Store, you can optionally
-choose a different [export method](https://help.apple.com/xcode/mac/current/#/dev31de635e5) by
-adding the option `--export-method ad-hoc`,
-`--export-method development` or `--export-method enterprise`.
+If you are not distributing to the App Store, you can optionally choose a different [export method](https://help.apple.com/xcode/mac/current/#/dev31de635e5) by adding the option `--export-method ad-hoc`, `--export-method development` or `--export-method enterprise`.
 
 > On versions of Flutter where `flutter build ipa --export-method` is unavailable, open `build/ios/archive/MyApp.xcarchive` and follow the instructions below to validate and distribute the app from Xcode.
 
 ### Upload the app bundle to App Store Connect
 
 Once the app bundle is created, upload it to
-[App Store Connect][appstoreconnect_login] by either:
+[App Store Connect](https://developer.apple.com/support/app-store-connect/) by either:
 
 1. Install and open the [Apple Transport macOS app](https://appstoreconnect.apple.com/). Drag and drop the `build/ios/ipa/*.ipa` app bundle into the app.
 
