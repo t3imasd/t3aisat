@@ -8,21 +8,16 @@ short-title: iOS
 
 ---
 
-This guide provides a step-by-step walkthrough of releasing a
-Flutter app to the [App Store][appstore] and [TestFlight][].
+This guide provides a step-by-step walkthrough of releasing a Flutter app to the [App Store](https://developer.apple.com/app-store/submissions/) and [TestFlight](https://developer.apple.com/testflight/).
 
 ## Preliminaries
 
-Xcode is required to build and release your app. You
-must use a device running macOS to follow this guide.
+Xcode is required to build and release your app. You must use a device running macOS to follow this guide.
 
-Before beginning the process of releasing your app,
-ensure that it meets Apple's [App Review Guidelines][appreview].
+Before beginning the process of releasing your app, ensure that it meets Apple's [App Review Guidelines](https://developer.apple.com/app-store/review/).
 
-To publish your app to the App Store,
-you must first enroll in the [Apple Developer Program][devprogram].
-You can read more about the various membership options in Apple's
-[Choosing a Membership][devprogram_membership] guide.
+To publish your app to the App Store, you must first enroll in the [Apple Developer Program](https://developer.apple.com/programs/).
+You can read more about the various membership options in Apple's [Choosing a Membership](https://developer.apple.com/support/compare-memberships/) guide.
 
 ## Video overview
 
@@ -66,68 +61,49 @@ to App Store Connect. To build an app means to compile the source code and app a
 
 It's time to add your IPA file to App Store Connect. There are a few different ways to do this, but the easiest is to use the Apple Transport macOS app. Drag and drop the IPA into the Transport app and wait for it to process. Once it's all ready, deliver it to App Store Connect. Over in App Store Connect, you can choose whether or not you want to deploy your app to the App Store or to TestFlight. TestFlight lets you push your apps to internal and external testers before making it available to a larger audience. Just create your groups of testers to get started. Keep in mind if you choose to invite external testers, your app is submitted to beta app review, which means that you may need to wait a few days before your app becomes available to testers. Testers can install the TestFlight app on their device and use it to install your app and share feedback. When you're ready to release your app to the world, complete all the required fields and click Add for Review. Apple will notify you when the review process is complete and your app is live in the App Store.
 
-And that's how you deploy your Flutter app in the App Store in seven steps. For more details on all the steps that we went through today and ways that you can automate the process, check out the step-by-step guide included in the video description. I'm Leigha. Thanks for watching, and I can't wait to see your Flutter app in the App Store.
+And that's how you deploy your Flutter app in the App Store in seven steps. For more details on all the steps that we went through today and ways that you can automate the process, check out the step-by-step guide included in the video description. I'm Leigha Thanks for watching, and I can't wait to see your Flutter app in the App Store.
 
 ## Register your app on App Store Connect
 
-Manage your app's life cycle on
-[App Store Connect][appstoreconnect] (formerly iTunes Connect).
-You define your app name and description, add screenshots,
-set pricing, and manage releases to the App Store and TestFlight.
+Manage your app's life cycle on [App Store Connect](https://developer.apple.com/support/app-store-connect/) (formerly iTunes Connect).
+You define your app name and description, add screenshots, set pricing, and manage releases to the App Store and TestFlight.
 
-Registering your app involves two steps: registering a unique
-Bundle ID, and creating an application record on App Store Connect.
+Registering your app involves two steps: registering a unique Bundle ID, and creating an application record on App Store Connect.
 
-For a detailed overview of App Store Connect, see the
-[App Store Connect][appstoreconnect_guide] guide.
+For a detailed overview of App Store Connect, see the [App Store Connect](https://developer.apple.com/support/app-store-connect/) guide.
 
 ### Register a Bundle ID
 
-Every iOS application is associated with a Bundle ID,
-a unique identifier registered with Apple.
-To register a Bundle ID for your app, follow these steps:
+Every iOS application is associated with a Bundle ID, a unique identifier registered with Apple. To register a Bundle ID for your app, follow these steps:
 
-1. Open the [App IDs][devportal_appids] page of your developer account.
+1. Open the [App IDs](https://developer.apple.com/account/ios/identifier/bundle) page of your developer account.
 1. Click **+** to create a new Bundle ID.
 1. Enter an app name, select **Explicit App ID**, and enter an ID.
 1. Select the services your app uses, then click **Continue**.
-1. On the next page, confirm the details and click **Register**
-   to register your Bundle ID.
+1. On the next page, confirm the details and click **Register** to register your Bundle ID.
 
 ### Create an application record on App Store Connect
 
 Register your app on App Store Connect:
 
-1. Open [App Store Connect][appstoreconnect_login] in your browser.
+1. Open [App Store Connect](https://developer.apple.com/support/app-store-connect//) in your browser.
 1. On the App Store Connect landing page, click **My Apps**.
-1. Click **+** in the top-left corner of the My Apps page,
-   then select **New App**.
-1. Fill in your app details in the form that appears.
-   In the Platforms section, ensure that iOS is checked.
-   Since Flutter does not currently support tvOS,
-   leave that checkbox unchecked. Click **Create**.
-1. Navigate to the application details for your app and select
-   **App Information** from the sidebar.
-1. In the General Information section, select the Bundle ID
-   you registered in the preceding step.
+1. Click **+** in the top-left corner of the My Apps page, then select **New App**.
+1. Fill in your app details in the form that appears. In the Platforms section, ensure that iOS is checked. Since Flutter does not currently support tvOS, leave that checkbox unchecked. Click **Create**.
+1. Navigate to the application details for your app and select **App Information** from the sidebar.
+1. In the General Information section, select the Bundle ID you registered in the preceding step.
 
-For a detailed overview, see
-[Add an app to your account][appstoreconnect_guide_register].
+For a detailed overview, see [Add an app to your account](https://help.apple.com/app-store-connect/#/dev2cd126805).
 
 ## Review Xcode project settings
 
-This step covers reviewing the most important settings
-in the Xcode workspace.
-For detailed procedures and descriptions, see
-[Prepare for app distribution][distributionguide_config].
+This step covers reviewing the most important settings in the Xcode workspace.
+For detailed procedures and descriptions, see [Prepare for app distribution](https://help.apple.com/xcode/mac/current/#/dev91fe7130a).
 
 Navigate to your target's settings in Xcode:
 
-1. Open the default Xcode workspace in your project by running
-   `open ios/Runner.xcworkspace` in a terminal window from your
-   Flutter project directory.
-2. To view your app's settings, select the **Runner** target in the
-   Xcode navigator.
+1. Open the default Xcode workspace in your project by running `open ios/Runner.xcworkspace` in a terminal window from your Flutter project directory.
+2. To view your app's settings, select the **Runner** target in the Xcode navigator.
 
 Verify the most important settings.
 
@@ -142,31 +118,23 @@ In the **Identity** section of the **General** tab:
 In the **Signing & Capabilities** tab:
 
 `Automatically manage signing`
-: Whether Xcode should automatically manage app signing
-and provisioning. This is set `true` by default, which should
-be sufficient for most apps. For more complex scenarios,
-see the [Code Signing Guide][codesigning_guide].
+: Whether Xcode should automatically manage app signing and provisioning. This is set `true` by default, which should be sufficient for most apps. For more complex scenarios, see the [Code Signing Guide](https://developer.apple.com/library/content/documentation/Security/Conceptual/CodeSigningGuide/Introduction/Introduction.html).
 
 `Team`
-: Select the team associated with your registered Apple Developer
-account. If required, select **Add Account...**,
-then update this setting.
+: Select the team associated with your registered Apple Developer account. If required, select **Add Account...**, then update this setting.
 
 In the **Deployment** section of the **Build Settings** tab:
 
 `iOS Deployment Target`
 : The minimum iOS version that your app supports.
-Flutter supports iOS 12 and later. If your app or plugins
-include Objective-C or Swift code that makes use of APIs newer
-than iOS 12, update this setting to the highest required version.
+Flutter supports iOS 12 and later. If your app or plugins include Objective-C or Swift code that makes use of APIs newer than iOS 12, update this setting to the highest required version.
 
 The **General** tab of your project settings should resemble
 the following:
 
-![Xcode Project Settings](/assets/images/docs/releaseguide/xcode_settings.png){:width="100%"}
+![Xcode Project Settings](https://docs.flutter.dev/assets/images/docs/releaseguide/xcode_settings.png)
 
-For a detailed overview of app signing, see
-[Create, export, and delete signing certificates][appsigning].
+For a detailed overview of app signing, see [Create, export, and delete signing certificates](https://help.apple.com/xcode/mac/current/#/dev154b28f09).
 
 ## Updating the app's deployment version
 
@@ -176,20 +144,12 @@ and update the `MinimumOSVersion` value to match.
 
 ## Add an app icon
 
-When a new Flutter app is created, a placeholder icon set is created.
-This step covers replacing these placeholder icons with your
-app's icons:
+When a new Flutter app is created, a placeholder icon set is created. This step covers replacing these placeholder icons with your app's icons:
 
-1. Review the [iOS App Icon][app-icon] guidelines and,
-   in particular, the advice on
-   [creating light, dark, and tinted][icon-modes] icons for your app.
-1. In the Xcode project navigator, select `Assets.xcassets` in the
-   `Runner` folder. Update the placeholder icons with your own app icons.
-1. Verify the icon has been replaced by running your app using
-   `flutter run`.
-
-[app-icon]: {{site.apple-dev}}/design/human-interface-guidelines/app-icons/
-[icon-modes]: {{site.apple-dev}}/design/human-interface-guidelines/app-icons#iOS-iPadOS
+1. Review the [iOS App Icon](https://developer.apple.com/design/human-interface-guidelines/app-icons/) guidelines and,
+   in particular, the advice on [creating light, dark, and tinted](https://developer.apple.com/design/human-interface-guidelines/app-icons#iOS-iPadOS) icons for your app.
+1. In the Xcode project navigator, select `Assets.xcassets` in the `Runner` folder. Update the placeholder icons with your own app icons.
+1. Verify the icon has been replaced by running your app using `flutter run`.
 
 ## Add a launch image
 
@@ -204,32 +164,21 @@ you can also replace the placeholder launch image:
 
 ## Create a build archive and upload to App Store Connect
 
-During development, you've been building, debugging, and testing
-with _debug_ builds. When you're ready to ship your app to users
-on the App Store or TestFlight, you need to prepare a _release_ build.
+During development, you've been building, debugging, and testing with _debug_ builds. When you're ready to ship your app to users on the App Store or TestFlight, you need to prepare a _release_ build.
 
 ### Update the app's build and version numbers
 
-The default version number of the app is `1.0.0`.
-To update it, navigate to the `pubspec.yaml` file
-and update the following line:
+The default version number of the app is `1.0.0`. To update it, navigate to the `pubspec.yaml` file and update the following line:
 
 ```yaml
 version: 1.0.0+1
 ```
 
-The version number is three numbers separated by dots,
-such as `1.0.0` in the example above, followed by an optional
-build number such as `1` in the example above, separated by a `+`.
+The version number is three numbers separated by dots, such as `1.0.0` in the example above, followed by an optional build number such as `1` in the example above, separated by a `+`.
 
-Both the version and the build number can be overridden in
-`flutter build ipa` by specifying `--build-name` and `--build-number`,
-respectively.
+Both the version and the build number can be overridden in `flutter build ipa` by specifying `--build-name` and `--build-number`, respectively.
 
-In iOS, `build-name` uses `CFBundleShortVersionString`
-while `build-number` uses `CFBundleVersion`.
-Read more about iOS versioning at [Core Foundation Keys][]
-on the Apple Developer's site.
+In iOS, `build-name` uses `CFBundleShortVersionString` while `build-number` uses `CFBundleVersion`. Read more about iOS versioning at [Core Foundation Keys](https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html) on the Apple Developer's site.
 
 You can also override the `pubspec.yaml` build name and number in Xcode:
 
@@ -249,26 +198,22 @@ in your project's `build/ios/archive/` directory and an App Store app
 bundle (`.ipa` file) in `build/ios/ipa`.
 
 Consider adding the `--obfuscate` and `--split-debug-info` flags to
-[obfuscate your Dart code][] to make it more difficult
+[obfuscate your Dart code](https://docs.flutter.dev/deployment/obfuscate) to make it more difficult
 to reverse engineer.
 
 If you are not distributing to the App Store, you can optionally
-choose a different [export method][app_bundle_export_method] by
+choose a different [export method](https://help.apple.com/xcode/mac/current/#/dev31de635e5) by
 adding the option `--export-method ad-hoc`,
 `--export-method development` or `--export-method enterprise`.
 
-:::note
-On versions of Flutter where `flutter build ipa --export-method` is unavailable,
-open `build/ios/archive/MyApp.xcarchive` and follow the instructions below
-to validate and distribute the app from Xcode.
-:::
+> On versions of Flutter where `flutter build ipa --export-method` is unavailable, open `build/ios/archive/MyApp.xcarchive` and follow the instructions below to validate and distribute the app from Xcode.
 
 ### Upload the app bundle to App Store Connect
 
 Once the app bundle is created, upload it to
 [App Store Connect][appstoreconnect_login] by either:
 
-1. Install and open the [Apple Transport macOS app][apple_transport_app]. Drag and drop the `build/ios/ipa/*.ipa` app bundle into the app.
+1. Install and open the [Apple Transport macOS app](https://appstoreconnect.apple.com/). Drag and drop the `build/ios/ipa/*.ipa` app bundle into the app.
 
 2. Or upload the app bundle from the command line by running:
 
@@ -291,22 +236,19 @@ Once the app bundle is created, upload it to
 
 4. You can follow the status of your build in the
    Activities tab of your app's details page on
-   [App Store Connect][appstoreconnect_login].
+   [App Store Connect](https://appstoreconnect.apple.com/).
    You should receive an email within 30 minutes notifying you that
    your build has been validated and is available to release to testers
    on TestFlight. At this point you can choose whether to release
    on TestFlight, or go ahead and release your app to the App Store.
 
-   For more details, see [Upload an app to App Store Connect][distributionguide_upload].
+   For more details, see [Upload an app to App Store Connect](https://help.apple.com/xcode/mac/current/#/dev442d7f2ca).
 
 ## Create a build archive with Codemagic CLI tools
 
 This step covers creating a build archive and uploading
 your build to App Store Connect using Flutter build commands
-and [Codemagic CLI Tools][codemagic_cli_tools] executed in a terminal
-in the Flutter project directory. This allows you to create a build archive
-with full control of distribution certificates in a temporary keychain
-isolated from your login keychain.
+and [Codemagic CLI Tools](https://github.com/codemagic-ci-cd/cli-tools) executed in a terminal in the Flutter project directory. This allows you to create a build archive with full control of distribution certificates in a temporary keychain isolated from your login keychain.
 
 1. Install the Codemagic CLI tools:
 
@@ -314,7 +256,7 @@ isolated from your login keychain.
    pip3 install codemagic-cli-tools
    ```
 
-2. You'll need to generate an [App Store Connect API Key][appstoreconnect_api_key] with App Manager access to automate operations with App Store Connect. To make subsequent commands more concise, set the following environment variables from the new key: issuer id, key id, and API key file.
+2. You'll need to generate an [App Store Connect API Key](https://appstoreconnect.apple.com/access/api) with App Manager access to automate operations with App Store Connect. To make subsequent commands more concise, set the following environment variables from the new key: issuer id, key id, and API key file.
 
    ```bash
    export APP_STORE_CONNECT_ISSUER_ID=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
@@ -324,7 +266,7 @@ isolated from your login keychain.
 
 3. You need to export or create an iOS Distribution certificate to code sign and package a build archive.
 
-   If you have existing [certificates][devportal_certificates], you can export the private keys by executing the following command for each certificate:
+   If you have existing [certificates](https://developer.apple.com/account/resources/certificates), you can export the private keys by executing the following command for each certificate:
 
    ```bash
    openssl pkcs12 -in <certificate_name>.p12 -nodes -nocerts | openssl rsa -out cert_key
@@ -417,12 +359,11 @@ isolated from your login keychain.
 
 ## Release your app on TestFlight
 
-[TestFlight][] allows developers to push their apps
-to internal and external testers. This optional step
-covers releasing your build on TestFlight.
+[TestFlight](https://developer.apple.com/testflight/) allows developers to push their apps
+to internal and external testers. This optional step covers releasing your build on TestFlight.
 
 1. Navigate to the TestFlight tab of your app's application
-   details page on [App Store Connect][appstoreconnect_login].
+   details page on [App Store Connect](https://appstoreconnect.apple.com/).
 1. Select **Internal Testing** in the sidebar.
 1. Select the build to publish to testers, then click **Save**.
 1. Add the email addresses of any internal testers.
@@ -430,8 +371,7 @@ covers releasing your build on TestFlight.
    page of App Store Connect,
    available from the dropdown menu at the top of the page.
 
-For more details, see
-[Distribute an app using TestFlight][distributionguide_testflight].
+For more details, see [Distribute an app using TestFlight](https://help.apple.com/xcode/mac/current/#/dev2539d985f).
 
 ## Release your app to the App Store
 
@@ -439,48 +379,14 @@ When you're ready to release your app to the world,
 follow these steps to submit your app for review and
 release to the App Store:
 
-1. Select **Pricing and Availability** from the sidebar of your app's
-   application details page on
-   [App Store Connect][appstoreconnect_login] and complete the
-   required information.
-1. Select the status from the sidebar. If this is the first
-   release of this app, its status is
-   **1.0 Prepare for Submission**. Complete all required fields.
+1. Select **Pricing and Availability** from the sidebar of your app's application details page on [App Store Connect](https://appstoreconnect.apple.com/) and complete the required information.
+1. Select the status from the sidebar. If this is the first release of this app, its status is **1.0 Prepare for Submission**. Complete all required fields.
 1. Click **Submit for Review**.
 
-Apple notifies you when their app review process is complete.
-Your app is released according to the instructions you
-specified in the **Version Release** section.
+Apple notifies you when their app review process is complete. Your app is released according to the instructions you specified in the **Version Release** section.
 
-For more details, see
-[Distribute an app through the App Store][distributionguide_submit].
+For more details, see [Distribute an app through the App Store](https://help.apple.com/xcode/mac/current/#/dev067853c94).
 
 ## Troubleshooting
 
-The [Distribute your app][distributionguide] guide provides a
-detailed overview of the process of releasing an app to the App Store.
-
-[appreview]: {{site.apple-dev}}/app-store/review/
-[appsigning]: https://help.apple.com/xcode/mac/current/#/dev154b28f09
-[appstore]: {{site.apple-dev}}/app-store/submissions/
-[appstoreconnect]: {{site.apple-dev}}/support/app-store-connect/
-[appstoreconnect_api_key]: https://appstoreconnect.apple.com/access/api
-[appstoreconnect_guide]: {{site.apple-dev}}/support/app-store-connect/
-[appstoreconnect_guide_register]: https://help.apple.com/app-store-connect/#/dev2cd126805
-[appstoreconnect_login]: https://appstoreconnect.apple.com/
-[codemagic_cli_tools]: {{site.github}}/codemagic-ci-cd/cli-tools
-[codesigning_guide]: {{site.apple-dev}}/library/content/documentation/Security/Conceptual/CodeSigningGuide/Introduction/Introduction.html
-[Core Foundation Keys]: {{site.apple-dev}}/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-[devportal_appids]: {{site.apple-dev}}/account/ios/identifier/bundle
-[devportal_certificates]: {{site.apple-dev}}/account/resources/certificates
-[devprogram]: {{site.apple-dev}}/programs/
-[devprogram_membership]: {{site.apple-dev}}/support/compare-memberships/
-[distributionguide]: https://help.apple.com/xcode/mac/current/#/devac02c5ab8
-[distributionguide_config]: https://help.apple.com/xcode/mac/current/#/dev91fe7130a
-[distributionguide_submit]: https://help.apple.com/xcode/mac/current/#/dev067853c94
-[distributionguide_testflight]: https://help.apple.com/xcode/mac/current/#/dev2539d985f
-[distributionguide_upload]: https://help.apple.com/xcode/mac/current/#/dev442d7f2ca
-[obfuscate your Dart code]: /deployment/obfuscate
-[TestFlight]: {{site.apple-dev}}/testflight/
-[app_bundle_export_method]: https://help.apple.com/xcode/mac/current/#/dev31de635e5
-[apple_transport_app]: https://apps.apple.com/us/app/transporter/id1450874784
+The [Distribute your app](https://help.apple.com/xcode/mac/current/#/devac02c5ab8) guide provides a detailed overview of the process of releasing an app to the App Store.
