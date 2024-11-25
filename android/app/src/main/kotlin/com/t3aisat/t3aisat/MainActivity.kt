@@ -1,4 +1,4 @@
-package com.t3aisat.t3aisat
+package com.t3imasd.t3aisat
 
 import android.os.Build
 import io.flutter.embedding.android.FlutterActivity

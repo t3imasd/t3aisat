@@ -1,5 +1,5 @@
 -keep class io.flutter.app.** { *; }
--keep class com.t3aisat.t3aisat.** { *; }
+-keep class com.t3imasd.t3aisat.** { *; }
 -keep public class * extends android.app.Application
 -keep public class * extends io.flutter.embedding.android.FlutterActivity
 -dontwarn io.flutter.embedding.**

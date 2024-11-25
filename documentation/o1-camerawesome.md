@@ -688,7 +688,7 @@ $formattedAddress
 `android/app/src/main/kotlin/com/t3aisat/t3aisat/MainActivity.kt`
 
 ```kotlin
-package com.t3aisat.t3aisat
+package com.t3imasd.t3aisat
 
 import io.flutter.embedding.android.FlutterActivity
 
