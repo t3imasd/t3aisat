@@ -414,6 +414,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
   // Function to get the address from the coordinates
   Future<void> _getAddressFromCoordinates(double lat, double lon) async {
     final accessToken = dotenv.env['MAPBOX_ACCESS_TOKEN'];
+
     final url =
         'https://api.mapbox.com/geocoding/v5/mapbox.places/$lon,$lat.json?access_token=$accessToken';
 
@@ -1189,7 +1190,7 @@ $appName''';
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Latitud: ${_currentPosition?.latitude}\nLongitud: ${_currentPosition?.longitude}',
+                              'Latitud: ${_currentPosition!.latitude.toStringAsFixed(6)}\nLongitud: ${_currentPosition!.longitude.toStringAsFixed(6)}',
                               textAlign: TextAlign.left,
                               style: const TextStyle(
                                   fontFamily: 'Roboto',

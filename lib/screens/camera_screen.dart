@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // Añadido
+import 'package:flutter/foundation.dart';
 import 'package:camera/camera.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:logging/logging.dart';
@@ -118,11 +118,13 @@ class CameraScreenState extends State<CameraScreen>
   Timer? _recordingTimer;
   Duration _recordingDuration = Duration.zero;
 
+  Uint8List? _lastCapturedThumbnail;
+
   @override
   void initState() {
     super.initState();
     _initCamera();
-    _loadLastCapturedAsset(); // Load the last captured asset
+    _loadLastCapturedAsset(); // Load the last asset captured
 
     // Initialize focus animation controller
     _focusAnimationController = AnimationController(
@@ -251,14 +253,14 @@ class CameraScreenState extends State<CameraScreen>
     }
   }
 
-  // Load the last captured media from the app's gallery
+  // Load the last asset captured and update the thumbnail
   Future<void> _loadLastCapturedAsset() async {
     final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
       type: RequestType.all,
       filterOption: FilterOptionGroup(
         createTimeCond: DateTimeCond(
-          min: DateTime.now().subtract(const Duration(days: 365)), // 1 year ago
-          max: DateTime.now(), // Current date
+          min: DateTime(2023),
+          max: DateTime.now(),
         ),
       ),
     );
@@ -283,17 +285,21 @@ class CameraScreenState extends State<CameraScreen>
           setState(() {
             _lastCapturedAsset = asset;
           });
-          return; // Exit after setting the new asset
+          // Update Thumbnail after establishing _lastCapturedAsset
+          await _updateLastCapturedThumbnail();
+          return; // Exit after finding the most recent valid asset
         }
       }
 
       // If no valid asset is found, set _lastCapturedAsset to null
       setState(() {
         _lastCapturedAsset = null;
+        _lastCapturedThumbnail = null;
       });
     } else {
       setState(() {
         _lastCapturedAsset = null;
+        _lastCapturedThumbnail = null;
       });
     }
   }
@@ -342,7 +348,7 @@ class CameraScreenState extends State<CameraScreen>
     }
   }
 
-  // Método para cambiar el modo de flash
+  // Method to change flash mode
   void _onFlashModeButtonPressed() {
     setState(() {
       // Cycle through flash modes
@@ -479,6 +485,21 @@ class CameraScreenState extends State<CameraScreen>
     _isRecording = false;
   }
 
+  // Update Thumbnail when it changes _lastCapturedAsset
+  Future<void> _updateLastCapturedThumbnail() async {
+    if (_lastCapturedAsset != null) {
+      final thumbnail = await _lastCapturedAsset!
+          .thumbnailDataWithSize(ThumbnailSize(100, 100));
+      setState(() {
+        _lastCapturedThumbnail = thumbnail;
+      });
+    } else {
+      setState(() {
+        _lastCapturedThumbnail = null;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isCameraInitialized || controller == null) {
@@ -511,7 +532,7 @@ class CameraScreenState extends State<CameraScreen>
               onScaleStart: _onScaleStart,
               onScaleUpdate: _onScaleUpdate,
               onTapDown: (details) {
-                // Maneja el toque para enfoque manual
+                // Handle the manual approach touch
                 final size = MediaQuery.of(context).size;
                 _onViewFinderTap(
                     details,
@@ -531,7 +552,7 @@ class CameraScreenState extends State<CameraScreen>
               onVerticalDragUpdate: (details) {
                 if (_pointerCount == 1) {
                   // Update exposure only for single-finger drag
-                  // Actualizar el valor de exposición según el movimiento vertical
+                  // Update the exposure value according to the vertical movement
                   final double delta = details.primaryDelta ?? 0.0;
                   final double sensitivity = 0.005;
                   double newValue =
@@ -544,7 +565,7 @@ class CameraScreenState extends State<CameraScreen>
                   });
                   controller?.setExposureOffset(_currentExposureOffset);
 
-                  // Reiniciar el temporizador para ocultar el indicador
+                  // Restart the timer to hide the indicator
                   _exposureIndicatorTimer?.cancel();
                   _exposureIndicatorTimer =
                       Timer(const Duration(seconds: 1), () {
@@ -553,7 +574,7 @@ class CameraScreenState extends State<CameraScreen>
                     });
                   });
 
-                  // Reiniciar el temporizador para ocultar el slider
+                  // Restart the timer to hide the slider
                   _exposureSliderTimer?.cancel();
                   _exposureSliderTimer = Timer(const Duration(seconds: 1), () {
                     setState(() {
@@ -565,7 +586,7 @@ class CameraScreenState extends State<CameraScreen>
               onVerticalDragEnd: (details) {
                 if (_pointerCount == 1) {
                   // Hide slider after single-finger drag
-                  // Ocultar el slider después de 1 segundo
+                  // Hide the slider after 1 second
                   _exposureSliderTimer?.cancel();
                   _exposureSliderTimer = Timer(const Duration(seconds: 1), () {
                     setState(() {
@@ -691,7 +712,7 @@ class CameraScreenState extends State<CameraScreen>
                       });
                       controller?.setExposureOffset(value);
 
-                      // Reiniciar el temporizador para ocultar el indicador
+                      // Restart the timer to hide the indicator
                       _exposureIndicatorTimer?.cancel();
                       _exposureIndicatorTimer =
                           Timer(const Duration(seconds: 1), () {
@@ -700,7 +721,7 @@ class CameraScreenState extends State<CameraScreen>
                         });
                       });
 
-                      // Reiniciar el temporizador para ocultar el slider
+                      // Restart the timer to hide the slider
                       _exposureSliderTimer?.cancel();
                       _exposureSliderTimer =
                           Timer(const Duration(seconds: 2), () {
@@ -747,7 +768,7 @@ class CameraScreenState extends State<CameraScreen>
                     ? const Color(0xFFFFD700)
                     : Colors.white,
                 onPressed: _onFlashModeButtonPressed,
-                iconSize: 24, // Ajustar el tamaño del icono
+                iconSize: 24, // Adjust the icon size
                 padding: EdgeInsets.zero,
               ),
             ),
@@ -770,64 +791,27 @@ class CameraScreenState extends State<CameraScreen>
                   heroTag: 'recordVideoFAB',
                   child: Icon(_isRecording ? Icons.stop : Icons.videocam),
                 ),
-                // Third button showing the thumbnail of the last captured media
-                if (_lastCapturedAsset != null)
-                  FutureBuilder<Uint8List?>(
-                    future: _lastCapturedAsset!
-                        .thumbnailDataWithSize(ThumbnailSize(100, 100)),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.done &&
-                          snapshot.hasData) {
-                        return FloatingActionButton(
-                          onPressed: () {
-                            _navigateToLastCapturedMedia(
-                                context); // Navigate and handle deletion
-                          },
-                          heroTag: 'lastCapturedMediaFAB',
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(
-                                8.0), // Rounded edges to match the button shape
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(
-                                  8.0), // Rounded edges to match the button shape
-                              child: FutureBuilder<Uint8List?>(
-                                future: _lastCapturedAsset!
-                                    .thumbnailDataWithSize(
-                                        const ThumbnailSize.square(200)),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                          ConnectionState.done &&
-                                      snapshot.hasData) {
-                                    return Image.memory(
-                                      snapshot.data!,
-                                      fit: BoxFit
-                                          .cover, // This makes the image cover the entire button area
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                    );
-                                  }
-                                  return const CircularProgressIndicator(); // Show a loading indicator while the image loads
-                                },
-                              ),
-                            ),
+                FloatingActionButton(
+                  onPressed: _lastCapturedThumbnail != null
+                      ? () {
+                          _navigateToLastCapturedMedia(context);
+                        }
+                      : () {
+                          _navigateToGallery(context);
+                        },
+                  heroTag: 'lastCapturedMediaFAB',
+                  child: _lastCapturedThumbnail != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8.0),
+                          child: Image.memory(
+                            _lastCapturedThumbnail!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
                           ),
-                        );
-                      }
-                      return FloatingActionButton(
-                        onPressed: null,
-                        heroTag: 'lastCapturedMediaFAB',
-                        child: Icon(_isRecording ? Icons.videocam : Icons.photo_library),
-                      );
-                    },
-                  ),
-                if (_lastCapturedAsset == null)
-                  FloatingActionButton(
-                    onPressed: () {
-                      _navigateToGallery(context);
-                    },
-                    heroTag: 'lastCapturedMediaFAB',
-                    child: const Icon(Icons.photo_library),
-                  ),
+                        )
+                      : const Icon(Icons.photo_library),
+                ),
               ],
             ),
           ),

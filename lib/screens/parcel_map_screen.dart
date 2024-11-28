@@ -141,7 +141,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       }
     } else if (status.isGranted) {
       // Permission already granted, get current location
-        _getCurrentLocation();
+      _getCurrentLocation();
     } else if (status.isPermanentlyDenied) {
       log.severe(
           'Location permission permanently denied. You need to enable it manually in settings.');
@@ -701,12 +701,13 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      height: numSelected > 1
-          ? (_isBottomSheetExpanded
-              ? MediaQuery.of(context).size.height * 0.5 // Expanded height 50%
-              : MediaQuery.of(context).size.height * 0.25) // Compact height 25%
-          : MediaQuery.of(context).size.height *
-              0.15, // Height when only one parcel is selected
+      constraints: BoxConstraints(
+        maxHeight: numSelected > 1
+            ? (_isBottomSheetExpanded
+                ? MediaQuery.of(context).size.height * 0.5
+                : MediaQuery.of(context).size.height * 0.4)
+            : MediaQuery.of(context).size.height * 0.3,
+      ),
       decoration: const BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -719,70 +720,69 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       ),
       child: Stack(
         children: [
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Área Total: $totalArea m²',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black, // Main text in black
+          SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Área Total: $totalArea m²',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                numSelected > 1
-                    ? 'Registros Catastrales: $numSelected'
-                    : _selectedParcels.values.first,
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
-                textAlign: TextAlign.center,
-              ),
-              if (numSelected > 1)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _isBottomSheetExpanded = !_isBottomSheetExpanded;
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF388E3C), // Verde Oscuro
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24.0,
-                        vertical: 12.0,
-                      ), // Internal Padding of the button
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.0),
+                  const SizedBox(height: 8),
+                  Text(
+                    numSelected > 1
+                        ? 'Registros Catastrales: $numSelected'
+                        : _selectedParcels.values.first,
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (numSelected > 1)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _isBottomSheetExpanded = !_isBottomSheetExpanded;
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF388E3C),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24.0,
+                            vertical: 12.0,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                        ),
+                        child: Text(
+                          _isBottomSheetExpanded
+                              ? 'Ver menos'
+                              : 'Ver más detalles',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
-                    child: Text(
-                      _isBottomSheetExpanded ? 'Ver menos' : 'Ver más detalles',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              if (_isBottomSheetExpanded)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0), // Lateral padding 16px
-                    child: ListView.builder(
+                  if (_isBottomSheetExpanded)
+                    ListView.builder(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
                       itemCount: _selectedParcels.length,
                       itemBuilder: (context, index) {
                         final entry = _selectedParcels.entries.toList()[index];
                         return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 4.0, // Vertical space 4px
-                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
                           child: Text(
                             entry.value,
                             style: const TextStyle(
@@ -793,19 +793,17 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
                         );
                       },
                     ),
-                  ),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
-          // Añade el botón de copiar en la esquina superior derecha
           Positioned(
             top: 8,
             right: 8,
             child: IconButton(
               icon: const Icon(
                 Icons.copy,
-                color: Color(
-                    0xFF388E3C), // Verde oscuro para coincidir con el tema
+                color: Color(0xFF388E3C),
               ),
               onPressed: _copyToClipboard,
               tooltip: 'Copiar al portapapeles',
@@ -826,7 +824,10 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       "type": "Feature",
       "geometry": {
         "type": "Point",
-        "coordinates": [_currentPosition!.longitude, _currentPosition!.latitude],
+        "coordinates": [
+          _currentPosition!.longitude,
+          _currentPosition!.latitude
+        ],
       },
     };
 
@@ -919,15 +920,17 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
           accuracy: geo.LocationAccuracy.high,
         ),
       );
-      log.info('📍 Posición obtenida: ${position.latitude}, ${position.longitude}, precisión: ${position.accuracy} metros');
-      
+      log.info(
+          '📍 Position obtained: ${position.latitude}, ${position.longitude}, precision: ${position.accuracy} metros');
+
       if (position.accuracy <= 10) {
         setState(() {
           _currentPosition = position;
         });
         _addUserLocationLayer();
       } else {
-        log.warning('Precisión insuficiente (${position.accuracy}m), no se actualiza la ubicación');
+        log.warning(
+            'Insufficient precision (${position.accuracy}m), the location is not updated');
       }
     } catch (e) {
       log.severe('Error al actualizar la ubicación del usuario: $e');
@@ -940,15 +943,18 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       distanceFilter: 0, // Recibir todas las actualizaciones
     );
 
-    _positionStreamSubscription = geo.Geolocator.getPositionStream(locationSettings: locationSettings)
-      .listen((geo.Position position) {
-        log.info('Posición: ${position.latitude}, ${position.longitude}, precisión: ${position.accuracy} metros');
-        if (position.accuracy <= 10) {
-          _updateUserLocationWithSmoothing(position);
-        } else {
-          log.warning('Precisión insuficiente (${position.accuracy}m), no se actualiza la ubicación');
-        }
-      });
+    _positionStreamSubscription =
+        geo.Geolocator.getPositionStream(locationSettings: locationSettings)
+            .listen((geo.Position position) {
+      log.info(
+          'Posición: ${position.latitude}, ${position.longitude}, precisión: ${position.accuracy} metros');
+      if (position.accuracy <= 10) {
+        _updateUserLocationWithSmoothing(position);
+      } else {
+        log.warning(
+            'Precisión insuficiente (${position.accuracy}m), no se actualiza la ubicación');
+      }
+    });
   }
 
   void _updateUserLocationWithSmoothing(geo.Position newPosition) {
@@ -957,8 +963,12 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       _positionHistory.removeAt(0); // Mantener solo las últimas 5 lecturas
     }
 
-    double avgLatitude = _positionHistory.map((p) => p.latitude).reduce((a, b) => a + b) / _positionHistory.length;
-    double avgLongitude = _positionHistory.map((p) => p.longitude).reduce((a, b) => a + b) / _positionHistory.length;
+    double avgLatitude =
+        _positionHistory.map((p) => p.latitude).reduce((a, b) => a + b) /
+            _positionHistory.length;
+    double avgLongitude =
+        _positionHistory.map((p) => p.longitude).reduce((a, b) => a + b) /
+            _positionHistory.length;
 
     setState(() {
       _currentPosition = geo.Position(
