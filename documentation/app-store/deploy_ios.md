@@ -196,6 +196,9 @@ Run `flutter build ipa` to produce an Xcode build archive (`.xcarchive` file)
 in your project's `build/ios/archive/` directory and an App Store app
 bundle (`.ipa` file) in `build/ios/ipa`.
 
+> Antes de ejecutar `flutter build ipa`, asegúrate de que tu proyecto Flutter esté en un estado limpio. Puedes hacerlo ejecutando `flutter clean` y `flutter pub get`.
+> Además, puedes pasarle como argumento la Access Token de Mapbox si lo necesitas con el comando `flutter build ipa --release --dart-define=MAPBOX_ACCESS_TOKEN=tu_token_de_mapbox`.
+
 Consider adding the `--obfuscate` and `--split-debug-info` flags to
 [obfuscate your Dart code](https://docs.flutter.dev/deployment/obfuscate) to make it more difficult
 to reverse engineer.
