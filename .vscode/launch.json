@@ -2,40 +2,44 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run Device",
+            "name": "T3AISAT Debug",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
+            "flutterMode": "debug",
             "args": [
-                "--dart-define", "PUBLIC_ACCESS_TOKEN=${env:MAPBOX_ACCESS_TOKEN}"
+                "--dart-define",
+                "PUBLIC_ACCESS_TOKEN=${env:MAPBOX_ACCESS_TOKEN}"
             ]
         },
         {
-            "name": "App in iPhone 15 Pro Max",
+            "name": "NO args T3AISAT Debug",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
-            "deviceId": "iPhone 15 Pro Max",
-            "args": [
-                "--dart-define", "PUBLIC_ACCESS_TOKEN=${env:MAPBOX_ACCESS_TOKEN}"
-            ]
+            "flutterMode": "debug",
+            "args": []
         },
         {
-            "name": "T3AISat (profile mode)",
+            "name": "T3AISAT Profile",
             "request": "launch",
             "type": "dart",
+            "program": "lib/main.dart",
             "flutterMode": "profile",
             "args": [
-                "--dart-define", "PUBLIC_ACCESS_TOKEN=${env:MAPBOX_ACCESS_TOKEN}"
+                "--dart-define",
+                "PUBLIC_ACCESS_TOKEN=${env:MAPBOX_ACCESS_TOKEN}"
             ]
         },
         {
-            "name": "T3AISat (release mode)",
+            "name": "T3AISAT Release",
             "request": "launch",
             "type": "dart",
+            "program": "lib/main.dart",
             "flutterMode": "release",
             "args": [
-                "--dart-define", "PUBLIC_ACCESS_TOKEN=${env:MAPBOX_ACCESS_TOKEN}"
+                "--dart-define",
+                "PUBLIC_ACCESS_TOKEN=${env:MAPBOX_ACCESS_TOKEN}"
             ]
         }
     ]
