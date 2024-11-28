@@ -18,6 +18,8 @@
 	<string>t3aisat</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>NSAppleMusicUsageDescription</key>
+    <string>Esta aplicación requiere acceso a Apple Music para mejorar la experiencia de audio en los videos grabados.</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
