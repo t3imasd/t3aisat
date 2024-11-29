@@ -166,9 +166,11 @@ class CameraScreenState extends State<CameraScreen>
           await controller?.getMaxExposureOffset() ?? 0.0;
       _minAvailableExposureOffset =
           await controller?.getMinExposureOffset() ?? 0.0;
-      setState(() {
-        _isCameraInitialized = true;
-      });
+      if (mounted) {
+        setState(() {
+          _isCameraInitialized = true;
+        });
+      }
     } catch (e) {
       Logger.root.severe('Error initializing camera: $e');
     }
@@ -178,6 +180,12 @@ class CameraScreenState extends State<CameraScreen>
   void dispose() {
     controller?.dispose();
     _focusAnimationController?.dispose();
+    _zoomIndicatorTimer?.cancel();
+    _flashTooltipTimer?.cancel();
+    _exposureIndicatorTimer?.cancel();
+    _exposureSliderTimer?.cancel();
+    _recordingTimer?.cancel();
+    _exposureSliderTimer?.cancel();
     super.dispose();
   }
 
@@ -221,9 +229,11 @@ class CameraScreenState extends State<CameraScreen>
       try {
         XFile videoFile = await controller!.stopVideoRecording();
         _stopRecordingTimer();
-        setState(() {
-          _isRecording = false;
-        });
+        if (mounted) {
+          setState(() {
+            _isRecording = false;
+          });
+        }
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -244,9 +254,11 @@ class CameraScreenState extends State<CameraScreen>
         await controller!.prepareForVideoRecording();
         await controller!.startVideoRecording();
         _startRecordingTimer();
-        setState(() {
-          _isRecording = true;
-        });
+        if (mounted) {
+          setState(() {
+            _isRecording = true;
+          });
+        }
       } catch (e) {
         Logger.root.severe('Error starting video recording: $e');
       }
@@ -282,9 +294,11 @@ class CameraScreenState extends State<CameraScreen>
         }
 
         if (isValid) {
-          setState(() {
-            _lastCapturedAsset = asset;
-          });
+          if (mounted) {
+            setState(() {
+              _lastCapturedAsset = asset;
+            });
+          }
           // Update Thumbnail after establishing _lastCapturedAsset
           await _updateLastCapturedThumbnail();
           return; // Exit after finding the most recent valid asset
@@ -292,15 +306,19 @@ class CameraScreenState extends State<CameraScreen>
       }
 
       // If no valid asset is found, set _lastCapturedAsset to null
-      setState(() {
-        _lastCapturedAsset = null;
-        _lastCapturedThumbnail = null;
-      });
+      if (mounted) {
+        setState(() {
+          _lastCapturedAsset = null;
+          _lastCapturedThumbnail = null;
+        });
+      }
     } else {
-      setState(() {
-        _lastCapturedAsset = null;
-        _lastCapturedThumbnail = null;
-      });
+      if (mounted) {
+        setState(() {
+          _lastCapturedAsset = null;
+          _lastCapturedThumbnail = null;
+        });
+      }
     }
   }
 
@@ -323,7 +341,9 @@ class CameraScreenState extends State<CameraScreen>
       if (deleted == true) {
         // If media was deleted, reload the last captured asset
         await _loadLastCapturedAsset();
-        setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
       }
     } else {
       // Handle the case where the file could not be loaded
@@ -344,33 +364,39 @@ class CameraScreenState extends State<CameraScreen>
 
     if (deleted == true) {
       await _loadLastCapturedAsset(); // Update the thumbnail
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
   // Method to change flash mode
   void _onFlashModeButtonPressed() {
-    setState(() {
-      // Cycle through flash modes
-      if (_flashMode == FlashMode.auto) {
-        _flashMode = FlashMode.always;
-      } else if (_flashMode == FlashMode.always) {
-        _flashMode = FlashMode.off;
-      } else {
-        _flashMode = FlashMode.auto;
-      }
-      controller?.setFlashMode(_flashMode);
+    if (mounted) {
+      setState(() {
+        // Cycle through flash modes
+        if (_flashMode == FlashMode.auto) {
+          _flashMode = FlashMode.always;
+        } else if (_flashMode == FlashMode.always) {
+          _flashMode = FlashMode.off;
+        } else {
+          _flashMode = FlashMode.auto;
+        }
+        controller?.setFlashMode(_flashMode);
 
-      // Show flash tooltip
-      _flashTooltipText = 'Flash: ${_flashMode.toString().split('.').last}';
-      _showFlashTooltip = true;
-      _flashTooltipTimer?.cancel();
-      _flashTooltipTimer = Timer(const Duration(seconds: 1), () {
-        setState(() {
-          _showFlashTooltip = false;
+        // Show flash tooltip
+        _flashTooltipText = 'Flash: ${_flashMode.toString().split('.').last}';
+        _showFlashTooltip = true;
+        _flashTooltipTimer?.cancel();
+        _flashTooltipTimer = Timer(const Duration(seconds: 1), () {
+          if (mounted) {
+            setState(() {
+              _showFlashTooltip = false;
+            });
+          }
         });
       });
-    });
+    }
   }
 
   // Method to handle Zoom's gesture
@@ -385,16 +411,20 @@ class CameraScreenState extends State<CameraScreen>
     _currentZoomLevel = zoom;
 
     // Show zoom indicator
-    setState(() {
-      _isZooming = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isZooming = true;
+      });
+    }
 
     // Cancel previous timer and start a new one
     _zoomIndicatorTimer?.cancel();
     _zoomIndicatorTimer = Timer(const Duration(seconds: 1), () {
-      setState(() {
-        _isZooming = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isZooming = false;
+        });
+      }
     });
 
     // Haptic feedback at zoom limits
@@ -412,19 +442,23 @@ class CameraScreenState extends State<CameraScreen>
     controller?.setExposurePoint(offset);
     controller?.setFocusPoint(offset);
 
-    setState(() {
-      _focusPoint = details.localPosition;
-      _isFocusing = true;
-    });
+    if (mounted) {
+      setState(() {
+        _focusPoint = details.localPosition;
+        _isFocusing = true;
+      });
+    }
 
     // Start focus animation
     _focusAnimationController?.forward(from: 0.0);
 
     // Hide focus indicator after 1 second
     Future.delayed(const Duration(seconds: 1), () {
-      setState(() {
-        _isFocusing = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isFocusing = false;
+        });
+      }
     });
   }
 
@@ -473,9 +507,11 @@ class CameraScreenState extends State<CameraScreen>
     _recordingDuration = Duration.zero;
     _isRecording = true;
     _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        _recordingDuration += const Duration(seconds: 1);
-      });
+      if (mounted) {
+        setState(() {
+          _recordingDuration += const Duration(seconds: 1);
+        });
+      }
     });
   }
 
@@ -490,13 +526,17 @@ class CameraScreenState extends State<CameraScreen>
     if (_lastCapturedAsset != null) {
       final thumbnail = await _lastCapturedAsset!
           .thumbnailDataWithSize(ThumbnailSize(100, 100));
-      setState(() {
-        _lastCapturedThumbnail = thumbnail;
-      });
+      if (mounted) {
+        setState(() {
+          _lastCapturedThumbnail = thumbnail;
+        });
+      }
     } else {
-      setState(() {
-        _lastCapturedThumbnail = null;
-      });
+      if (mounted) {
+        setState(() {
+          _lastCapturedThumbnail = null;
+        });
+      }
     }
   }
 
@@ -519,14 +559,18 @@ class CameraScreenState extends State<CameraScreen>
         children: [
           Listener(
             onPointerDown: (_) {
-              setState(() {
-                _pointerCount += 1;
-              });
+              if (mounted) {
+                setState(() {
+                  _pointerCount += 1;
+                });
+              }
             },
             onPointerUp: (_) {
-              setState(() {
-                _pointerCount -= 1;
-              });
+              if (mounted) {
+                setState(() {
+                  _pointerCount -= 1;
+                });
+              }
             },
             child: GestureDetector(
               onScaleStart: _onScaleStart,
@@ -544,9 +588,11 @@ class CameraScreenState extends State<CameraScreen>
               onVerticalDragStart: (details) {
                 if (_pointerCount == 1) {
                   // Show slider only for single-finger drag
-                  setState(() {
-                    _showExposureSlider = true;
-                  });
+                  if (mounted) {
+                    setState(() {
+                      _showExposureSlider = true;
+                    });
+                  }
                 }
               },
               onVerticalDragUpdate: (details) {
@@ -559,27 +605,33 @@ class CameraScreenState extends State<CameraScreen>
                       _currentExposureOffset - delta * sensitivity;
                   newValue = newValue.clamp(
                       _minAvailableExposureOffset, _maxAvailableExposureOffset);
-                  setState(() {
-                    _currentExposureOffset = newValue;
-                    _showExposureIndicator = true;
-                  });
+                  if (mounted) {
+                    setState(() {
+                      _currentExposureOffset = newValue;
+                      _showExposureIndicator = true;
+                    });
+                  }
                   controller?.setExposureOffset(_currentExposureOffset);
 
                   // Restart the timer to hide the indicator
                   _exposureIndicatorTimer?.cancel();
                   _exposureIndicatorTimer =
                       Timer(const Duration(seconds: 1), () {
-                    setState(() {
-                      _showExposureIndicator = false;
-                    });
+                    if (mounted) {
+                      setState(() {
+                        _showExposureIndicator = false;
+                      });
+                    }
                   });
 
                   // Restart the timer to hide the slider
                   _exposureSliderTimer?.cancel();
                   _exposureSliderTimer = Timer(const Duration(seconds: 1), () {
-                    setState(() {
-                      _showExposureSlider = false;
-                    });
+                    if (mounted) {
+                      setState(() {
+                        _showExposureSlider = false;
+                      });
+                    }
                   });
                 }
               },
@@ -589,9 +641,11 @@ class CameraScreenState extends State<CameraScreen>
                   // Hide the slider after 1 second
                   _exposureSliderTimer?.cancel();
                   _exposureSliderTimer = Timer(const Duration(seconds: 1), () {
-                    setState(() {
-                      _showExposureSlider = false;
-                    });
+                    if (mounted) {
+                      setState(() {
+                        _showExposureSlider = false;
+                      });
+                    }
                   });
                 }
               },
@@ -706,42 +760,52 @@ class CameraScreenState extends State<CameraScreen>
                     min: _minAvailableExposureOffset,
                     max: _maxAvailableExposureOffset,
                     onChanged: (value) {
-                      setState(() {
-                        _currentExposureOffset = value;
-                        _showExposureIndicator = true;
-                      });
+                      if (mounted) {
+                        setState(() {
+                          _currentExposureOffset = value;
+                          _showExposureIndicator = true;
+                        });
+                      }
                       controller?.setExposureOffset(value);
 
                       // Restart the timer to hide the indicator
                       _exposureIndicatorTimer?.cancel();
                       _exposureIndicatorTimer =
                           Timer(const Duration(seconds: 1), () {
-                        setState(() {
-                          _showExposureIndicator = false;
-                        });
+                        if (mounted) {
+                          setState(() {
+                            _showExposureIndicator = false;
+                          });
+                        }
                       });
 
                       // Restart the timer to hide the slider
                       _exposureSliderTimer?.cancel();
                       _exposureSliderTimer =
                           Timer(const Duration(seconds: 2), () {
-                        setState(() {
-                          _showExposureSlider = false;
-                        });
+                        if (mounted) {
+                          setState(() {
+                            _showExposureSlider = false;
+                          });
+                        }
                       });
                     },
                     onChangeStart: (value) {
-                      setState(() {
-                        _showExposureIndicator = true;
-                      });
+                      if (mounted) {
+                        setState(() {
+                          _showExposureIndicator = true;
+                        });
+                      }
                     },
                     onChangeEnd: (value) {
                       _exposureIndicatorTimer?.cancel();
                       _exposureIndicatorTimer =
                           Timer(const Duration(seconds: 1), () {
-                        setState(() {
-                          _showExposureIndicator = false;
-                        });
+                        if (mounted) {
+                          setState(() {
+                            _showExposureIndicator = false;
+                          });
+                        }
                       });
                     },
                   ),
