@@ -1,7 +1,7 @@
 name: t3aisat
 description: 'A new Flutter project.'
 publish_to: 'none'
-version: 1.0.5+15
+version: 1.0.5+18
 
 environment:
   sdk: '>=3.4.3 <4.0.0'
