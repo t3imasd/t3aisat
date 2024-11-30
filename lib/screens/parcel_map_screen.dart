@@ -153,7 +153,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
     _mapboxMap = mapboxMap;
 
     // Cargar el estilo satelital y esperar a que se cargue completamente
-    _mapboxMap.loadStyleURI(mapbox.MapboxStyles.SATELLITE).then((_) {
+    _mapboxMap.loadStyleURI(mapbox.MapboxStyles.SATELLITE_STREETS).then((_) {
       log.info('Estilo de Mapbox cargado y listo.');
 
       // Ahora que el estilo está cargado, podemos agregar la capa de ubicación del usuario
