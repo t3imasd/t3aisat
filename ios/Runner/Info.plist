@@ -18,8 +18,6 @@
 	<string>t3aisat</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
-	<key>NSAppleMusicUsageDescription</key>
-    <string>Esta aplicación requiere acceso a Apple Music para mejorar la experiencia de audio en los videos grabados.</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
@@ -28,6 +26,8 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Esta aplicación requiere acceso a Apple Music para mejorar la experiencia de audio en los videos grabados.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>La App necesita tener permiso a tu cámara para hacer fotos.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
@@ -55,13 +55,6 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
