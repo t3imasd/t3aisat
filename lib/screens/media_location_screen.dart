@@ -570,7 +570,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
       final formattedText = '''$formattedLocalTime
 $latitudeDMS $longitudeDMS
 $formattedAddress
-T3 AI SAT''';
+T3 AI SAT Copr.''';
 
       // Calculate text size
       final numLineBreaks = countLinesInText(formattedText);
@@ -779,7 +779,7 @@ T3 AI SAT''';
       final formattedText = '''$formattedLocalTime
 $latitudeDMS $longitudeDMS
 $formattedAddress
-$appName''';
+$appName ©''';
 
       // Escape special characters for FFmpeg command
       String escapedText = formattedText
