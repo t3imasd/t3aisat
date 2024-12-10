@@ -2,6 +2,7 @@
 t3aisat_dev_gpt_v?.md
 t3aisat_ui_ux_gpt.md
 android/key.properties
+documentation/screenshots
 
 # Dart related
 .dart_tool/
