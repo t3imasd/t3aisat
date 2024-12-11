@@ -12,6 +12,8 @@ import 'package:geobase/projections_proj4d.dart'; // Import for EPSG:25830 proje
 import 'dart:convert'; // Import required for jsonEncode
 import 'dart:async'; // Import for Timer
 import 'package:flutter/services.dart'; // Añade este import para el clipboard
+import '../widgets/search_bar_widget.dart'; // The widget of the search bar imports
+import '../model/search_result.dart'; // The search results model imports
 
 class ParcelMapScreen extends StatefulWidget {
   const ParcelMapScreen({super.key});
@@ -694,6 +696,19 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
     log.info('User is interacting with the map...');
   }
 
+  Future<void> _onLocationSelected(SearchResult result) async {
+    await _mapboxMap.flyTo(
+      mapbox.CameraOptions(
+        center: mapbox.Point(
+          coordinates: geojson.Position(result.longitude, result.latitude),
+        ),
+        zoom: 17.0,
+      ),
+      mapbox.MapAnimationOptions(duration: 1000),
+    );
+    await _fetchParcelData(result.latitude, result.longitude);
+  }
+
   // BottomSheet UI for selected parcels
   Widget _buildBottomSheet(BuildContext context) {
     final totalArea = _calculateTotalArea();
@@ -992,18 +1007,22 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mapa Parcelas'),
-        backgroundColor: const Color(0xFFE6E6E6), // Light gray background color
-        foregroundColor: const Color(0xFF1976D2), // Navy blue text color
-        elevation: 0, // No shadow in the AppBar
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.my_location),
-            onPressed: () {
-              _moveToCurrentLocation();
-            },
-          ),
-        ],
+        title: Row(
+          children: [
+            Expanded(
+              child: ExpandableSearchBar(
+                onLocationSelected: _onLocationSelected,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.my_location),
+              onPressed: _moveToCurrentLocation,
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFFE6E6E6),
+        foregroundColor: const Color(0xFF1976D2),
+        elevation: 0,
       ),
       body: Stack(
         children: [
@@ -1014,12 +1033,12 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
             ),
             onMapCreated: (mapbox.MapboxMap mapboxMap) {
               _mapboxMap = mapboxMap;
-              // Map initialization logic
-              _onMapCreated(mapboxMap); // Initialize the map
+              _onMapCreated(mapboxMap);
             },
-            onTapListener: _onMapClick, // Handle map click
+            onTapListener: _onMapClick,
           ),
-          // Loading Spinner - Diseño minimalista
+          
+          // Loading Spinner
           if (_isFetching)
             Center(
               child: SizedBox(
@@ -1033,6 +1052,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
                 ),
               ),
             ),
+
           // Bottom Sheet
           if (_selectedParcels.isNotEmpty)
             Positioned(
