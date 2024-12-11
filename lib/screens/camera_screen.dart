@@ -9,6 +9,7 @@ import '../objectbox.g.dart';
 import 'media_location_screen.dart';
 import 'gallery_screen.dart';
 import '../helpers/media_helpers.dart'; // Added import
+import 'dart:io' show Platform;
 
 // Add a personalized class for the Slider's Thumb with the sun icon
 class SunThumbShape extends SliderComponentShape {
@@ -596,6 +597,9 @@ class CameraScreenState extends State<CameraScreen>
                 }
               },
               onVerticalDragUpdate: (details) {
+                if (Platform.isAndroid) {
+                  return; // Ignore exposure adjustments on Android
+                }
                 if (_pointerCount == 1) {
                   // Update exposure only for single-finger drag
                   // Update the exposure value according to the vertical movement
@@ -712,8 +716,8 @@ class CameraScreenState extends State<CameraScreen>
               ),
             ),
 
-          // Exposure value indicator
-          if (_showExposureIndicator)
+          // Exposure value indicator for iOS only
+          if (_showExposureIndicator && Platform.isIOS)
             Positioned(
               right: 60,
               top: MediaQuery.of(context).size.height * 0.25 +
@@ -738,8 +742,35 @@ class CameraScreenState extends State<CameraScreen>
               ),
             ),
 
-          // Exposure slider
-          if (_showExposureSlider)
+          // Android message in Spanish
+          if (Platform.isAndroid && _showExposureIndicator)
+            Positioned(
+              bottom: 100,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Ajuste de exposición no disponible en Android',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Exposure slider - only show on iOS
+          if (Platform.isIOS)
             Positioned(
               right: 20,
               top: MediaQuery.of(context).size.height * 0.25,
