@@ -136,6 +136,7 @@ class MyHomePage extends StatefulWidget {
 class MyHomePageState extends State<MyHomePage> {
   List<CameraDescription> _cameras = [];
   bool _termsAccepted = false;
+  bool _isRequestingPermissions = false;
 
   @override
   void initState() {
@@ -338,71 +339,74 @@ class MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _showPermissionsDialog() async {
-    PermissionStatus cameraPermission = await Permission.camera.isGranted
-        ? PermissionStatus.granted
-        : await Permission.camera.request();
-    PermissionStatus microphonePermission =
-        await Permission.microphone.isGranted
-            ? PermissionStatus.granted
-            : await Permission.microphone.request();
-    PermissionStatus photoPermission = await Permission.photos.isGranted
-        ? PermissionStatus.granted
-        : await Permission.photos.request();
-
-    String cameraMessage =
-        cameraPermission.isPermanentlyDenied || cameraPermission.isDenied
-            ? 'Cámara'
-            : '';
-    String photoMessage =
-        photoPermission.isPermanentlyDenied || photoPermission.isDenied
-            ? 'Galería de fotos'
-            : '';
-    String microphoneMessage = microphonePermission.isPermanentlyDenied ||
-            microphonePermission.isDenied
-        ? 'Micrófono'
-        : '';
-    String microphoneAdditionalMessage = microphonePermission
-                .isPermanentlyDenied ||
-            microphonePermission.isDenied
-        ? ' Algunas funcionalidades pueden estar limitadas sin el permiso del micrófono.'
-        : '';
-
-    String message = '';
-    if (cameraMessage.isNotEmpty ||
-        photoMessage.isNotEmpty ||
-        microphoneMessage.isNotEmpty) {
-      List<String> messages = [];
-      if (cameraMessage.isNotEmpty) messages.add(cameraMessage);
-      if (photoMessage.isNotEmpty) messages.add(photoMessage);
-      if (microphoneMessage.isNotEmpty) messages.add(microphoneMessage);
-
-      if (messages.isNotEmpty) {
-        message =
-            'La aplicación necesita permisos de acceso a ${messages.join(', ').replaceFirst(RegExp(r', (?=[^,]*$)'), ' y ')} para continuar.$microphoneAdditionalMessage';
-      }
+    // Check if already requesting permissions
+    if (_isRequestingPermissions) {
+      return;
     }
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Permisos requeridos'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // Volver a solicitar permisos
-              _requestPermissions();
-            },
-            child: const Text('Otorgar permisos'),
+    try {
+      _isRequestingPermissions = true;
+
+      // Check current status first
+      PermissionStatus cameraPermission = await Permission.camera.status;
+      PermissionStatus microphonePermission = await Permission.microphone.status;
+      PermissionStatus photoPermission = await Permission.photos.status;
+      PermissionStatus locationPermission = await Permission.location.status;
+
+      // Create list of permissions that need to be requested
+      List<Permission> permissionsToRequest = [];
+      
+      if (!cameraPermission.isGranted) permissionsToRequest.add(Permission.camera);
+      if (!microphonePermission.isGranted) permissionsToRequest.add(Permission.microphone);
+      if (!photoPermission.isGranted) permissionsToRequest.add(Permission.photos);
+      if (!locationPermission.isGranted) permissionsToRequest.add(Permission.location);
+
+      // If permissions needed, request them all at once
+      if (permissionsToRequest.isNotEmpty) {
+        await Permission.camera.request();
+        await Permission.microphone.request();
+        await Permission.photos.request();
+        await Permission.location.request();
+      }
+
+      // Re-check status after requests
+      List<String> deniedPermissions = [];
+      if (!await Permission.camera.isGranted) deniedPermissions.add('Cámara');
+      if (!await Permission.microphone.isGranted) deniedPermissions.add('Micrófono');
+      if (!await Permission.photos.isGranted) deniedPermissions.add('Galería de fotos');
+      if (!await Permission.location.isGranted) deniedPermissions.add('Ubicación');
+
+      if (deniedPermissions.isNotEmpty) {
+        String message = 'La aplicación necesita permisos de acceso a ${deniedPermissions.join(', ')} para continuar.';
+        
+        if (!context.mounted) return;
+        
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Permisos requeridos'),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  openAppSettings();
+                },
+                child: const Text('Abrir Ajustes'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancelar'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-        ],
-      ),
-    );
+        );
+      }
+    } catch (e) {
+      Logger.root.severe('Error requesting permissions: $e');
+    } finally {
+      _isRequestingPermissions = false;
+    }
   }
 
   // New method to show location permission dialog
@@ -479,15 +483,16 @@ class MyHomePageState extends State<MyHomePage> {
                 height: 60), // Spacing between the title and the first button
             ElevatedButton(
               onPressed: () async {
-                bool cameraPermissionGranted =
-                    await Permission.camera.isGranted;
-                bool microphonePermissionGranted =
-                    await Permission.microphone.isGranted;
+                // Check all required permissions including location
+                bool cameraPermissionGranted = await Permission.camera.isGranted;
+                bool microphonePermissionGranted = await Permission.microphone.isGranted;
                 bool photoPermissionGranted = await Permission.photos.isGranted;
+                bool locationPermissionGranted = await Permission.location.isGranted;
 
-                if (cameraPermissionGranted &&
-                    microphonePermissionGranted &&
-                    photoPermissionGranted) {
+                if (cameraPermissionGranted && 
+                    microphonePermissionGranted && 
+                    photoPermissionGranted &&
+                    locationPermissionGranted) {
                   if (_cameras.isEmpty) {
                     await _initializeCameras();
                   }
@@ -501,7 +506,8 @@ class MyHomePageState extends State<MyHomePage> {
                     ),
                   );
                 } else {
-                  _showPermissionsDialog();
+                  // Update _showPermissionsDialog to handle location permission too
+                  await _showPermissionsDialog();
                 }
               },
               child: const Text('Captura con Ubicación'),

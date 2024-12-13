@@ -35,6 +35,10 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   bool _isFetching = false;
   bool _isBottomSheetExpanded = false; // Track the state of the bottom sheet
 
+  // Add to class state variables
+  bool _isErrorMessageVisible = false;
+  final _errorMessageKey = GlobalKey();
+
   // Retrieve the Mapbox Access Token from environment variables
   final String accessToken = dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
 
@@ -411,36 +415,40 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
 
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
-        final xmlDocument = XmlDocument.parse(response.body);
+        if (_isValidXmlContent(response.body)) {
+          final xmlDocument = XmlDocument.parse(response.body);
+          // Continue with existing logic
+          // Generate the new Geojson data
+          final newGeoJsonData = _generateGeoJsonData(xmlDocument);
 
-        // Generate the new Geojson data
-        final newGeoJsonData = _generateGeoJsonData(xmlDocument);
+          final isSourceIdExists =
+              await _mapboxMap.style.styleSourceExists('source-id');
+          if (isSourceIdExists) {
+            // If the source already exists, we update the property `data` with the new data
+            await _mapboxMap.style.setStyleSourceProperty(
+              'source-id',
+              'data',
+              newGeoJsonData,
+            );
+            log.info("Source 'source-id' updated with new parcel data.");
+          } else {
+            // If there is no source, we create it and add the necessary layers
+            final geoJsonSource = mapbox.GeoJsonSource(
+              id: 'source-id',
+              data: newGeoJsonData,
+            );
 
-        final isSourceIdExists =
-            await _mapboxMap.style.styleSourceExists('source-id');
-        if (isSourceIdExists) {
-          // If the source already exists, we update the property `data` with the new data
-          await _mapboxMap.style.setStyleSourceProperty(
-            'source-id',
-            'data',
-            newGeoJsonData,
-          );
-          log.info("Source 'source-id' updated with new parcel data.");
+            _mapboxMap.style.addSource(geoJsonSource);
+
+            // Add the layers again if the source did not exist
+            _addParcelLayers();
+          }
+
+          // Esperar un breve momento para asegurar que los datos se han renderizado
+          await Future.delayed(const Duration(milliseconds: 500));
         } else {
-          // If there is no source, we create it and add the necessary layers
-          final geoJsonSource = mapbox.GeoJsonSource(
-            id: 'source-id',
-            data: newGeoJsonData,
-          );
-
-          _mapboxMap.style.addSource(geoJsonSource);
-
-          // Add the layers again if the source did not exist
-          _addParcelLayers();
+          _showTemporaryMessage();
         }
-
-        // Esperar un breve momento para asegurar que los datos se han renderizado
-        await Future.delayed(const Duration(milliseconds: 500));
       } else {
         log.warning(
             'Failed to load parcel data: Status code ${response.statusCode}');
@@ -1003,6 +1011,33 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
     _addUserLocationLayer();
   }
 
+  // Function to check if content is valid XML
+  bool _isValidXmlContent(String content) {
+    try {
+      return content.trim().startsWith('<?xml') || 
+             content.trim().startsWith('<catastro>');
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Function to show error message
+  void _showTemporaryMessage() {
+    if (!_isErrorMessageVisible) {
+      setState(() {
+        _isErrorMessageVisible = true;
+      });
+      
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) {
+          setState(() {
+            _isErrorMessageVisible = false;
+          });
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1061,6 +1096,28 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
               right: 0,
               child: _buildBottomSheet(context),
             ),
+          if (_isErrorMessageVisible) Positioned(
+            bottom: 20,
+            left: 20,
+            right: 20,
+            child: Container(
+              key: _errorMessageKey,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Las parcelas catastrales no están disponibles. Por favor, inténtelo más tarde',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          )
         ],
       ),
     );
