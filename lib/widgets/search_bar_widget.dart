@@ -6,9 +6,9 @@ import '../model/search_result.dart';
 
 class ExpandableSearchBar extends StatefulWidget {
   final Function(SearchResult) onLocationSelected;
-  
+
   const ExpandableSearchBar({
-    super.key, 
+    super.key,
     required this.onLocationSelected,
   });
 
@@ -25,15 +25,22 @@ class _ExpandableSearchBarState extends State<ExpandableSearchBar> {
   bool _isLoading = false;
 
   @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      width: _isExpanded ? MediaQuery.of(context).size.width * 0.7 : 40,
+      width: MediaQuery.of(context).size.width * 0.7,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: _isExpanded ? _buildSearchField() : _buildSearchIcon(),
+      child: _buildSearchField(),
     );
   }
 
@@ -46,12 +53,21 @@ class _ExpandableSearchBarState extends State<ExpandableSearchBar> {
             hintText: 'Buscar dirección...',
             contentPadding: const EdgeInsets.symmetric(horizontal: 16),
             border: InputBorder.none,
-            suffixIcon: _isLoading 
-              ? const CircularProgressIndicator() 
-              : IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: _clearSearch,
-                ),
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: _clearSearch,
+                  )
+                : _isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : null,
           ),
           onChanged: _onSearchChanged,
         ),
@@ -63,21 +79,11 @@ class _ExpandableSearchBarState extends State<ExpandableSearchBar> {
             child: ListView.builder(
               shrinkWrap: true,
               itemCount: _results.length,
-              itemBuilder: (context, index) => _buildResultItem(_results[index]),
+              itemBuilder: (context, index) =>
+                  _buildResultItem(_results[index]),
             ),
           ),
       ],
-    );
-  }
-
-  Widget _buildSearchIcon() {
-    return IconButton(
-      icon: const Icon(Icons.search),
-      onPressed: () {
-        setState(() {
-          _isExpanded = true;
-        });
-      },
     );
   }
 
@@ -103,8 +109,13 @@ class _ExpandableSearchBarState extends State<ExpandableSearchBar> {
   void _onSearchChanged(String query) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () async {
+      if (!mounted) return; // Verificar si el widget sigue montado
+      
       setState(() => _isLoading = true);
       final results = await _searchService.searchAddress(query);
+      
+      if (!mounted) return; // Verificar nuevamente después de la operación asíncrona
+      
       setState(() {
         _results = results;
         _isLoading = false;

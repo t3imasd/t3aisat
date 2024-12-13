@@ -63,6 +63,9 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   Timer? _searchBarTimer;
   bool _isSearchBarActive = false; // Add this new state variable
 
+  late AnimationController _searchBarAnimationController;
+  late Animation<double> _searchBarOpacity;
+
   @override
   void initState() {
     super.initState();
@@ -104,6 +107,19 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
     });
 
     _startLocationUpdates();
+
+    _searchBarAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    
+    _searchBarOpacity = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _searchBarAnimationController,
+      curve: Curves.easeInOut,
+    ));
   }
 
   @override
@@ -115,6 +131,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
     _animationController.dispose();
     _positionStreamSubscription?.cancel();
     _searchBarTimer?.cancel(); // Add this line
+    _searchBarAnimationController.dispose();
     super.dispose();
   }
 
@@ -1046,12 +1063,23 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
 
   // Add method to handle search bar visibility
   void _showSearchBar() {
-    setState(() {
-      _isSearchBarVisible = true;
-      _isSearchBarActive = false;
-    });
-    
-    _startSearchBarTimer();
+    if (_isSearchBarVisible) {
+      // Si ya está visible, lo ocultamos con animación
+      _searchBarAnimationController.reverse().then((_) {
+        setState(() {
+          _isSearchBarVisible = false;
+          _isSearchBarActive = false;
+        });
+      });
+    } else {
+      // Si está oculto, lo mostramos con animación
+      setState(() {
+        _isSearchBarVisible = true;
+        _isSearchBarActive = false;
+      });
+      _searchBarAnimationController.forward();
+      _startSearchBarTimer();
+    }
   }
 
   // Add new method to handle timer
@@ -1119,34 +1147,39 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
               top: 16,
               left: 16,
               right: 16,
-              child: GestureDetector(
-                onTapDown: (_) {
-                  setState(() {
-                    _isSearchBarActive = true;
-                  });
-                  _searchBarTimer?.cancel(); // Cancel timer when user taps search bar
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: ExpandableSearchBar(
-                    onLocationSelected: (result) {
-                      _onLocationSelected(result);
-                      setState(() {
-                        _isSearchBarVisible = false;
-                        _isSearchBarActive = false;
-                      });
-                      _searchBarTimer?.cancel();
-                    },
+              child: FadeTransition(
+                opacity: _searchBarOpacity,
+                child: GestureDetector(
+                  onTapDown: (_) {
+                    setState(() {
+                      _isSearchBarActive = true;
+                    });
+                    _searchBarTimer?.cancel(); // Cancel timer when user taps search bar
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ExpandableSearchBar(
+                      onLocationSelected: (result) {
+                        _onLocationSelected(result);
+                        _searchBarAnimationController.reverse().then((_) {
+                          setState(() {
+                            _isSearchBarVisible = false;
+                            _isSearchBarActive = false;
+                          });
+                        });
+                        _searchBarTimer?.cancel();
+                      },
+                    ),
                   ),
                 ),
               ),
