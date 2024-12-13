@@ -1078,25 +1078,30 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         _isSearchBarActive = false;
       });
       _searchBarAnimationController.forward();
-      _startSearchBarTimer();
+      // Solo iniciamos el timer si no está activo el SearchBar
+      if (!_isSearchBarActive) {
+        _startSearchBarTimer();
+      }
     }
   }
 
   // Add new method to handle timer
   void _startSearchBarTimer() {
-    if (_isSearchBarActive) return; // Don't start timer if search is active
-    
-    // Reset any existing timer
+    // Cancelar cualquier timer existente
     _searchBarTimer?.cancel();
     
-    // Start new timer
-    _searchBarTimer = Timer(const Duration(seconds: 5), () {
-      if (mounted && !_isSearchBarActive) {
-        setState(() {
-          _isSearchBarVisible = false;
-        });
-      }
-    });
+    // Solo iniciar el timer si el SearchBar no está activo
+    if (!_isSearchBarActive) {
+      _searchBarTimer = Timer(const Duration(seconds: 5), () {
+        if (mounted && !_isSearchBarActive) {
+          _searchBarAnimationController.reverse().then((_) {
+            setState(() {
+              _isSearchBarVisible = false;
+            });
+          });
+        }
+      });
+    }
   }
 
   @override
@@ -1151,10 +1156,10 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
                 opacity: _searchBarOpacity,
                 child: GestureDetector(
                   onTapDown: (_) {
+                    _searchBarTimer?.cancel(); // Cancelar el timer inmediatamente al tocar
                     setState(() {
                       _isSearchBarActive = true;
                     });
-                    _searchBarTimer?.cancel(); // Cancel timer when user taps search bar
                   },
                   child: Container(
                     decoration: BoxDecoration(
