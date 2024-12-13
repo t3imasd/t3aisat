@@ -58,6 +58,11 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
 
   final List<geo.Position> _positionHistory = [];
 
+  // Add new state variables
+  bool _isSearchBarVisible = false;
+  Timer? _searchBarTimer;
+  bool _isSearchBarActive = false; // Add this new state variable
+
   @override
   void initState() {
     super.initState();
@@ -109,6 +114,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
     _spinnerAnimationController.dispose();
     _animationController.dispose();
     _positionStreamSubscription?.cancel();
+    _searchBarTimer?.cancel(); // Add this line
     super.dispose();
   }
 
@@ -1038,16 +1044,45 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
     }
   }
 
+  // Add method to handle search bar visibility
+  void _showSearchBar() {
+    setState(() {
+      _isSearchBarVisible = true;
+      _isSearchBarActive = false;
+    });
+    
+    _startSearchBarTimer();
+  }
+
+  // Add new method to handle timer
+  void _startSearchBarTimer() {
+    if (_isSearchBarActive) return; // Don't start timer if search is active
+    
+    // Reset any existing timer
+    _searchBarTimer?.cancel();
+    
+    // Start new timer
+    _searchBarTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted && !_isSearchBarActive) {
+        setState(() {
+          _isSearchBarVisible = false;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
-            Expanded(
-              child: ExpandableSearchBar(
-                onLocationSelected: _onLocationSelected,
-              ),
+            const Expanded(
+              child: Text('Volver'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: _showSearchBar,
             ),
             IconButton(
               icon: const Icon(Icons.my_location),
@@ -1070,9 +1105,53 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
               _mapboxMap = mapboxMap;
               _onMapCreated(mapboxMap);
             },
-            onTapListener: _onMapClick,
+            onTapListener: (context) {
+              _onMapClick(context);
+              if (_isSearchBarVisible && !_isSearchBarActive) {
+                _startSearchBarTimer();
+              }
+            },
           ),
           
+          // Floating Search Bar with modified logic
+          if (_isSearchBarVisible)
+            Positioned(
+              top: 16,
+              left: 16,
+              right: 16,
+              child: GestureDetector(
+                onTapDown: (_) {
+                  setState(() {
+                    _isSearchBarActive = true;
+                  });
+                  _searchBarTimer?.cancel(); // Cancel timer when user taps search bar
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ExpandableSearchBar(
+                    onLocationSelected: (result) {
+                      _onLocationSelected(result);
+                      setState(() {
+                        _isSearchBarVisible = false;
+                        _isSearchBarActive = false;
+                      });
+                      _searchBarTimer?.cancel();
+                    },
+                  ),
+                ),
+              ),
+            ),
+
           // Loading Spinner
           if (_isFetching)
             Center(
