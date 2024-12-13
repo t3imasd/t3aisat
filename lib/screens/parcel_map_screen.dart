@@ -1111,7 +1111,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         title: Row(
           children: [
             const Expanded(
-              child: Text('Volver'),
+              child: Text('Parcelas'),
             ),
             IconButton(
               icon: const Icon(Icons.search),
