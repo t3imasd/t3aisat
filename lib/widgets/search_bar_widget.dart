@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../services/search_service.dart';
 import '../model/search_result.dart';
+import '../screens/parcel_map_screen.dart';
 
 class ExpandableSearchBar extends StatefulWidget {
   final Function(SearchResult) onLocationSelected;
@@ -107,14 +108,22 @@ class _ExpandableSearchBarState extends State<ExpandableSearchBar> {
   }
 
   void _onSearchChanged(String query) {
+    if (query.isNotEmpty) {
+      // Si hay texto, marcamos el SearchBar como activo
+      // para evitar que se oculte automáticamente
+      if (context.findAncestorStateOfType<ParcelMapScreenState>() != null) {
+        context.findAncestorStateOfType<ParcelMapScreenState>()!.setSearchBarActive(true);
+      }
+    }
+
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () async {
-      if (!mounted) return; // Verificar si el widget sigue montado
+      if (!mounted) return;
       
       setState(() => _isLoading = true);
       final results = await _searchService.searchAddress(query);
       
-      if (!mounted) return; // Verificar nuevamente después de la operación asíncrona
+      if (!mounted) return;
       
       setState(() {
         _results = results;

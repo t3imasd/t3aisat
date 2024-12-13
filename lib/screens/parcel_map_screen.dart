@@ -1078,16 +1078,11 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         _isSearchBarActive = false;
       });
       _searchBarAnimationController.forward();
-      // Solo iniciamos el timer si no está activo el SearchBar
-      if (!_isSearchBarActive) {
-        _startSearchBarTimer();
-      }
     }
   }
 
   // Add new method to handle timer
   void _startSearchBarTimer() {
-    // Cancelar cualquier timer existente
     _searchBarTimer?.cancel();
     
     // Solo iniciar el timer si el SearchBar no está activo
@@ -1102,6 +1097,13 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         }
       });
     }
+  }
+
+  // Añadir método para actualizar el estado activo del SearchBar
+  void setSearchBarActive(bool active) {
+    setState(() {
+      _isSearchBarActive = active;
+    });
   }
 
   @override
