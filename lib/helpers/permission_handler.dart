@@ -12,6 +12,144 @@ class PermissionHelper {
   static final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
   static const String _permissionPrefsKey = 'permission_requests';
 
+  // Updated dialog style constants
+  static const _dialogBorderRadius = 16.0;
+  static const _iconSize = 48.0;
+  static const _contentPadding = EdgeInsets.all(24.0);
+  static const _titleFontSize = 20.0;
+  static const _subtitleFontSize = 16.0;
+  static const _textFontSize = 14.0;
+  
+  static const _dialogTheme = BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.all(Radius.circular(_dialogBorderRadius)),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black12,
+        blurRadius: 10,
+        offset: Offset(0, 4),
+      ),
+    ],
+  );
+
+  static Icon _getPermissionIcon(Permission permission) {
+    switch (permission) {
+      case Permission.camera:
+        return const Icon(Icons.camera_alt_rounded, 
+          size: _iconSize, color: Color(0xFF4CAF50));
+      case Permission.microphone:
+        return const Icon(Icons.mic_rounded, 
+          size: _iconSize, color: Color(0xFF2196F3));
+      case Permission.photos:
+      case Permission.videos:
+      case Permission.storage:
+        return const Icon(Icons.photo_library_rounded, 
+          size: _iconSize, color: Color(0xFF9C27B0));
+      case Permission.locationWhenInUse:
+      case Permission.location:
+        return const Icon(Icons.location_on_rounded, 
+          size: _iconSize, color: Color(0xFFFF9800));
+      default:
+        return const Icon(Icons.settings, 
+          size: _iconSize, color: Color(0xFF757575));
+    }
+  }
+
+  static Widget _buildPermissionDialog({
+    required String title,
+    required List<Permission> permissions,
+    required String feature,
+    required List<Widget> actions,
+    String? additionalInfo,
+  }) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_dialogBorderRadius),
+      ),
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      child: Container(
+        decoration: _dialogTheme,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF212121),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const Divider(height: 1),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: _contentPadding,
+                child: Column(
+                  children: [
+                    ...permissions.map((permission) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: ListTile(
+                        leading: _getPermissionIcon(permission),
+                        title: Text(
+                          _getPermissionName(permission),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                        subtitle: Text(
+                          _getDetailedPermissionExplanation(permission, feature),
+                          style: const TextStyle(
+                            color: Color(0xFF666666),
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                    )),
+                    if (additionalInfo != null) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5F5F5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          additionalInfo,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF666666),
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: actions.map((action) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: action,
+                )).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // Almacena información sobre los intentos de solicitud de permisos
   static Future<void> _savePermissionRequest(Permission permission) async {
     final prefs = await SharedPreferences.getInstance();
@@ -100,36 +238,70 @@ class PermissionHelper {
     String permissionName,
     String explanation,
   ) async {
-    final result = await showDialog<bool>(
+    final permission = _getPermissionFromName(permissionName);
+    
+    return await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text('Permiso de $permissionName necesario'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(explanation),
-            const SizedBox(height: 12),
-            const Text(
-              'Este permiso es necesario para el correcto funcionamiento de la aplicación.',
-              style: TextStyle(fontStyle: FontStyle.italic),
-            ),
-          ],
-        ),
+      builder: (context) => _buildPermissionDialog(
+        title: 'Permiso necesario',
+        permissions: [permission],
+        feature: '',
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Ahora no'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Continuar'),
           ),
         ],
       ),
+    ) ?? false;
+  }
+
+  // Add this helper method to convert permission name to Permission object
+  static Permission _getPermissionFromName(String permissionName) {
+    switch (permissionName.toLowerCase()) {
+      case 'cámara':
+        return Permission.camera;
+      case 'micrófono':
+        return Permission.microphone;
+      case 'galería':
+        return Platform.isAndroid && _getSdkVersion() >= 33
+            ? Permission.photos
+            : Permission.storage;
+      case 'ubicación':
+        return Permission.locationWhenInUse;
+      default:
+        return Permission.storage;
+    }
+  }
+
+  // Add helper method to get Android SDK version
+  static int _getSdkVersion() {
+    if (Platform.isAndroid) {
+      return int.tryParse(Platform.operatingSystemVersion.split('.').first) ?? 0;
+    }
+    return 0;
+  }
+
+  // Update button styles helper method
+  static ButtonStyle _getButtonStyle(BuildContext context, {bool isPrimary = false}) {
+    return ElevatedButton.styleFrom(
+      backgroundColor: isPrimary ? Theme.of(context).primaryColor : Colors.grey[200],
+      foregroundColor: isPrimary ? Colors.white : Colors.black87,
+      elevation: isPrimary ? 2 : 0,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
     );
-    return result ?? false;
   }
 
   /// Request permissions sequentially
@@ -322,44 +494,11 @@ class PermissionHelper {
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Permisos necesarios'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Los siguientes permisos son necesarios:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              ...deniedPermissions.map((permission) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('• ', style: TextStyle(fontSize: 16)),
-                        Expanded(
-                          child: Text(
-                            '${_getPermissionName(permission)}: ${_getDetailedExplanation(permission)}',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )),
-              const SizedBox(height: 16),
-              Text(
-                'Para habilitar estos permisos:\n\n$platformSpecificInstructions',
-                style: const TextStyle(
-                  fontStyle: FontStyle.italic,
-                  color: Colors.blue,
-                ),
-              ),
-            ],
-          ),
-        ),
+      builder: (context) => _buildPermissionDialog(
+        title: 'Permisos necesarios',
+        permissions: deniedPermissions,
+        feature: '',
+        additionalInfo: platformSpecificInstructions,
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -448,43 +587,11 @@ class PermissionHelper {
     return await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Permisos Requeridos'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Los siguientes permisos son necesarios:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              ...deniedPermissions.map((permission) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('• ', style: TextStyle(fontSize: 16)),
-                    Expanded(
-                      child: Text(
-                        '${_getPermissionName(permission)}: ${_getDetailedPermissionExplanation(permission, feature)}',
-                      ),
-                    ),
-                  ],
-                ),
-              )),
-              const SizedBox(height: 16),
-              Text(
-                'Para continuar:\n\n$instructions',
-                style: const TextStyle(
-                  fontStyle: FontStyle.italic,
-                  color: Colors.blue,
-                ),
-              ),
-            ],
-          ),
-        ),
+      builder: (context) => _buildPermissionDialog(
+        title: 'Permisos Requeridos',
+        permissions: deniedPermissions,
+        feature: feature,
+        additionalInfo: instructions,
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -517,35 +624,10 @@ class PermissionHelper {
     return await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Permisos Necesarios'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Para usar esta función, la aplicación necesita los siguientes permisos:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              ...permissions.map((permission) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('• ', style: TextStyle(fontSize: 16)),
-                    Expanded(
-                      child: Text(
-                        '${_getPermissionName(permission)}: ${_getDetailedPermissionExplanation(permission, feature)}',
-                      ),
-                    ),
-                  ],
-                ),
-              )),
-            ],
-          ),
-        ),
+      builder: (context) => _buildPermissionDialog(
+        title: 'Permisos Necesarios',
+        permissions: permissions,
+        feature: feature,
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -571,43 +653,11 @@ class PermissionHelper {
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Permisos Denegados'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Los siguientes permisos han sido denegados:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              ...deniedPermissions.map((permission) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('• ', style: TextStyle(fontSize: 16)),
-                    Expanded(
-                      child: Text(
-                        '${_getPermissionName(permission)}: ${_getDetailedPermissionExplanation(permission, feature)}',
-                      ),
-                    ),
-                  ],
-                ),
-              )),
-              const SizedBox(height: 16),
-              Text(
-                'Para habilitar estos permisos:\n\n$instructions',
-                style: const TextStyle(
-                  fontStyle: FontStyle.italic,
-                  color: Colors.blue,
-                ),
-              ),
-            ],
-          ),
-        ),
+      builder: (context) => _buildPermissionDialog(
+        title: 'Permisos Denegados',
+        permissions: deniedPermissions,
+        feature: feature,
+        additionalInfo: instructions,
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
