@@ -146,13 +146,14 @@ class MyHomePageState extends State<MyHomePage> {
 
   void _checkTermsAccepted() async {
     final prefs = await SharedPreferences.getInstance();
-    _termsAccepted = prefs.getBool('termsAccepted') ?? false;
+    setState(() {
+      _termsAccepted = prefs.getBool('termsAccepted') ?? false;
+    });
     if (!_termsAccepted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showTermsAndConditionsDialog();
-      });
+      if (!mounted) return;
+      _showTermsAndConditionsDialog();
     } else {
-      _initializeCameras();
+      await _initializeCameras();
     }
   }
 
@@ -236,7 +237,7 @@ class MyHomePageState extends State<MyHomePage> {
                       _termsAccepted = true;
                     });
                     Navigator.of(context).pop();
-                    _initializeCameras();
+                    await _initializeCameras(); // Only initialize cameras, no permission requests
                   },
                   child: const Text('Acepto'),
                 ),
@@ -292,107 +293,78 @@ class MyHomePageState extends State<MyHomePage> {
 
   Future<void> _initializeCameras() async {
     try {
-      PermissionStatus cameraPermission = await Permission.camera.isGranted
-          ? PermissionStatus.granted
-          : await Permission.camera.request();
-      PermissionStatus microphonePermission =
-          await Permission.microphone.isGranted
-              ? PermissionStatus.granted
-              : await Permission.microphone.request();
-      PermissionStatus photoPermission = await Permission.photos.isGranted
-          ? PermissionStatus.granted
-          : await Permission.photos.request();
-
-      if (cameraPermission.isGranted &&
-          photoPermission.isGranted &&
-          microphonePermission.isGranted) {
-        // Initialize cameras
-        _cameras = await availableCameras();
-      }
+      _cameras = await availableCameras();
     } catch (e) {
       Logger.root.severe('Error initializing cameras: $e');
-      // Optionally handle the error, e.g., show a dialog
     }
   }
 
-  Future<void> _requestPermissions() async {
-    PermissionStatus cameraPermission = await Permission.camera.isGranted
-        ? PermissionStatus.granted
-        : await Permission.camera.request();
-    PermissionStatus microphonePermission =
-        await Permission.microphone.isGranted
-            ? PermissionStatus.granted
-            : await Permission.microphone.request();
-    PermissionStatus photoPermission = await Permission.photos.isGranted
-        ? PermissionStatus.granted
-        : await Permission.photos.request();
-
-    if (cameraPermission.isDenied ||
-        microphonePermission.isDenied ||
-        photoPermission.isDenied) {
-      await _showPermissionsDialog();
-    } else if (cameraPermission.isPermanentlyDenied ||
-        microphonePermission.isPermanentlyDenied ||
-        photoPermission.isPermanentlyDenied) {
-      await openAppSettings();
-    }
+  Future<Map<Permission, bool>> _checkAllPermissions() async {
+    Map<Permission, bool> permissionStatus = {
+      Permission.camera: await Permission.camera.isGranted,
+      Permission.microphone: await Permission.microphone.isGranted,
+      Permission.photos: await Permission.photos.isGranted,
+      Permission.location: await Permission.location.isGranted,
+    };
+    return permissionStatus;
   }
 
-  Future<void> _showPermissionsDialog() async {
-    // Check if already requesting permissions
-    if (_isRequestingPermissions) {
-      return;
-    }
-
+  Future<void> _requestPermissions(List<Permission> permissions) async {
+    if (_isRequestingPermissions) return;
+    
     try {
       _isRequestingPermissions = true;
+      Map<Permission, String> permissionDescriptions = {
+        Permission.camera: 'Cámara - para capturar fotos y vídeos de las parcelas',
+        Permission.microphone: 'Micrófono - para grabar audio en los vídeos',
+        Permission.photos: 'Galería - para guardar las capturas realizadas',
+        Permission.location: 'Ubicación - para geolocalizar las fotos y vídeos',
+      };
 
-      // Check current status first
-      PermissionStatus cameraPermission = await Permission.camera.status;
-      PermissionStatus microphonePermission = await Permission.microphone.status;
-      PermissionStatus photoPermission = await Permission.photos.status;
-      PermissionStatus locationPermission = await Permission.location.status;
-
-      // Create list of permissions that need to be requested
-      List<Permission> permissionsToRequest = [];
-      
-      if (!cameraPermission.isGranted) permissionsToRequest.add(Permission.camera);
-      if (!microphonePermission.isGranted) permissionsToRequest.add(Permission.microphone);
-      if (!photoPermission.isGranted) permissionsToRequest.add(Permission.photos);
-      if (!locationPermission.isGranted) permissionsToRequest.add(Permission.location);
-
-      // If permissions needed, request them all at once
-      if (permissionsToRequest.isNotEmpty) {
-        await Permission.camera.request();
-        await Permission.microphone.request();
-        await Permission.photos.request();
-        await Permission.location.request();
+      Map<Permission, PermissionStatus> statuses = {};
+      for (var permission in permissions) {
+        statuses[permission] = await permission.request();
       }
 
-      // Re-check status after requests
       List<String> deniedPermissions = [];
-      if (!await Permission.camera.isGranted) deniedPermissions.add('Cámara');
-      if (!await Permission.microphone.isGranted) deniedPermissions.add('Micrófono');
-      if (!await Permission.photos.isGranted) deniedPermissions.add('Galería de fotos');
-      if (!await Permission.location.isGranted) deniedPermissions.add('Ubicación');
+      for (var entry in statuses.entries) {
+        if (entry.value.isDenied || entry.value.isPermanentlyDenied) {
+          deniedPermissions.add(permissionDescriptions[entry.key] ?? '');
+        }
+      }
 
-      if (deniedPermissions.isNotEmpty) {
-        String message = 'La aplicación necesita permisos de acceso a ${deniedPermissions.join(', ')} para continuar.';
-        
-        if (!context.mounted) return;
-        
+      if (deniedPermissions.isNotEmpty && mounted) {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Permisos requeridos'),
-            content: Text(message),
+            title: const Text('Permisos necesarios'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Para poder realizar capturas necesitamos acceso a:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                ...deniedPermissions.map((permission) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text('• $permission'),
+                )),
+                const SizedBox(height: 12),
+                const Text(
+                  'Estos permisos son necesarios para el correcto funcionamiento de la aplicación.',
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+              ],
+            ),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                   openAppSettings();
                 },
-                child: const Text('Abrir Ajustes'),
+                child: const Text('Ir a Ajustes'),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -402,50 +374,87 @@ class MyHomePageState extends State<MyHomePage> {
           ),
         );
       }
-    } catch (e) {
-      Logger.root.severe('Error requesting permissions: $e');
     } finally {
       _isRequestingPermissions = false;
     }
   }
 
-  // New method to show location permission dialog
   Future<void> _showLocationPermissionDialog() async {
-    showDialog(
+    if (!mounted) return;
+    
+    final bool? dialogResult = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Permiso de Localización'),
-          content: Text(
-              'El permiso de localización es necesario para mostrar el mapa de parcelas.'),
+          title: const Text('Acceso a ubicación requerido'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'El acceso a tu ubicación es necesario para:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 12),
+              Text('• Ubicar las parcelas en el mapa'),
+              Text('• Mostrar tu posición actual en el mapa'),
+              SizedBox(height: 12),
+              Text(
+                'Sin este permiso, no podrás ver tu posición en el mapa ni ubicar las parcelas correctamente.',
+                style: TextStyle(fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
           actions: [
             TextButton(
-              child: Text('Otorgar permisos'),
-              onPressed: () async {
-                Navigator.of(context).pop();
-                // Request permission again
-                PermissionStatus status = await Permission.location.request();
-                if (status.isGranted) {
-                  // Permission granted, navigate to ParcelMapScreen
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => ParcelMapScreen()),
-                  );
-                } else if (status.isPermanentlyDenied) {
-                  // Open app settings
-                  await openAppSettings();
-                }
-              },
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Permitir ubicación'),
             ),
             TextButton(
-              child: Text('Cancelar'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Ahora no'),
             ),
           ],
         );
       },
     );
+
+    if (!mounted || dialogResult != true) return;
+
+    final status = await Permission.location.request();
+    if (!mounted) return;
+
+    if (status.isGranted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ParcelMapScreen()),
+      );
+    } else if (status.isPermanentlyDenied) {
+      if (!mounted) return;
+      final bool? settingsDialogResult = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Permiso denegado'),
+          content: const Text(
+            'Has denegado permanentemente el acceso a la ubicación. Para usar el mapa, necesitas habilitarlo en los ajustes del sistema.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Abrir Ajustes'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+          ],
+        ),
+      );
+
+      if (settingsDialogResult == true) {
+        openAppSettings();
+      }
+    }
   }
 
   @override
@@ -483,19 +492,27 @@ class MyHomePageState extends State<MyHomePage> {
                 height: 60), // Spacing between the title and the first button
             ElevatedButton(
               onPressed: () async {
-                // Check all required permissions including location
-                bool cameraPermissionGranted = await Permission.camera.isGranted;
-                bool microphonePermissionGranted = await Permission.microphone.isGranted;
-                bool photoPermissionGranted = await Permission.photos.isGranted;
-                bool locationPermissionGranted = await Permission.location.isGranted;
+                List<Permission> requiredPermissions = [
+                  Permission.camera,
+                  Permission.microphone,
+                  Permission.photos,
+                  Permission.location,
+                ];
+                
+                Map<Permission, bool> permissions = await _checkAllPermissions();
+                bool allGranted = permissions.values.every((status) => status);
 
-                if (cameraPermissionGranted && 
-                    microphonePermissionGranted && 
-                    photoPermissionGranted &&
-                    locationPermissionGranted) {
+                if (!allGranted) {
+                  await _requestPermissions(requiredPermissions);
+                  permissions = await _checkAllPermissions();
+                  allGranted = permissions.values.every((status) => status);
+                }
+
+                if (allGranted) {
                   if (_cameras.isEmpty) {
                     await _initializeCameras();
                   }
+                  if (!mounted) return;
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -505,9 +522,6 @@ class MyHomePageState extends State<MyHomePage> {
                       ),
                     ),
                   );
-                } else {
-                  // Update _showPermissionsDialog to handle location permission too
-                  await _showPermissionsDialog();
                 }
               },
               child: const Text('Captura con Ubicación'),
@@ -515,29 +529,40 @@ class MyHomePageState extends State<MyHomePage> {
             const SizedBox(height: 40), // Spacing between the buttons
             ElevatedButton(
               onPressed: () async {
-                // Check current permission status
-                PermissionStatus status = await Permission.location.status;
+                final status = await Permission.location.status;
+                
+                if (!mounted) return;
+                
                 if (status.isGranted) {
-                  // Navigate to ParcelMapScreen
-                  Navigator.of(context).push(
+                  Navigator.push(
+                    context,
                     MaterialPageRoute(builder: (context) => ParcelMapScreen()),
                   );
-                } else {
-                  // Request permission
-                  PermissionStatus newStatus =
-                      await Permission.location.request();
-                  if (newStatus.isGranted) {
-                    // Permission granted, navigate to ParcelMapScreen
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (context) => ParcelMapScreen()),
-                    );
-                  } else if (newStatus.isDenied) {
-                    // Show permission dialog
-                    await _showLocationPermissionDialog();
-                  } else if (newStatus.isPermanentlyDenied) {
-                    // Open app settings
-                    await openAppSettings();
+                } else if (status.isDenied) {
+                  _showLocationPermissionDialog();
+                } else if (status.isPermanentlyDenied) {
+                  final bool? settingsDialogResult = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Permiso denegado'),
+                      content: const Text(
+                        'Para usar el mapa necesitas habilitar el acceso a la ubicación en los ajustes del sistema.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text('Abrir Ajustes'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('Cancelar'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (settingsDialogResult == true) {
+                    openAppSettings();
                   }
                 }
               },
