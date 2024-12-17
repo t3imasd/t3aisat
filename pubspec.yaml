@@ -65,7 +65,7 @@ flutter:
     - assets/fonts/roboto_black/Roboto-Black_100_size_white_color.ttf.zip
     - assets/fonts/roboto_bold/Roboto-Bold-20-size-white-color.ttf.zip
     - assets/fonts/roboto/Roboto-Bold.ttf
-    - documentation/privacy_policy/privacy_policy_t3aisat.md
+    - assets/documents/privacy_policy_t3aisat.md
 
 flutter_launcher_icons:
   android: true

@@ -158,98 +158,252 @@ class MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _showTermsAndConditionsDialog() async {
-    String termsContent = await loadTermsFromFile();
+  void _showTermsAndConditionsDialog() {
     bool isExpanded = false;
-
+    
     showDialog(
       context: context,
-      barrierDismissible: false, // Evita cerrar el diálogo al tocar fuera
+      barrierDismissible: false,
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              insetPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 64),
-              title: const Text('Términos y Condiciones'),
-              content: SizedBox(
-                width: double.maxFinite,
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.0),
+              ),
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.8,
+                ),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.all(Radius.circular(16.0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      'Para continuar usando la app, debes aceptar nuestros términos y condiciones. Pulsa en "Leer Términos Completos" para ver el contenido completo.',
-                    ),
-                    const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          isExpanded = !isExpanded;
-                        });
-                      },
-                      child: Text(
-                        isExpanded
-                            ? 'Ocultar Términos Completos'
-                            : 'Leer Términos Completos',
-                        style: const TextStyle(color: Colors.blue),
-                      ),
-                    ),
-                    if (isExpanded)
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(8.0),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.article_rounded,
+                            size: 48,
+                            color: Color(0xFF1976D2),
                           ),
-                          child: Scrollbar(
-                            thumbVisibility: true,
-                            child: Markdown(
-                              data: termsContent,
-                              selectable: true,
-                              styleSheet: MarkdownStyleSheet(
-                                h1: const TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.bold),
-                                h2: const TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold),
-                                p: const TextStyle(fontSize: 14),
-                                listBullet: const TextStyle(fontSize: 14),
-                              ),
-                              onTapLink: (text, href, title) {
-                                // Abrir enlaces externos si es necesario
-                                if (href != null) {
-                                  launchUrl(Uri.parse(href));
-                                }
-                              },
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                Text(
+                                  'Términos y Condiciones',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF212121),
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Antes de continuar',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF666666),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Para continuar usando la app, debes aceptar nuestros términos y condiciones.',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Color(0xFF424242),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            GestureDetector(
+                              onTap: () {
+                                setDialogState(() {
+                                  isExpanded = !isExpanded;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                  horizontal: 12.0,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF5F5F5),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isExpanded
+                                          ? Icons.keyboard_arrow_up
+                                          : Icons.keyboard_arrow_down,
+                                      color: const Color(0xFF1976D2),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      isExpanded
+                                          ? 'Ocultar Términos Completos'
+                                          : 'Leer Términos Completos',
+                                      style: const TextStyle(
+                                        color: Color(0xFF1976D2),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            if (isExpanded) ...[
+                              const SizedBox(height: 16),
+                              Container(
+                                height: MediaQuery.of(context).size.height * 0.4,
+                                padding: const EdgeInsets.all(16.0),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF5F5F5),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFE0E0E0)),
+                                ),
+                                child: FutureBuilder<String>(
+                                  future: loadTermsFromFile(),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState == ConnectionState.waiting) {
+                                      return const Center(
+                                        child: CircularProgressIndicator(),
+                                      );
+                                    }
+                                    if (snapshot.hasError) {
+                                      return Center(
+                                        child: Text(
+                                          'Error: ${snapshot.error}',
+                                          style: const TextStyle(color: Colors.red),
+                                        ),
+                                      );
+                                    }
+                                    if (!snapshot.hasData) {
+                                      return const Center(
+                                        child: Text('No se encontró el contenido'),
+                                      );
+                                    }
+                                    return SingleChildScrollView(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Markdown(
+                                            data: snapshot.data!,
+                                            shrinkWrap: true,
+                                            physics: const NeverScrollableScrollPhysics(),
+                                            styleSheet: MarkdownStyleSheet(
+                                              h1: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF212121),
+                                              ),
+                                              h2: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF424242),
+                                              ),
+                                              p: const TextStyle(
+                                                fontSize: 14,
+                                                color: Color(0xFF666666),
+                                                height: 1.5,
+                                              ),
+                                            ),
+                                            onTapLink: (text, href, title) {
+                                              if (href != null) {
+                                                launchUrl(Uri.parse(href));
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
+                    ),
+                    const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _showMustAcceptDialog();
+                            },
+                            child: const Text(
+                              'Cancelar',
+                              style: TextStyle(
+                                color: Color(0xFF666666),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () async {
+                              final prefs =
+                                  await SharedPreferences.getInstance();
+                              await prefs.setBool('termsAccepted', true);
+                              setState(() {
+                                _termsAccepted = true;
+                              });
+                              Navigator.of(context).pop();
+                              await _initializeCameras();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1976D2),
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text('Acepto'),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () async {
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.setBool('termsAccepted', true);
-                    setState(() {
-                      _termsAccepted = true;
-                    });
-                    Navigator.of(context).pop();
-                    await _initializeCameras(); // Only initialize cameras, no permission requests
-                  },
-                  child: const Text('Acepto'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    _showMustAcceptDialog();
-                  },
-                  child: const Text('Cancelar'),
-                ),
-              ],
             );
           },
         );
@@ -261,34 +415,111 @@ class MyHomePageState extends State<MyHomePage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Aviso'),
-          content: const Text(
-            'Debe aceptar los términos y condiciones para usar la aplicación.',
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.0),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.all(Radius.circular(16.0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _showTermsAndConditionsDialog();
-              },
-              child: const Text('Aceptar'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                if (Platform.isAndroid) {
-                  SystemNavigator.pop();
-                } else if (Platform.isIOS) {
-                  exit(0);
-                }
-              },
-              child: const Text('Salir'),
-            ),
-          ],
-        );
-      },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      size: 48,
+                      color: Color(0xFFFFA000),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Text(
+                        'Aviso Importante',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF212121),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Text(
+                  'Debe aceptar los términos y condiciones para usar la aplicación.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[800],
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        if (Platform.isAndroid) {
+                          SystemNavigator.pop();
+                        } else if (Platform.isIOS) {
+                          exit(0);
+                        }
+                      },
+                      child: const Text(
+                        'Salir',
+                        style: TextStyle(
+                          color: Color(0xFF666666),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _showTermsAndConditionsDialog();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1976D2),
+                        foregroundColor: Colors.white,
+                        elevation: 2,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Aceptar'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -300,15 +531,16 @@ class MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<List<Permission>> getNotRequestedPermissions(List<Permission> permissions) async {
+  Future<List<Permission>> getNotRequestedPermissions(
+      List<Permission> permissions) async {
     List<Permission> notRequested = [];
-    
+
     for (var permission in permissions) {
       if (!await PermissionHelper.hasBeenRequested(permission)) {
         notRequested.add(permission);
       }
     }
-    
+
     return notRequested;
   }
 
@@ -317,9 +549,10 @@ class MyHomePageState extends State<MyHomePage> {
 
     try {
       _isRequestingPermissions = true;
-      
-      final permissions = await PermissionHelper.getRequiredPermissions(destination);
-      
+
+      final permissions =
+          await PermissionHelper.getRequiredPermissions(destination);
+
       // Check current status of all permissions
       Map<Permission, PermissionStatus> statuses = {};
       for (var permission in permissions) {
@@ -328,26 +561,21 @@ class MyHomePageState extends State<MyHomePage> {
 
       // First, handle permissions that haven't been requested yet
       final notRequested = await getNotRequestedPermissions(permissions);
-      
+
       if (notRequested.isNotEmpty) {
         if (!mounted) return;
-        
+
         // Show informative dialog for each not requested permission
-        final shouldContinue = await PermissionHelper.showInitialPermissionsDialog(
-          context,
-          notRequested,
-          destination
-        );
+        final shouldContinue =
+            await PermissionHelper.showInitialPermissionsDialog(
+                context, notRequested, destination);
 
         if (!shouldContinue) return;
       }
 
       // Now request all needed permissions
       statuses = await PermissionHelper.requestPermissions(
-        context,
-        permissions,
-        destination
-      );
+          context, permissions, destination);
 
       // Check for denied permissions after request
       final denied = statuses.entries
@@ -358,10 +586,7 @@ class MyHomePageState extends State<MyHomePage> {
       if (denied.isNotEmpty) {
         if (!mounted) return;
         await PermissionHelper.handleDeniedPermissions(
-          context, 
-          denied,
-          destination
-        );
+            context, denied, destination);
         return;
       }
 
@@ -373,12 +598,13 @@ class MyHomePageState extends State<MyHomePage> {
         }
 
         if (!mounted) return;
-        
+
         if (destination == 'camera') {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => CameraScreen(cameras: _cameras, store: store),
+              builder: (context) =>
+                  CameraScreen(cameras: _cameras, store: store),
             ),
           );
         } else {
