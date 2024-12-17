@@ -18,7 +18,7 @@ class TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
   @override
   void initState() {
     super.initState();
-    termsContent = loadTermsFromFile();
+    termsContent = loadTermsFromFile(context);
   }
 
   Future<void> _acceptTerms() async {
