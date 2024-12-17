@@ -16,9 +16,6 @@ class PermissionHelper {
   static const _dialogBorderRadius = 16.0;
   static const _iconSize = 48.0;
   static const _contentPadding = EdgeInsets.all(24.0);
-  static const _titleFontSize = 20.0;
-  static const _subtitleFontSize = 16.0;
-  static const _textFontSize = 14.0;
   
   static const _dialogTheme = BoxDecoration(
     color: Colors.white,
@@ -291,19 +288,6 @@ class PermissionHelper {
     return 0;
   }
 
-  // Update button styles helper method
-  static ButtonStyle _getButtonStyle(BuildContext context, {bool isPrimary = false}) {
-    return ElevatedButton.styleFrom(
-      backgroundColor: isPrimary ? Theme.of(context).primaryColor : Colors.grey[200],
-      foregroundColor: isPrimary ? Colors.white : Colors.black87,
-      elevation: isPrimary ? 2 : 0,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-    );
-  }
-
   /// Request permissions sequentially
   static Future<Map<Permission, PermissionStatus>> requestPermissions(
     BuildContext context,
@@ -517,24 +501,6 @@ class PermissionHelper {
 
     if (result ?? false) {
       await openAppSettings();
-    }
-  }
-
-  static String _getDetailedExplanation(Permission permission) {
-    switch (permission) {
-      case Permission.camera:
-        return 'Para capturar fotos y vídeos';
-      case Permission.microphone:
-        return 'Para grabar audio en los vídeos';
-      case Permission.photos:
-      case Permission.videos:
-      case Permission.storage:
-        return 'Para guardar las capturas realizadas';
-      case Permission.locationWhenInUse:
-      case Permission.location:
-        return 'Para geolocalizar las fotos y vídeos';
-      default:
-        return 'Necesario para el funcionamiento de la aplicación';
     }
   }
 
