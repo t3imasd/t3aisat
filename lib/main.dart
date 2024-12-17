@@ -291,7 +291,7 @@ class MyHomePageState extends State<MyHomePage> {
                                   border: Border.all(color: const Color(0xFFE0E0E0)),
                                 ),
                                 child: FutureBuilder<String>(
-                                  future: loadTermsFromFile(),
+                                  future: loadTermsFromFile(context),
                                   builder: (context, snapshot) {
                                     if (snapshot.connectionState == ConnectionState.waiting) {
                                       return const Center(
