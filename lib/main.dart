@@ -14,9 +14,12 @@ import 'screens/camera_screen.dart';
 import 'helpers/terms_helpers.dart';
 import 'helpers/permission_handler.dart';
 import 'model/photo_model.dart';
+import 'screens/terms_and_condition_screen.dart';
 import 'objectbox.g.dart'; // Import ObjectBox generated code
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
+import 'dart:convert'; // Add this for jsonEncode
+import 'package:device_info_plus/device_info_plus.dart'; // Add this for DeviceInfoPlugin
 
 List<CameraDescription> cameras = [];
 late Store store; // ObjectBox store
@@ -136,391 +139,13 @@ class MyHomePage extends StatefulWidget {
 
 class MyHomePageState extends State<MyHomePage> {
   List<CameraDescription> _cameras = [];
-  bool _termsAccepted = false;
   bool _isRequestingPermissions = false;
+  final DeviceInfoPlugin deviceInfoPlugin = DeviceInfoPlugin(); // Add this line
 
   @override
   void initState() {
     super.initState();
-    _checkTermsAccepted();
-  }
-
-  void _checkTermsAccepted() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _termsAccepted = prefs.getBool('termsAccepted') ?? false;
-    });
-    if (!_termsAccepted) {
-      if (!mounted) return;
-      _showTermsAndConditionsDialog();
-    } else {
-      await _initializeCameras();
-    }
-  }
-
-  void _showTermsAndConditionsDialog() {
-    bool isExpanded = false;
-    
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.0),
-              ),
-              elevation: 0,
-              backgroundColor: Colors.transparent,
-              child: Container(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.8,
-                ),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.all(Radius.circular(16.0)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.article_rounded,
-                            size: 48,
-                            color: Color(0xFF1976D2),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  'Términos y Condiciones',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF212121),
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Antes de continuar',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF666666),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    Flexible(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Para continuar usando la app, debes aceptar nuestros términos y condiciones.',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Color(0xFF424242),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            GestureDetector(
-                              onTap: () {
-                                setDialogState(() {
-                                  isExpanded = !isExpanded;
-                                });
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8.0,
-                                  horizontal: 12.0,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF5F5F5),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      isExpanded
-                                          ? Icons.keyboard_arrow_up
-                                          : Icons.keyboard_arrow_down,
-                                      color: const Color(0xFF1976D2),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      isExpanded
-                                          ? 'Ocultar Términos Completos'
-                                          : 'Leer Términos Completos',
-                                      style: const TextStyle(
-                                        color: Color(0xFF1976D2),
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            if (isExpanded) ...[
-                              const SizedBox(height: 16),
-                              Container(
-                                height: MediaQuery.of(context).size.height * 0.4,
-                                padding: const EdgeInsets.all(16.0),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF5F5F5),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFE0E0E0)),
-                                ),
-                                child: FutureBuilder<String>(
-                                  future: loadTermsFromFile(context),
-                                  builder: (context, snapshot) {
-                                    if (snapshot.connectionState == ConnectionState.waiting) {
-                                      return const Center(
-                                        child: CircularProgressIndicator(),
-                                      );
-                                    }
-                                    if (snapshot.hasError) {
-                                      return Center(
-                                        child: Text(
-                                          'Error: ${snapshot.error}',
-                                          style: const TextStyle(color: Colors.red),
-                                        ),
-                                      );
-                                    }
-                                    if (!snapshot.hasData) {
-                                      return const Center(
-                                        child: Text('No se encontró el contenido'),
-                                      );
-                                    }
-                                    return SingleChildScrollView(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Markdown(
-                                            data: snapshot.data!,
-                                            shrinkWrap: true,
-                                            physics: const NeverScrollableScrollPhysics(),
-                                            styleSheet: MarkdownStyleSheet(
-                                              h1: const TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF212121),
-                                              ),
-                                              h2: const TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF424242),
-                                              ),
-                                              p: const TextStyle(
-                                                fontSize: 14,
-                                                color: Color(0xFF666666),
-                                                height: 1.5,
-                                              ),
-                                            ),
-                                            onTapLink: (text, href, title) {
-                                              if (href != null) {
-                                                launchUrl(Uri.parse(href));
-                                              }
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                              _showMustAcceptDialog();
-                            },
-                            child: const Text(
-                              'Cancelar',
-                              style: TextStyle(
-                                color: Color(0xFF666666),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () async {
-                              final prefs =
-                                  await SharedPreferences.getInstance();
-                              await prefs.setBool('termsAccepted', true);
-                              setState(() {
-                                _termsAccepted = true;
-                              });
-                              Navigator.of(context).pop();
-                              await _initializeCameras();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1976D2),
-                              foregroundColor: Colors.white,
-                              elevation: 2,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text('Acepto'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showMustAcceptDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.0),
-        ),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.all(Radius.circular(16.0)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.warning_amber_rounded,
-                      size: 48,
-                      color: Color(0xFFFFA000),
-                    ),
-                    const SizedBox(width: 16),
-                    const Expanded(
-                      child: Text(
-                        'Aviso Importante',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF212121),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Text(
-                  'Debe aceptar los términos y condiciones para usar la aplicación.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[800],
-                  ),
-                ),
-              ),
-              const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        if (Platform.isAndroid) {
-                          SystemNavigator.pop();
-                        } else if (Platform.isIOS) {
-                          exit(0);
-                        }
-                      },
-                      child: const Text(
-                        'Salir',
-                        style: TextStyle(
-                          color: Color(0xFF666666),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _showTermsAndConditionsDialog();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1976D2),
-                        foregroundColor: Colors.white,
-                        elevation: 2,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text('Aceptar'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    _initializeCameras();
   }
 
   Future<void> _initializeCameras() async {
@@ -550,8 +175,23 @@ class MyHomePageState extends State<MyHomePage> {
     try {
       _isRequestingPermissions = true;
 
-      final permissions =
-          await PermissionHelper.getRequiredPermissions(destination);
+      // Check if terms are accepted
+      final prefs = await SharedPreferences.getInstance();
+      final termsAccepted = prefs.getBool('termsAccepted') ?? false;
+
+      if (!termsAccepted) {
+        if (!mounted) return;
+        // Show terms screen first
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const TermsAndConditionScreen()),
+        );
+        
+        // If terms were not accepted, return early
+        if (result != true) return;
+      }
+
+      final permissions = await PermissionHelper.getRequiredPermissions(destination);
 
       // Check current status of all permissions
       Map<Permission, PermissionStatus> statuses = {};

@@ -13,11 +13,19 @@
             ]
         },
         {
-            "name": "NO args T3AISAT Debug",
+            "name": "Debug NO args T3AISAT",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "flutterMode": "debug",
+            "args": []
+        },
+        {
+            "name": "Release NO args T3AISAT",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "flutterMode": "release",
             "args": []
         },
         {

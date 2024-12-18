@@ -69,3 +69,18 @@
 # Please add these rules to your existing keep rules in order to suppress warnings.
 # This is generated automatically by the Android Gradle plugin.
 -dontwarn com.google.android.play.core.splitcompat.SplitCompatApplication
+
+# Flutter specific rules
+-keep class io.flutter.plugin.** { *; }
+-keep class io.flutter.util.** { *; }
+-keep class io.flutter.view.** { *; }
+-keep class io.flutter.** { *; }
+-keep class io.flutter.plugins.** { *; }
+
+# SharedPreferences rules
+-keep class android.app.** { *; }
+-keep class androidx.preference.** { *; }
+
+# Keep your Markdown files
+-keep class assets.** { *; }
+-keep class assets.documents.** { *; }
