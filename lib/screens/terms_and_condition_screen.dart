@@ -9,7 +9,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io';
 
 class TermsAndConditionScreen extends StatefulWidget {
-  const TermsAndConditionScreen({Key? key}) : super(key: key);
+  const TermsAndConditionScreen({super.key});
 
   @override
   State<TermsAndConditionScreen> createState() => _TermsAndConditionScreenState();

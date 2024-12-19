@@ -262,7 +262,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         center: mapbox.Point(
           coordinates: geojson.Position(longitude, latitude),
         ),
-        zoom: 17.0,
+        zoom: 18.0,
         bearing: 0.0,
         pitch: 0.0,
       ),
@@ -733,7 +733,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         center: mapbox.Point(
           coordinates: geojson.Position(result.longitude, result.latitude),
         ),
-        zoom: 17.0,
+        zoom: 18.0,
       ),
       mapbox.MapAnimationOptions(duration: 1000),
     );

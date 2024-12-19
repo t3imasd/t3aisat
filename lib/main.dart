@@ -8,17 +8,13 @@ import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'screens/parcel_map_screen.dart';
 import 'screens/camera_screen.dart';
-import 'helpers/terms_helpers.dart';
 import 'helpers/permission_handler.dart';
 import 'model/photo_model.dart';
 import 'screens/terms_and_condition_screen.dart';
 import 'objectbox.g.dart'; // Import ObjectBox generated code
-import 'package:url_launcher/url_launcher.dart';
-import 'dart:io';
-import 'dart:convert'; // Add this for jsonEncode
+// Add this for jsonEncode
 import 'package:device_info_plus/device_info_plus.dart'; // Add this for DeviceInfoPlugin
 
 List<CameraDescription> cameras = [];
