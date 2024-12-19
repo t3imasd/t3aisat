@@ -12,10 +12,14 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'screens/parcel_map_screen.dart';
 import 'screens/camera_screen.dart';
 import 'helpers/terms_helpers.dart';
+import 'helpers/permission_handler.dart';
 import 'model/photo_model.dart';
+import 'screens/terms_and_condition_screen.dart';
 import 'objectbox.g.dart'; // Import ObjectBox generated code
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
+import 'dart:convert'; // Add this for jsonEncode
+import 'package:device_info_plus/device_info_plus.dart'; // Add this for DeviceInfoPlugin
 
 List<CameraDescription> cameras = [];
 late Store store; // ObjectBox store
@@ -135,322 +139,128 @@ class MyHomePage extends StatefulWidget {
 
 class MyHomePageState extends State<MyHomePage> {
   List<CameraDescription> _cameras = [];
-  bool _termsAccepted = false;
   bool _isRequestingPermissions = false;
+  final DeviceInfoPlugin deviceInfoPlugin = DeviceInfoPlugin(); // Add this line
 
   @override
   void initState() {
     super.initState();
-    _checkTermsAccepted();
-  }
-
-  void _checkTermsAccepted() async {
-    final prefs = await SharedPreferences.getInstance();
-    _termsAccepted = prefs.getBool('termsAccepted') ?? false;
-    if (!_termsAccepted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showTermsAndConditionsDialog();
-      });
-    } else {
-      _initializeCameras();
-    }
-  }
-
-  void _showTermsAndConditionsDialog() async {
-    String termsContent = await loadTermsFromFile();
-    bool isExpanded = false;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false, // Evita cerrar el diálogo al tocar fuera
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              insetPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 64),
-              title: const Text('Términos y Condiciones'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Para continuar usando la app, debes aceptar nuestros términos y condiciones. Pulsa en "Leer Términos Completos" para ver el contenido completo.',
-                    ),
-                    const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          isExpanded = !isExpanded;
-                        });
-                      },
-                      child: Text(
-                        isExpanded
-                            ? 'Ocultar Términos Completos'
-                            : 'Leer Términos Completos',
-                        style: const TextStyle(color: Colors.blue),
-                      ),
-                    ),
-                    if (isExpanded)
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(8.0),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey),
-                          ),
-                          child: Scrollbar(
-                            thumbVisibility: true,
-                            child: Markdown(
-                              data: termsContent,
-                              selectable: true,
-                              styleSheet: MarkdownStyleSheet(
-                                h1: const TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.bold),
-                                h2: const TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold),
-                                p: const TextStyle(fontSize: 14),
-                                listBullet: const TextStyle(fontSize: 14),
-                              ),
-                              onTapLink: (text, href, title) {
-                                // Abrir enlaces externos si es necesario
-                                if (href != null) {
-                                  launchUrl(Uri.parse(href));
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () async {
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.setBool('termsAccepted', true);
-                    setState(() {
-                      _termsAccepted = true;
-                    });
-                    Navigator.of(context).pop();
-                    _initializeCameras();
-                  },
-                  child: const Text('Acepto'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    _showMustAcceptDialog();
-                  },
-                  child: const Text('Cancelar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showMustAcceptDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Aviso'),
-          content: const Text(
-            'Debe aceptar los términos y condiciones para usar la aplicación.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _showTermsAndConditionsDialog();
-              },
-              child: const Text('Aceptar'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                if (Platform.isAndroid) {
-                  SystemNavigator.pop();
-                } else if (Platform.isIOS) {
-                  exit(0);
-                }
-              },
-              child: const Text('Salir'),
-            ),
-          ],
-        );
-      },
-    );
+    _initializeCameras();
   }
 
   Future<void> _initializeCameras() async {
     try {
-      PermissionStatus cameraPermission = await Permission.camera.isGranted
-          ? PermissionStatus.granted
-          : await Permission.camera.request();
-      PermissionStatus microphonePermission =
-          await Permission.microphone.isGranted
-              ? PermissionStatus.granted
-              : await Permission.microphone.request();
-      PermissionStatus photoPermission = await Permission.photos.isGranted
-          ? PermissionStatus.granted
-          : await Permission.photos.request();
-
-      if (cameraPermission.isGranted &&
-          photoPermission.isGranted &&
-          microphonePermission.isGranted) {
-        // Initialize cameras
-        _cameras = await availableCameras();
-      }
+      _cameras = await availableCameras();
     } catch (e) {
       Logger.root.severe('Error initializing cameras: $e');
-      // Optionally handle the error, e.g., show a dialog
     }
   }
 
-  Future<void> _requestPermissions() async {
-    PermissionStatus cameraPermission = await Permission.camera.isGranted
-        ? PermissionStatus.granted
-        : await Permission.camera.request();
-    PermissionStatus microphonePermission =
-        await Permission.microphone.isGranted
-            ? PermissionStatus.granted
-            : await Permission.microphone.request();
-    PermissionStatus photoPermission = await Permission.photos.isGranted
-        ? PermissionStatus.granted
-        : await Permission.photos.request();
+  Future<List<Permission>> getNotRequestedPermissions(
+      List<Permission> permissions) async {
+    List<Permission> notRequested = [];
 
-    if (cameraPermission.isDenied ||
-        microphonePermission.isDenied ||
-        photoPermission.isDenied) {
-      await _showPermissionsDialog();
-    } else if (cameraPermission.isPermanentlyDenied ||
-        microphonePermission.isPermanentlyDenied ||
-        photoPermission.isPermanentlyDenied) {
-      await openAppSettings();
+    for (var permission in permissions) {
+      if (!await PermissionHelper.hasBeenRequested(permission)) {
+        notRequested.add(permission);
+      }
     }
+
+    return notRequested;
   }
 
-  Future<void> _showPermissionsDialog() async {
-    // Check if already requesting permissions
-    if (_isRequestingPermissions) {
-      return;
-    }
+  Future<void> _handlePermissionsAndNavigation(String destination) async {
+    if (_isRequestingPermissions) return;
 
     try {
       _isRequestingPermissions = true;
 
-      // Check current status first
-      PermissionStatus cameraPermission = await Permission.camera.status;
-      PermissionStatus microphonePermission = await Permission.microphone.status;
-      PermissionStatus photoPermission = await Permission.photos.status;
-      PermissionStatus locationPermission = await Permission.location.status;
+      // Check if terms are accepted
+      final prefs = await SharedPreferences.getInstance();
+      final termsAccepted = prefs.getBool('termsAccepted') ?? false;
 
-      // Create list of permissions that need to be requested
-      List<Permission> permissionsToRequest = [];
-      
-      if (!cameraPermission.isGranted) permissionsToRequest.add(Permission.camera);
-      if (!microphonePermission.isGranted) permissionsToRequest.add(Permission.microphone);
-      if (!photoPermission.isGranted) permissionsToRequest.add(Permission.photos);
-      if (!locationPermission.isGranted) permissionsToRequest.add(Permission.location);
-
-      // If permissions needed, request them all at once
-      if (permissionsToRequest.isNotEmpty) {
-        await Permission.camera.request();
-        await Permission.microphone.request();
-        await Permission.photos.request();
-        await Permission.location.request();
-      }
-
-      // Re-check status after requests
-      List<String> deniedPermissions = [];
-      if (!await Permission.camera.isGranted) deniedPermissions.add('Cámara');
-      if (!await Permission.microphone.isGranted) deniedPermissions.add('Micrófono');
-      if (!await Permission.photos.isGranted) deniedPermissions.add('Galería de fotos');
-      if (!await Permission.location.isGranted) deniedPermissions.add('Ubicación');
-
-      if (deniedPermissions.isNotEmpty) {
-        String message = 'La aplicación necesita permisos de acceso a ${deniedPermissions.join(', ')} para continuar.';
-        
-        if (!context.mounted) return;
-        
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Permisos requeridos'),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  openAppSettings();
-                },
-                child: const Text('Abrir Ajustes'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancelar'),
-              ),
-            ],
-          ),
+      if (!termsAccepted) {
+        if (!mounted) return;
+        // Show terms screen first
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const TermsAndConditionScreen()),
         );
+        
+        // If terms were not accepted, return early
+        if (result != true) return;
       }
-    } catch (e) {
-      Logger.root.severe('Error requesting permissions: $e');
+
+      final permissions = await PermissionHelper.getRequiredPermissions(destination);
+
+      // Check current status of all permissions
+      Map<Permission, PermissionStatus> statuses = {};
+      for (var permission in permissions) {
+        statuses[permission] = await permission.status;
+      }
+
+      // First, handle permissions that haven't been requested yet
+      final notRequested = await getNotRequestedPermissions(permissions);
+
+      if (notRequested.isNotEmpty) {
+        if (!mounted) return;
+
+        // Show informative dialog for each not requested permission
+        final shouldContinue =
+            await PermissionHelper.showInitialPermissionsDialog(
+                context, notRequested, destination);
+
+        if (!shouldContinue) return;
+      }
+
+      // Now request all needed permissions
+      statuses = await PermissionHelper.requestPermissions(
+          context, permissions, destination);
+
+      // Check for denied permissions after request
+      final denied = statuses.entries
+          .where((e) => e.value.isDenied || e.value.isPermanentlyDenied)
+          .map((e) => e.key)
+          .toList();
+
+      if (denied.isNotEmpty) {
+        if (!mounted) return;
+        await PermissionHelper.handleDeniedPermissions(
+            context, denied, destination);
+        return;
+      }
+
+      final allGranted = statuses.values.every((status) => status.isGranted);
+
+      if (allGranted) {
+        if (destination == 'camera' && _cameras.isEmpty) {
+          await _initializeCameras();
+        }
+
+        if (!mounted) return;
+
+        if (destination == 'camera') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  CameraScreen(cameras: _cameras, store: store),
+            ),
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ParcelMapScreen()),
+          );
+        }
+      }
     } finally {
       _isRequestingPermissions = false;
     }
   }
 
-  // New method to show location permission dialog
-  Future<void> _showLocationPermissionDialog() async {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Permiso de Localización'),
-          content: Text(
-              'El permiso de localización es necesario para mostrar el mapa de parcelas.'),
-          actions: [
-            TextButton(
-              child: Text('Otorgar permisos'),
-              onPressed: () async {
-                Navigator.of(context).pop();
-                // Request permission again
-                PermissionStatus status = await Permission.location.request();
-                if (status.isGranted) {
-                  // Permission granted, navigate to ParcelMapScreen
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => ParcelMapScreen()),
-                  );
-                } else if (status.isPermanentlyDenied) {
-                  // Open app settings
-                  await openAppSettings();
-                }
-              },
-            ),
-            TextButton(
-              child: Text('Cancelar'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Build the UI regardless of permissions
     return Scaffold(
       backgroundColor: const Color(0xFFE6E6E6), // Light gray
       appBar: AppBar(
@@ -482,65 +292,12 @@ class MyHomePageState extends State<MyHomePage> {
             const SizedBox(
                 height: 60), // Spacing between the title and the first button
             ElevatedButton(
-              onPressed: () async {
-                // Check all required permissions including location
-                bool cameraPermissionGranted = await Permission.camera.isGranted;
-                bool microphonePermissionGranted = await Permission.microphone.isGranted;
-                bool photoPermissionGranted = await Permission.photos.isGranted;
-                bool locationPermissionGranted = await Permission.location.isGranted;
-
-                if (cameraPermissionGranted && 
-                    microphonePermissionGranted && 
-                    photoPermissionGranted &&
-                    locationPermissionGranted) {
-                  if (_cameras.isEmpty) {
-                    await _initializeCameras();
-                  }
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CameraScreen(
-                        cameras: _cameras,
-                        store: store,
-                      ),
-                    ),
-                  );
-                } else {
-                  // Update _showPermissionsDialog to handle location permission too
-                  await _showPermissionsDialog();
-                }
-              },
+              onPressed: () => _handlePermissionsAndNavigation('camera'),
               child: const Text('Captura con Ubicación'),
             ),
             const SizedBox(height: 40), // Spacing between the buttons
             ElevatedButton(
-              onPressed: () async {
-                // Check current permission status
-                PermissionStatus status = await Permission.location.status;
-                if (status.isGranted) {
-                  // Navigate to ParcelMapScreen
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => ParcelMapScreen()),
-                  );
-                } else {
-                  // Request permission
-                  PermissionStatus newStatus =
-                      await Permission.location.request();
-                  if (newStatus.isGranted) {
-                    // Permission granted, navigate to ParcelMapScreen
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (context) => ParcelMapScreen()),
-                    );
-                  } else if (newStatus.isDenied) {
-                    // Show permission dialog
-                    await _showLocationPermissionDialog();
-                  } else if (newStatus.isPermanentlyDenied) {
-                    // Open app settings
-                    await openAppSettings();
-                  }
-                }
-              },
+              onPressed: () => _handlePermissionsAndNavigation('map'),
               child: const Text('Mapa de Parcelas'),
             ),
             const SizedBox(
