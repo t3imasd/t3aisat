@@ -43,3 +43,27 @@ unzip -l test.apks | grep privacy_policy_t3aisat.md
 ```
 
 > También se puede descomprimir el archivo AAB usando la herramienta de descomprimir de macOS y ver así su contenido.
+
+## Nota importante sobre datos de la aplicación en Android
+
+Cuando se desinstala una aplicación en Android, algunos datos del sistema como los permisos (cámara, micrófono, galería, ubicación, etc.) permanecen almacenados en el dispositivo. Esto puede causar problemas cuando:
+
+- Se reinstala la aplicación
+- Se está probando una nueva versión
+- Se necesita restablecer todos los permisos
+
+Para asegurar un funcionamiento correcto de la aplicación y sus permisos, se recomienda:
+
+1. Ir a **Ajustes** del dispositivo
+2. Seleccionar **Aplicaciones**
+3. Buscar **T3 AI SAT**
+4. Entrar en **Almacenamiento**
+5. Pulsar en **Borrar datos**
+
+Este proceso eliminará:
+
+- Preferencias de la aplicación
+- Permisos otorgados
+- Datos almacenados localmente
+
+Después de este proceso, la aplicación funcionará como si fuera una instalación nueva.
