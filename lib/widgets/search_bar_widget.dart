@@ -50,25 +50,21 @@ class _ExpandableSearchBarState extends State<ExpandableSearchBar> {
       children: [
         TextField(
           controller: _searchController,
-          decoration: InputDecoration(
+          style: const TextStyle(  // Style for the text written the user
+            fontSize: 16.0,
+            fontWeight: FontWeight.normal,
+            decoration: TextDecoration.none,  // Eliminate underlined
+          ),
+          decoration: const InputDecoration(
             hintText: 'Buscar dirección...',
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-            border: InputBorder.none,
-            suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: _clearSearch,
-                  )
-                : _isLoading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : null,
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide.none, // Esto elimina el subrayado
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide.none, // Esto elimina el subrayado cuando está enfocado
+            ),
+            border: InputBorder.none, // Esto también ayuda a eliminar bordes
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
           onChanged: _onSearchChanged,
         ),
