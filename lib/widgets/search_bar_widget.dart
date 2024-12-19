@@ -24,6 +24,7 @@ class _ExpandableSearchBarState extends State<ExpandableSearchBar> {
   Timer? _debounce;
   List<SearchResult> _results = [];
   bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -41,46 +42,58 @@ class _ExpandableSearchBarState extends State<ExpandableSearchBar> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: _buildSearchField(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildSearchField(),
+          if (_errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Text(
+                _errorMessage!,
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          if (_results.isNotEmpty)
+            Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.3,
+              ),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _results.length,
+                itemBuilder: (context, index) =>
+                    _buildResultItem(_results[index]),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
   Widget _buildSearchField() {
-    return Column(
-      children: [
-        TextField(
-          controller: _searchController,
-          style: const TextStyle(  // Style for the text written the user
-            fontSize: 16.0,
-            fontWeight: FontWeight.normal,
-            decoration: TextDecoration.none,  // Eliminate underlined
-          ),
-          decoration: const InputDecoration(
-            hintText: 'Buscar dirección...',
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide.none, // Esto elimina el subrayado
-            ),
-            focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide.none, // Esto elimina el subrayado cuando está enfocado
-            ),
-            border: InputBorder.none, // Esto también ayuda a eliminar bordes
-            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-          onChanged: _onSearchChanged,
+    return TextField(
+      controller: _searchController,
+      style: const TextStyle(
+        fontSize: 16.0,
+        fontWeight: FontWeight.normal,
+        decoration: TextDecoration.none,
+      ),
+      decoration: const InputDecoration(
+        hintText: 'Buscar dirección...',
+        enabledBorder: UnderlineInputBorder(
+          borderSide: BorderSide.none,
         ),
-        if (_results.isNotEmpty)
-          Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.3,
-            ),
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: _results.length,
-              itemBuilder: (context, index) =>
-                  _buildResultItem(_results[index]),
-            ),
-          ),
-      ],
+        focusedBorder: UnderlineInputBorder(
+          borderSide: BorderSide.none,
+        ),
+        border: InputBorder.none,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      onChanged: _onSearchChanged,
     );
   }
 
@@ -105,13 +118,18 @@ class _ExpandableSearchBarState extends State<ExpandableSearchBar> {
 
   void _onSearchChanged(String query) {
     if (query.isNotEmpty) {
-      // Si hay texto, marcamos el SearchBar como activo
-      // para evitar que se oculte automáticamente
       if (context.findAncestorStateOfType<ParcelMapScreenState>() != null) {
         context.findAncestorStateOfType<ParcelMapScreenState>()!.setSearchBarActive(true);
       }
+
+      // Verificar si es un par de coordenadas
+      if (_isCoordinates(query)) {
+        _handleCoordinates(query);
+        return;
+      }
     }
 
+    // Si no son coordenadas, proceder con la búsqueda normal
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () async {
       if (!mounted) return;
@@ -124,7 +142,48 @@ class _ExpandableSearchBarState extends State<ExpandableSearchBar> {
       setState(() {
         _results = results;
         _isLoading = false;
+        _errorMessage = null;
       });
     });
+  }
+
+  bool _isCoordinates(String query) {
+    // Patrón para coordenadas: dos números decimales separados por coma
+    final coordPattern = RegExp(r'^[-]?\d+\.?\d*,\s*[-]?\d+\.?\d*$');
+    return coordPattern.hasMatch(query);
+  }
+
+  void _handleCoordinates(String query) {
+    final coords = query.split(',').map((s) => double.tryParse(s.trim())).toList();
+    
+    if (coords.length == 2 && coords[0] != null && coords[1] != null) {
+      final lat = coords[0]!;
+      final lon = coords[1]!;
+
+      // Validar rangos de coordenadas
+      if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+        setState(() {
+          _errorMessage = null;
+          _results = [
+            SearchResult(
+              name: 'Coordenadas',
+              address: '$lat, $lon',
+              latitude: lat,
+              longitude: lon,
+            )
+          ];
+        });
+      } else {
+        setState(() {
+          _errorMessage = 'Coordenadas fuera de rango';
+          _results = [];
+        });
+      }
+    } else {
+      setState(() {
+        _errorMessage = 'Formato inválido. Use: latitud, longitud';
+        _results = [];
+      });
+    }
   }
 }
