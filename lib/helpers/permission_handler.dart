@@ -29,6 +29,19 @@ class PermissionHelper {
     ],
   );
 
+  // Add these constants after other static constants
+  static const _minButtonTextSize = 14.0;
+  static const _maxButtonTextSize = 16.0;
+  static const _buttonTextScaleFactor = 0.04; // 4% of button width
+  static const _defaultButtonPadding = EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0);
+  static const _minButtonPadding = EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0);
+  
+  // Add this helper method after the constants
+  static double _calculateButtonTextSize(double buttonWidth) {
+    final calculatedSize = buttonWidth * _buttonTextScaleFactor;
+    return calculatedSize.clamp(_minButtonTextSize, _maxButtonTextSize);
+  }
+
   static Icon _getPermissionIcon(Permission permission) {
     switch (permission) {
       case Permission.camera:
@@ -132,12 +145,15 @@ class PermissionHelper {
             ),
             const Divider(height: 1),
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
-                children: actions.map((action) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: action,
+                children: actions.map((action) => Flexible(
+                  fit: FlexFit.loose,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: action,
+                  ),
                 )).toList(),
               ),
             ),
@@ -245,17 +261,21 @@ class PermissionHelper {
         permissions: [permission],
         feature: '',
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Ahora no'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
+          Expanded(
+            child: _buildActionButton(
+              text: 'Ahora no',
+              onPressed: () => Navigator.of(context).pop(false),
+              isPrimary: false,
+              context: context,
             ),
-            child: const Text('Continuar'),
+          ),
+          Expanded(
+            child: _buildActionButton(
+              text: 'Continuar',
+              onPressed: () => Navigator.of(context).pop(true),
+              isPrimary: true,
+              context: context,
+            ),
           ),
         ],
       ),
@@ -484,16 +504,24 @@ class PermissionHelper {
         feature: '',
         additionalInfo: platformSpecificInstructions,
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+          Expanded(
+            child: _buildActionButton(
+              text: 'Cancelar',
+              onPressed: () => Navigator.of(context).pop(false),
+              isPrimary: false,
+              context: context,
+            ),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop(true);
-              openAppSettings();
-            },
-            child: const Text('Abrir Ajustes'),
+          Expanded(
+            child: _buildActionButton(
+              text: 'Ajustes',  // Changed from 'Abrir Ajustes'
+              onPressed: () {
+                Navigator.of(context).pop(true);
+                openAppSettings();
+              },
+              isPrimary: true,
+              context: context,
+            ),
           ),
         ],
       ),
@@ -559,22 +587,34 @@ class PermissionHelper {
         feature: feature,
         additionalInfo: instructions,
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+          Expanded(
+            child: _buildActionButton(
+              text: 'Cancelar',
+              onPressed: () => Navigator.of(context).pop(false),
+              isPrimary: false,
+              context: context,
+            ),
           ),
           if (canOpenSettings)
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(true);
-                openAppSettings();
-              },
-              child: const Text('Abrir Ajustes'),
+            Expanded(
+              child: _buildActionButton(
+                text: 'Ajustes',  // Changed from 'Abrir Ajustes'
+                onPressed: () {
+                  Navigator.of(context).pop(true);
+                  openAppSettings();
+                },
+                isPrimary: true,
+                context: context,
+              ),
             )
           else
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Entendido'),
+            Expanded(
+              child: _buildActionButton(
+                text: 'Entendido',
+                onPressed: () => Navigator.of(context).pop(true),
+                isPrimary: true,
+                context: context,
+              ),
             ),
         ],
       ),
@@ -595,13 +635,21 @@ class PermissionHelper {
         permissions: permissions,
         feature: feature,
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+          Expanded(
+            child: _buildActionButton(
+              text: 'Cancelar',
+              onPressed: () => Navigator.of(context).pop(false),
+              isPrimary: false,
+              context: context,
+            ),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Continuar'),
+          Expanded(
+            child: _buildActionButton(
+              text: 'Continuar',
+              onPressed: () => Navigator.of(context).pop(true),
+              isPrimary: true,
+              context: context,
+            ),
           ),
         ],
       ),
@@ -625,16 +673,24 @@ class PermissionHelper {
         feature: feature,
         additionalInfo: instructions,
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
+          Expanded(
+            child: _buildActionButton(
+              text: 'Cancelar',
+              onPressed: () => Navigator.of(context).pop(),
+              isPrimary: false,
+              context: context,
+            ),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              await openAppSettings();
-            },
-            child: const Text('Abrir Ajustes'),
+          Expanded(
+            child: _buildActionButton(
+              text: 'Ajustes',  // Changed from 'Abrir Ajustes'
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await openAppSettings();
+              },
+              isPrimary: true,
+              context: context,
+            ),
           ),
         ],
       ),
@@ -646,5 +702,67 @@ class PermissionHelper {
     final prefs = await SharedPreferences.getInstance();
     final requests = prefs.getStringList(_permissionPrefsKey) ?? [];
     return requests.contains(permission.value.toString());
+  }
+
+  // Modify the ElevatedButton builder in all action buttons
+  // Example for one button (apply similar pattern to all):
+  static Widget _buildActionButton({
+    required String text,
+    required VoidCallback onPressed,
+    bool isPrimary = false,
+    BuildContext? context,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textSize = _calculateButtonTextSize(constraints.maxWidth);
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: text,
+            style: TextStyle(fontSize: textSize),
+          ),
+          maxLines: 1,
+          textDirection: TextDirection.ltr,
+        )..layout(maxWidth: double.infinity);
+        
+        final textWidth = textPainter.width;
+        final buttonPadding = (textWidth + 32.0 > constraints.maxWidth) 
+            ? _minButtonPadding 
+            : _defaultButtonPadding;
+        
+        final buttonStyle = isPrimary 
+            ? ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+                padding: buttonPadding,
+                minimumSize: const Size(0, 48), // Add minimum height
+              )
+            : ButtonStyle(
+                padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0)),
+                minimumSize: WidgetStateProperty.all(const Size(0, 36)), // Smaller height for secondary
+              );
+
+        return isPrimary 
+          ? ElevatedButton(
+              onPressed: onPressed,
+              style: buttonStyle,
+              child: Text(
+                text,
+                style: TextStyle(fontSize: textSize),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            )
+          : TextButton(
+              onPressed: onPressed,
+              style: buttonStyle,
+              child: Text(
+                text,
+                style: TextStyle(fontSize: _minButtonTextSize),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+      },
+    );
   }
 }
