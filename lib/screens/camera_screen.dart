@@ -476,7 +476,7 @@ class CameraScreenState extends State<CameraScreen>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
+              color: const Color.fromRGBO(0, 0, 0, 0.5),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -709,7 +709,7 @@ class CameraScreenState extends State<CameraScreen>
               right: 20,
               child: Container(
                 padding: const EdgeInsets.all(8),
-                color: Colors.black.withOpacity(0.4),
+                color: const Color.fromRGBO(0, 0, 0, 0.4),
                 child: Text(
                   _flashTooltipText!,
                   style: const TextStyle(
@@ -735,7 +735,7 @@ class CameraScreenState extends State<CameraScreen>
                   10,
               child: Container(
                 padding: const EdgeInsets.all(4),
-                color: Colors.black.withOpacity(0.4),
+                color: const Color.fromRGBO(0, 0, 0, 0.4),
                 child: Text(
                   _currentExposureOffset.toStringAsFixed(1),
                   style: const TextStyle(

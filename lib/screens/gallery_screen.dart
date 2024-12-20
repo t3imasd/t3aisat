@@ -1,6 +1,7 @@
 import 'dart:async'; // Import for Timer class
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:logging/logging.dart';
 import 'package:flutter/services.dart'; // For MethodChannel
 import 'package:camera/camera.dart'; // Import for CameraDescription
 import 'package:objectbox/objectbox.dart';
@@ -124,7 +125,7 @@ class GalleryScreenState extends State<GalleryScreen> {
                               setState(() {
                                 // Refresh the gallery
                               });
-                              print('_lastAsset: $_lastAsset');
+                              Logger.root.info('_lastAsset: $_lastAsset');
                               // Verify if _lastAsset is contained in the mediaFiles list
                               if (_lastAsset != null &&
                                   _selectedAsset != null) {
