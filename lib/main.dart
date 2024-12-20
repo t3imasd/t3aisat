@@ -24,6 +24,14 @@ late ValueNotifier<List<Photo>> photoNotifier;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Configurar el color de la barra de estado
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFFF8F9FA), // Color del fondo
+      statusBarIconBrightness: Brightness.dark, // Iconos oscuros para fondo claro
+    ),
+  );
+
   // Set Portrait Orientation for the app
   await _lockOrientationToPortrait();
 
@@ -95,29 +103,27 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ButtonStyle(
-            backgroundColor:
-                WidgetStateProperty.all(const Color(0xFF388E3C)), // Dark green
-            foregroundColor:
-                WidgetStateProperty.all(const Color(0xFFFFFFFF)), // White
+            backgroundColor: WidgetStateProperty.all(const Color(0xFF388E3C)),
+            foregroundColor: WidgetStateProperty.all(Colors.white),
             textStyle: WidgetStateProperty.all(
               const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
               ),
             ),
             padding: WidgetStateProperty.all(
-              const EdgeInsets.all(16), // Increased padding to 16px
+              const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
             ),
             shape: WidgetStateProperty.all(
               RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(
-                    12), // Rounded corners with 12px radius
+                borderRadius: BorderRadius.circular(16),
               ),
             ),
-            shadowColor: WidgetStateProperty.all(
-                Colors.black54), // More pronounced shadow
-            elevation: WidgetStateProperty.all(
-                4), // Greater elevation for depth effect
+            elevation: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.pressed)) return 2;
+              return 4;
+            }),
           ),
         ),
       ),
@@ -133,15 +139,38 @@ class MyHomePage extends StatefulWidget {
   MyHomePageState createState() => MyHomePageState();
 }
 
-class MyHomePageState extends State<MyHomePage> {
+class MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
   List<CameraDescription> _cameras = [];
   bool _isRequestingPermissions = false;
   final DeviceInfoPlugin deviceInfoPlugin = DeviceInfoPlugin(); // Add this line
+
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
     _initializeCameras();
+    
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeCameras() async {
@@ -258,49 +287,107 @@ class MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFE6E6E6), // Light gray
-      appBar: AppBar(
-        title: Text(
-          'T3 AI SAT',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF1976D2), // Navy blue
-            shadows: [
-              Shadow(
-                blurRadius: 3.0,
-                color: Colors.black
-                    .withOpacity(0.25), // Light shadow behind the title
-                offset: const Offset(0, 2.0),
-              ),
+      backgroundColor: const Color(0xFFF8F9FA), // Mismo color que statusBarColor
+      extendBodyBehindAppBar: true, // Extiende el contenido detrás de la barra de estado
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFFF8F9FA),
+              const Color(0xFFE9ECEF),
+              Colors.white.withAlpha(230),
             ],
           ),
         ),
-        centerTitle: true,
-        backgroundColor: const Color(0xFFE6E6E6), // Light gray
-        elevation: 0, // No shadow in the title bar
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center, // Focuses horizontally
-          children: <Widget>[
-            const SizedBox(
-                height: 60), // Spacing between the title and the first button
-            ElevatedButton(
-              onPressed: () => _handlePermissionsAndNavigation('camera'),
-              child: const Text('Captura con Ubicación'),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              children: [
+                const SizedBox(height: 60), // Espacio superior ajustable
+                TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 1000),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Text(
+                        'T3 AI SAT',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1976D2),
+                          letterSpacing: 1.2,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                Expanded(
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildAnimatedButton(
+                            'Captura con Ubicación',
+                            () => _handlePermissionsAndNavigation('camera'),
+                            const Duration(milliseconds: 200),
+                          ),
+                          const SizedBox(height: 40),
+                          _buildAnimatedButton(
+                            'Mapa de Parcelas',
+                            () => _handlePermissionsAndNavigation('map'),
+                            const Duration(milliseconds: 400),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 40), // Spacing between the buttons
-            ElevatedButton(
-              onPressed: () => _handlePermissionsAndNavigation('map'),
-              child: const Text('Mapa de Parcelas'),
-            ),
-            const SizedBox(
-                height: 60), // Spacing to center the content vertically
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAnimatedButton(String text, VoidCallback onPressed, Duration delay) {
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 600),
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: value,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF388E3C).withAlpha(76),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: onPressed,
+              child: Text(text),
+            ),
+          ),
+        );
+      },
     );
   }
 }
