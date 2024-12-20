@@ -148,13 +148,12 @@ class PermissionHelper {
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
-                children: actions.map((action) => Flexible(
-                  fit: FlexFit.loose,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: action,
-                  ),
-                )).toList(),
+                children: [
+                  for (int i = 0; i < actions.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 8.0),
+                    actions[i],
+                  ],
+                ],
               ),
             ),
           ],
@@ -261,21 +260,17 @@ class PermissionHelper {
         permissions: [permission],
         feature: '',
         actions: [
-          Expanded(
-            child: _buildActionButton(
-              text: 'Ahora no',
-              onPressed: () => Navigator.of(context).pop(false),
-              isPrimary: false,
-              context: context,
-            ),
+          _buildActionButton(
+            text: 'Ahora no',
+            onPressed: () => Navigator.of(context).pop(false),
+            isPrimary: false,
+            context: context,
           ),
-          Expanded(
-            child: _buildActionButton(
-              text: 'Continuar',
-              onPressed: () => Navigator.of(context).pop(true),
-              isPrimary: true,
-              context: context,
-            ),
+          _buildActionButton(
+            text: 'Continuar',
+            onPressed: () => Navigator.of(context).pop(true),
+            isPrimary: true,
+            context: context,
           ),
         ],
       ),
@@ -504,24 +499,20 @@ class PermissionHelper {
         feature: '',
         additionalInfo: platformSpecificInstructions,
         actions: [
-          Expanded(
-            child: _buildActionButton(
-              text: 'Cancelar',
-              onPressed: () => Navigator.of(context).pop(false),
-              isPrimary: false,
-              context: context,
-            ),
+          _buildActionButton(
+            text: 'Cancelar',
+            onPressed: () => Navigator.of(context).pop(false),
+            isPrimary: false,
+            context: context,
           ),
-          Expanded(
-            child: _buildActionButton(
-              text: 'Ajustes',  // Changed from 'Abrir Ajustes'
-              onPressed: () {
-                Navigator.of(context).pop(true);
-                openAppSettings();
-              },
-              isPrimary: true,
-              context: context,
-            ),
+          _buildActionButton(
+            text: 'Ajustes',  // Changed from 'Abrir Ajustes'
+            onPressed: () {
+              Navigator.of(context).pop(true);
+              openAppSettings();
+            },
+            isPrimary: true,
+            context: context,
           ),
         ],
       ),
@@ -587,34 +578,28 @@ class PermissionHelper {
         feature: feature,
         additionalInfo: instructions,
         actions: [
-          Expanded(
-            child: _buildActionButton(
-              text: 'Cancelar',
-              onPressed: () => Navigator.of(context).pop(false),
-              isPrimary: false,
-              context: context,
-            ),
+          _buildActionButton(
+            text: 'Cancelar',
+            onPressed: () => Navigator.of(context).pop(false),
+            isPrimary: false,
+            context: context,
           ),
           if (canOpenSettings)
-            Expanded(
-              child: _buildActionButton(
-                text: 'Ajustes',  // Changed from 'Abrir Ajustes'
-                onPressed: () {
-                  Navigator.of(context).pop(true);
-                  openAppSettings();
-                },
-                isPrimary: true,
-                context: context,
-              ),
+            _buildActionButton(
+              text: 'Ajustes',
+              onPressed: () {
+                Navigator.of(context).pop(true);
+                openAppSettings();
+              },
+              isPrimary: true,
+              context: context,
             )
           else
-            Expanded(
-              child: _buildActionButton(
-                text: 'Entendido',
-                onPressed: () => Navigator.of(context).pop(true),
-                isPrimary: true,
-                context: context,
-              ),
+            _buildActionButton(
+              text: 'Entendido',
+              onPressed: () => Navigator.of(context).pop(true),
+              isPrimary: true,
+              context: context,
             ),
         ],
       ),
@@ -635,21 +620,17 @@ class PermissionHelper {
         permissions: permissions,
         feature: feature,
         actions: [
-          Expanded(
-            child: _buildActionButton(
-              text: 'Cancelar',
-              onPressed: () => Navigator.of(context).pop(false),
-              isPrimary: false,
-              context: context,
-            ),
+          _buildActionButton(
+            text: 'Cancelar',
+            onPressed: () => Navigator.of(context).pop(false),
+            isPrimary: false,
+            context: context,
           ),
-          Expanded(
-            child: _buildActionButton(
-              text: 'Continuar',
-              onPressed: () => Navigator.of(context).pop(true),
-              isPrimary: true,
-              context: context,
-            ),
+          _buildActionButton(
+            text: 'Continuar',
+            onPressed: () => Navigator.of(context).pop(true),
+            isPrimary: true,
+            context: context,
           ),
         ],
       ),
@@ -673,24 +654,20 @@ class PermissionHelper {
         feature: feature,
         additionalInfo: instructions,
         actions: [
-          Expanded(
-            child: _buildActionButton(
-              text: 'Cancelar',
-              onPressed: () => Navigator.of(context).pop(),
-              isPrimary: false,
-              context: context,
-            ),
+          _buildActionButton(
+            text: 'Cancelar',
+            onPressed: () => Navigator.of(context).pop(),
+            isPrimary: false,
+            context: context,
           ),
-          Expanded(
-            child: _buildActionButton(
-              text: 'Ajustes',  // Changed from 'Abrir Ajustes'
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await openAppSettings();
-              },
-              isPrimary: true,
-              context: context,
-            ),
+          _buildActionButton(
+            text: 'Ajustes',
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await openAppSettings();
+            },
+            isPrimary: true,
+            context: context,
           ),
         ],
       ),
