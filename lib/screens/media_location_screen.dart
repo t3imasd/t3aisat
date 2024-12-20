@@ -993,22 +993,22 @@ $appName ©''';
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: true, // Allows backward navigation
+      canPop: true,
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
         if (didPop) {
-          // Navigate back to the main screen
           Navigator.of(context).popUntil((route) => route.isFirst);
         }
         return;
       },
       child: Scaffold(
         appBar: AppBar(
+          iconTheme: const IconThemeData(color: Color(0xFF1976D2)), // Add this line
           title: const Text('GeoPosición',
               style: TextStyle(
                 fontFamily: 'Roboto',
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1976D2), // Navy blue
+                color: Color(0xFF1976D2),
               )),
           backgroundColor: const Color(0xFFE6E6E6), // Light gray
           foregroundColor: const Color(0xFF1976D2), // Navy blue for text

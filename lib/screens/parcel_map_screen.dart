@@ -1110,17 +1110,21 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        iconTheme: const IconThemeData(color: Color(0xFF1976D2)), // Add this line
         title: Row(
           children: [
             const Expanded(
-              child: Text('Parcelas'),
+              child: Text(
+                'Parcelas',
+                style: TextStyle(color: Color(0xFF1976D2)),
+              ),
             ),
             IconButton(
-              icon: const Icon(Icons.search),
+              icon: const Icon(Icons.search, color: Color(0xFF1976D2)),
               onPressed: _showSearchBar,
             ),
             IconButton(
-              icon: const Icon(Icons.my_location),
+              icon: const Icon(Icons.my_location, color: Color(0xFF1976D2)),
               onPressed: _moveToCurrentLocation,
             ),
           ],

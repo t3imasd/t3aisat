@@ -94,10 +94,15 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isVideo ? 'Ver Vídeo' : 'Ver Foto'),
+        iconTheme:
+            const IconThemeData(color: Color(0xFF1976D2)), // Add this line
+        title: Text(
+          widget.isVideo ? 'Ver Vídeo' : 'Ver Foto',
+          style: const TextStyle(color: Color(0xFF1976D2)),
+        ),
         actions: [
           IconButton(
-            icon: Icon(Icons.share),
+            icon: const Icon(Icons.share, color: Color(0xFF1976D2)),
             onPressed: _shareMedia,
             tooltip: 'Compartir',
           ),

@@ -74,7 +74,11 @@ class GalleryScreenState extends State<GalleryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Galería de Fotos"),
+        iconTheme: const IconThemeData(color: Color(0xFF1976D2)), // Add this line
+        title: const Text(
+          "Galería de Fotos",
+          style: TextStyle(color: Color(0xFF1976D2)),
+        ),
       ),
       body: ValueListenableBuilder<List<Photo>>(
         valueListenable: photoNotifier, // Escucha cambios en photoNotifier
