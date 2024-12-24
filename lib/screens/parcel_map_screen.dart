@@ -112,7 +112,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    
+
     _searchBarOpacity = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -644,13 +644,9 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   // Handle Map Click to Select/Deselect Parcel
   void _onMapClick(mapbox.MapContentGestureContext clickContext) async {
     final screenCoordinate = clickContext.touchPosition;
-
     try {
-      // Crear RenderedQueryGeometry usando el método actualizado
       final renderedQueryGeometry =
           mapbox.RenderedQueryGeometry.fromScreenCoordinate(screenCoordinate);
-
-      // Query rendered features at the clicked point to find the parcel
       final features = await _mapboxMap.queryRenderedFeatures(
         renderedQueryGeometry,
         mapbox.RenderedQueryOptions(
@@ -659,13 +655,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       );
 
       if (features.isNotEmpty) {
-        // Get the first feature (parcel) from the list
         final feature = features.first;
-
-        // Declare Properties before the if block
         Map<String, dynamic> properties = {};
-
-        // Verify that feature and the properties are not null
         if (feature != null &&
             feature.queriedFeature.feature['properties'] != null) {
           properties = Map<String, dynamic>.from(
@@ -674,29 +665,67 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
           );
         }
 
-        // Extract the necessary values ​​of properties
         final cadastralReference = properties['cadastralReference'];
         final areaValue = properties['areaValue'];
         final parcelId = properties['id'];
 
-        // Verify that the properties are complete
         if (cadastralReference != null &&
             areaValue != null &&
             parcelId != null) {
           setState(() {
             if (_selectedParcelIds.contains(parcelId)) {
-              // Deselect the parcel
               _selectedParcelIds.remove(parcelId);
               _selectedParcels.remove(parcelId);
             } else {
-              // Select the parcel
               _selectedParcelIds.add(parcelId);
               _selectedParcels[parcelId] =
                   '$cadastralReference - $areaValue m²';
             }
-          });
 
-          _highlightSelectedParcels();
+            // Optimize layer updates
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Future.delayed(const Duration(milliseconds: 16), () async {
+                if (!mounted) return;
+
+                try {
+                  // Remove existing layers if they exist
+                  if (await _mapboxMap.style
+                      .styleLayerExists('selected-parcel-line')) {
+                    await _mapboxMap.style
+                        .removeStyleLayer('selected-parcel-line');
+                  }
+                  if (await _mapboxMap.style
+                      .styleLayerExists('selected-parcel-fill')) {
+                    await _mapboxMap.style
+                        .removeStyleLayer('selected-parcel-fill');
+                  }
+
+                  // Add new layers immediately after removing previous ones
+                  await _mapboxMap.style.addLayer(
+                    mapbox.LineLayer(
+                      id: 'selected-parcel-line',
+                      sourceId: 'source-id',
+                      lineColor: const Color(0xFFF57C00).value,
+                      lineWidth: 2.0,
+                      filter: ['in', 'id', ..._selectedParcelIds],
+                    ),
+                  );
+
+                  await _mapboxMap.style.addLayer(
+                    mapbox.FillLayer(
+                      id: 'selected-parcel-fill',
+                      sourceId: 'source-id',
+                      fillColor: const Color(0xFFF57C00).value,
+                      fillOpacity: 0.3,
+                      filter: ['in', 'id', ..._selectedParcelIds],
+                    ),
+                  );
+                } catch (e) {
+                  log.severe('Error updating layers: $e');
+                }
+              });
+            });
+          });
         } else {
           log.warning('Parcel properties are incomplete.');
         }
@@ -1037,8 +1066,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   // Function to check if content is valid XML
   bool _isValidXmlContent(String content) {
     try {
-      return content.trim().startsWith('<?xml') || 
-             content.trim().startsWith('<catastro>');
+      return content.trim().startsWith('<?xml') ||
+          content.trim().startsWith('<catastro>');
     } catch (e) {
       return false;
     }
@@ -1050,7 +1079,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       setState(() {
         _isErrorMessageVisible = true;
       });
-      
+
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted) {
           setState(() {
@@ -1084,7 +1113,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   // Add new method to handle timer
   void _startSearchBarTimer() {
     _searchBarTimer?.cancel();
-    
+
     // Solo iniciar el timer si el SearchBar no está activo
     if (!_isSearchBarActive) {
       _searchBarTimer = Timer(const Duration(seconds: 5), () {
@@ -1110,7 +1139,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Color(0xFF1976D2)), // Add this line
+        iconTheme:
+            const IconThemeData(color: Color(0xFF1976D2)), // Add this line
         title: Row(
           children: [
             const Expanded(
@@ -1151,7 +1181,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
               }
             },
           ),
-          
+
           // Floating Search Bar with modified logic
           if (_isSearchBarVisible)
             Positioned(
@@ -1162,7 +1192,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
                 opacity: _searchBarOpacity,
                 child: GestureDetector(
                   onTapDown: (_) {
-                    _searchBarTimer?.cancel(); // Cancelar el timer inmediatamente al tocar
+                    _searchBarTimer
+                        ?.cancel(); // Cancelar el timer inmediatamente al tocar
                     setState(() {
                       _isSearchBarActive = true;
                     });
@@ -1219,28 +1250,30 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
               right: 0,
               child: _buildBottomSheet(context),
             ),
-          if (_isErrorMessageVisible) Positioned(
-            bottom: 20,
-            left: 20,
-            right: 20,
-            child: Container(
-              key: _errorMessageKey,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                'Las parcelas catastrales no están disponibles. Por favor, inténtelo más tarde',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+          if (_isErrorMessageVisible)
+            Positioned(
+              bottom: 20,
+              left: 20,
+              right: 20,
+              child: Container(
+                key: _errorMessageKey,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                textAlign: TextAlign.center,
+                child: const Text(
+                  'Las parcelas catastrales no están disponibles. Por favor, inténtelo más tarde',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
-          )
+            )
         ],
       ),
     );
