@@ -28,12 +28,13 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Color(0xFFF8F9FA), // Color del fondo
-      statusBarIconBrightness: Brightness.dark, // Iconos oscuros para fondo claro
+      statusBarIconBrightness:
+          Brightness.dark, // Iconos oscuros para fondo claro
     ),
   );
 
-  // Set Portrait Orientation for the app
-  await _lockOrientationToPortrait();
+  // Set allowed orientations for the app
+  await _setAllowedOrientations();
 
   // Set up the logger
   _setupLogging();
@@ -64,10 +65,12 @@ Future<void> main() async {
   );
 }
 
-/// Set the orientation of the Portrait screen
-Future<void> _lockOrientationToPortrait() async {
+/// Set the allowed orientations
+Future<void> _setAllowedOrientations() async {
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
   ]);
 }
 
@@ -139,7 +142,8 @@ class MyHomePage extends StatefulWidget {
   MyHomePageState createState() => MyHomePageState();
 }
 
-class MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
+class MyHomePageState extends State<MyHomePage>
+    with SingleTickerProviderStateMixin {
   List<CameraDescription> _cameras = [];
   bool _isRequestingPermissions = false;
   final DeviceInfoPlugin deviceInfoPlugin = DeviceInfoPlugin(); // Add this line
@@ -151,19 +155,19 @@ class MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMi
   void initState() {
     super.initState();
     _initializeCameras();
-    
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
         curve: Curves.easeInOut,
       ),
     );
-    
+
     _animationController.forward();
   }
 
@@ -209,14 +213,16 @@ class MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMi
         // Show terms screen first
         final result = await Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const TermsAndConditionScreen()),
+          MaterialPageRoute(
+              builder: (context) => const TermsAndConditionScreen()),
         );
-        
+
         // If terms were not accepted, return early
         if (result != true) return;
       }
 
-      final permissions = await PermissionHelper.getRequiredPermissions(destination);
+      final permissions =
+          await PermissionHelper.getRequiredPermissions(destination);
 
       // Check current status of all permissions
       Map<Permission, PermissionStatus> statuses = {};
@@ -287,83 +293,103 @@ class MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMi
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), // Mismo color que statusBarColor
-      extendBodyBehindAppBar: true, // Extiende el contenido detrás de la barra de estado
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFFF8F9FA),
-              const Color(0xFFE9ECEF),
-              Colors.white.withAlpha(230),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                const SizedBox(height: 60), // Espacio superior ajustable
-                TweenAnimationBuilder<double>(
-                  duration: const Duration(milliseconds: 1000),
-                  tween: Tween(begin: 0.0, end: 1.0),
-                  builder: (context, value, child) {
-                    return Transform.scale(
-                      scale: value,
-                      child: Text(
-                        'T3 AI SAT',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1976D2),
-                          letterSpacing: 1.2,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black12,
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
+      backgroundColor:
+          const Color(0xFFF8F9FA), // Mismo color que statusBarColor
+      extendBodyBehindAppBar:
+          true, // Extiende el contenido detrás de la barra de estado
+      body: OrientationBuilder(
+        builder: (context, orientation) {
+          final isPortrait = orientation == Orientation.portrait;
+
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFFF8F9FA),
+                  const Color(0xFFE9ECEF),
+                  Colors.white.withAlpha(230),
+                ],
+              ),
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isPortrait ? 24.0 : 16.0,
+                ),
+                child: Column(
+                  children: [
+                    SizedBox(height: isPortrait ? 60 : 20),
+                    TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 1000),
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      builder: (context, value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: Text(
+                            'T3 AI SAT',
+                            style: TextStyle(
+                              fontSize: isPortrait ? 32 : 28,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF1976D2),
+                              letterSpacing: 1.2,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black12,
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
+                        );
+                      },
+                    ),
+                    Expanded(
+                      child: FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: Center(
+                          child: isPortrait
+                              ? Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: _buildButtons(spacing: 40.0),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: _buildButtons(spacing: 20.0),
+                                ),
                         ),
                       ),
-                    );
-                  },
-                ),
-                Expanded(
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildAnimatedButton(
-                            'Captura con Ubicación',
-                            () => _handlePermissionsAndNavigation('camera'),
-                            const Duration(milliseconds: 200),
-                          ),
-                          const SizedBox(height: 40),
-                          _buildAnimatedButton(
-                            'Mapa de Parcelas',
-                            () => _handlePermissionsAndNavigation('map'),
-                            const Duration(milliseconds: 400),
-                          ),
-                        ],
-                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildAnimatedButton(String text, VoidCallback onPressed, Duration delay) {
+  List<Widget> _buildButtons({required double spacing}) {
+    return [
+      _buildAnimatedButton(
+        'Captura con Ubicación',
+        () => _handlePermissionsAndNavigation('camera'),
+        const Duration(milliseconds: 200),
+      ),
+      SizedBox(width: spacing, height: spacing),
+      _buildAnimatedButton(
+        'Mapa de Parcelas',
+        () => _handlePermissionsAndNavigation('map'),
+        const Duration(milliseconds: 400),
+      ),
+    ];
+  }
+
+  Widget _buildAnimatedButton(
+      String text, VoidCallback onPressed, Duration delay) {
     return TweenAnimationBuilder<double>(
       duration: const Duration(milliseconds: 600),
       tween: Tween(begin: 0.0, end: 1.0),
