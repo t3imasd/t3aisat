@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:logging/logging.dart';
@@ -10,6 +11,7 @@ import 'media_location_screen.dart';
 import 'gallery_screen.dart';
 import '../helpers/media_helpers.dart'; // Added import
 import 'dart:io' show Platform;
+import 'package:sensors_plus/sensors_plus.dart';
 
 // Add a personalized class for the Slider's Thumb with the sun icon
 class SunThumbShape extends SliderComponentShape {
@@ -121,64 +123,312 @@ class CameraScreenState extends State<CameraScreen>
 
   Uint8List? _lastCapturedThumbnail;
 
+  // Add new properties for orientation handling
+  DeviceOrientation? _currentOrientation;
+  double? _previewAspectRatio;
+
+  bool _isOrientationInitialized = false;
+  bool _isInitializing = true;
+  bool _wasResumed = false;
+
+  // Add new properties for preview calculations
+  Size? _previewSize;
+  double _previewScale = 1.0;
+
+  // Add new properties for preview calculations
+  double _cameraAspectRatio = 1.0;
+  double _screenAspectRatio = 1.0;
+  BoxFit _previewFit = BoxFit.contain;
+
+  // Add properties for preview calculations
+  late ValueNotifier<Size> _previewSizeNotifier;
+  late ValueNotifier<double> _scaleFactor;
+
   @override
   void initState() {
     super.initState();
-    _initCamera();
-    _loadLastCapturedAsset(); // Load the last asset captured
+    _previewSizeNotifier = ValueNotifier(Size.zero);
+    _scaleFactor = ValueNotifier(1.0);
+    WidgetsBinding.instance.addObserver(this);
+    _initializeFocusAnimation();
+  }
 
-    // Initialize focus animation controller
+  void _initializeFocusAnimation() {
     _focusAnimationController = AnimationController(
       duration: const Duration(milliseconds: 150),
       vsync: this,
     )..addListener(() {
-        setState(() {});
+        if (mounted) setState(() {});
       });
+
     _focusAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
       CurvedAnimation(
         parent: _focusAnimationController!,
         curve: Curves.easeOut,
       ),
     );
-
-    // Show the exhibition slider for 3 seconds at the beginning
-    _showExposureSlider = true;
-    _exposureSliderTimer = Timer(const Duration(seconds: 3), () {
-      setState(() {
-        _showExposureSlider = false;
-      });
-    });
   }
 
-  Future<void> _initCamera() async {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isInitializing) {
+      _initializeCamera();
+      _isInitializing = false;
+    } else {
+      _updateOrientationSafely();
+    }
+  }
+
+  Future<void> _initializeCamera() async {
     if (widget.cameras.isEmpty) {
-      // No cameras available
       Logger.root.severe('No cameras found');
       return;
     }
 
-    controller = CameraController(widget.cameras[0], ResolutionPreset.high);
-
     try {
-      await controller?.initialize();
-      _maxAvailableZoom = await controller?.getMaxZoomLevel() ?? 1.0;
-      _minAvailableZoom = await controller?.getMinZoomLevel() ?? 1.0;
-      _maxAvailableExposureOffset =
-          await controller?.getMaxExposureOffset() ?? 0.0;
-      _minAvailableExposureOffset =
-          await controller?.getMinExposureOffset() ?? 0.0;
+      final newController = CameraController(
+        widget.cameras[0],
+        ResolutionPreset.high,
+        enableAudio: true,
+        imageFormatGroup: Platform.isAndroid
+            ? ImageFormatGroup.yuv420
+            : ImageFormatGroup.bgra8888,
+      );
+
+      // Wait for controller to initialize
+      await newController.initialize();
+
+      if (!mounted) return;
+
+      controller = newController;
+
+      // Detect the current device orientation
+      final mediaQuery = MediaQuery.of(context);
+      final orientation = mediaQuery.orientation;
+      final deviceOrientation = orientation == Orientation.portrait
+          ? DeviceOrientation.portraitUp
+          : mediaQuery.platformBrightness == Brightness.light
+              ? DeviceOrientation.landscapeRight
+              : DeviceOrientation.landscapeLeft;
+
+      // Establish the orientation detected
+      await newController.lockCaptureOrientation(deviceOrientation);
+      _currentOrientation = deviceOrientation;
+
+      // Configure camera settings
+      await Future.wait([
+        controller!
+            .getMaxZoomLevel()
+            .then((value) => _maxAvailableZoom = value),
+        controller!
+            .getMinZoomLevel()
+            .then((value) => _minAvailableZoom = value),
+        controller!
+            .getMaxExposureOffset()
+            .then((value) => _maxAvailableExposureOffset = value),
+        controller!
+            .getMinExposureOffset()
+            .then((value) => _minAvailableExposureOffset = value),
+      ]);
+
+      // Update initial preview ratio
+      _updatePreviewRatio(MediaQuery.of(context).size);
+
+      // Update preview size
+      _previewSizeNotifier.value = controller!.value.previewSize!;
+
+      _updatePreviewScaling(MediaQuery.of(context).size);
+
       if (mounted) {
         setState(() {
           _isCameraInitialized = true;
+          _isOrientationInitialized = true;
         });
       }
+
+      // Load last captured asset after camera initialization
+      await _loadLastCapturedAsset();
     } catch (e) {
       Logger.root.severe('Error initializing camera: $e');
     }
   }
 
+  void _updatePreviewScaling(Size screenSize) {
+    if (!mounted || controller?.value.previewSize == null) return;
+
+    final previewSize = controller!.value.previewSize!;
+    final isPortrait = _currentOrientation == DeviceOrientation.portraitUp;
+
+    // Calculate screen and preview aspect ratios
+    final screenAspectRatio = screenSize.width / screenSize.height;
+    final previewAspectRatio = isPortrait
+        ? previewSize.height / previewSize.width
+        : previewSize.width / previewSize.height;
+
+    // Calculate scaling factor
+    double scale = 1.0;
+    if (isPortrait) {
+      // Portrait mode
+      if (screenAspectRatio < previewAspectRatio) {
+        scale = screenSize.width / (previewSize.height);
+      } else {
+        scale = screenSize.height / (previewSize.width);
+      }
+    } else {
+      // Landscape mode
+      if (screenAspectRatio > previewAspectRatio) {
+        scale = screenSize.height / (previewSize.width);
+      } else {
+        scale = screenSize.width / (previewSize.height);
+      }
+    }
+
+    _scaleFactor.value = scale;
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final isDetached = state == AppLifecycleState.detached;
+
+    // Handle app lifecycle changes
+    switch (state) {
+      case AppLifecycleState.resumed:
+        if (_wasResumed) _resumeCamera();
+        _wasResumed = true;
+        break;
+      case AppLifecycleState.inactive:
+        _pauseCamera();
+        break;
+      case AppLifecycleState.paused:
+        _pauseCamera();
+        break;
+      case AppLifecycleState.detached:
+        if (mounted) dispose();
+        break;
+      default:
+        break;
+    }
+  }
+
+  Future<void> _pauseCamera() async {
+    if (controller?.value.isInitialized ?? false) {
+      await controller?.pausePreview();
+    }
+  }
+
+  Future<void> _resumeCamera() async {
+    if (controller?.value.isInitialized ?? false) {
+      await controller?.resumePreview();
+      _updateOrientationSafely();
+    } else {
+      await _initializeCamera();
+    }
+  }
+
+  Future<DeviceOrientation> _detectDeviceOrientation() async {
+    try {
+      // Esperar un momento para que el sensor se estabilice
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // Tomar varias muestras para asegurar una lectura estable
+      final List<AccelerometerEvent> samples = [];
+      for (int i = 0; i < 3; i++) {
+        final event = await accelerometerEventStream().first;
+        samples.add(event);
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+
+      // Calcular el promedio de las lecturas
+      final avgX =
+          samples.map((e) => e.x).reduce((a, b) => a + b) / samples.length;
+
+      if (avgX.abs() < 1) {
+        return DeviceOrientation.portraitUp;
+      } else {
+        return avgX > 0
+            ? DeviceOrientation.landscapeLeft
+            : DeviceOrientation.landscapeRight;
+      }
+    } catch (e) {
+      Logger.root.warning('Error in _detectDeviceOrientation: $e');
+      // Fallback a MediaQuery
+      final orientation = MediaQuery.of(context).orientation;
+      return orientation == Orientation.portrait
+          ? DeviceOrientation.portraitUp
+          : DeviceOrientation.landscapeRight;
+    }
+  }
+
+  void _updateOrientationSafely() async {
+    if (!mounted || controller?.value.isInitialized != true) return;
+
+    try {
+      final deviceOrientation = await _detectDeviceOrientation();
+      if (_currentOrientation != deviceOrientation) {
+        _currentOrientation = deviceOrientation;
+        await controller?.lockCaptureOrientation(deviceOrientation);
+        _updatePreviewRatio(MediaQuery.of(context).size);
+      }
+    } catch (e) {
+      Logger.root.warning('Error updating orientation: $e');
+    }
+  }
+
+  void _updatePreviewRatio(Size screenSize) {
+    if (!mounted || controller?.value.previewSize == null) return;
+
+    try {
+      final previewSize = controller!.value.previewSize!;
+      final isPortrait = _currentOrientation == DeviceOrientation.portraitUp;
+
+      // Calculate aspect ratios
+      _screenAspectRatio = screenSize.width / screenSize.height;
+      _cameraAspectRatio = isPortrait
+          ? previewSize.height / previewSize.width
+          : previewSize.width / previewSize.height;
+
+      // Determine optimal preview fit
+      _previewFit = _screenAspectRatio > _cameraAspectRatio
+          ? BoxFit.fitHeight
+          : BoxFit.fitWidth;
+
+      // Calculate scale to fill screen
+      _previewScale =
+          _calculatePreviewScale(screenSize, previewSize, isPortrait);
+
+      if (mounted) setState(() {});
+    } catch (e) {
+      Logger.root.warning('Error updating preview ratio: $e');
+    }
+  }
+
+  double _calculatePreviewScale(
+      Size screenSize, Size previewSize, bool isPortrait) {
+    final screenAspectRatio = screenSize.width / screenSize.height;
+    final previewAspectRatio = isPortrait
+        ? previewSize.width / previewSize.height
+        : previewSize.height / previewSize.width;
+
+    // Calculate scale to fill screen completely
+    double scale;
+    if (screenAspectRatio > previewAspectRatio) {
+      // Screen is wider than preview
+      scale = screenSize.width /
+          (isPortrait ? previewSize.height : previewSize.width);
+    } else {
+      // Screen is taller than preview
+      scale = screenSize.height /
+          (isPortrait ? previewSize.width : previewSize.height);
+    }
+
+    return scale * 1.1; // Add 10% extra scale to ensure full coverage
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     controller?.dispose();
     _focusAnimationController?.dispose();
     _zoomIndicatorTimer?.cancel();
@@ -552,371 +802,393 @@ class CameraScreenState extends State<CameraScreen>
       );
     }
 
+    final mediaQuery = MediaQuery.of(context);
+    final screenSize = mediaQuery.size;
+    final isPortrait = mediaQuery.orientation == Orientation.portrait;
+    final padding = mediaQuery.padding;
+
     return Scaffold(
+      backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Color(0xFF1976D2)), // Add this line
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           'Cámara',
-          style: TextStyle(color: Color(0xFF1976D2)),
+          style: TextStyle(color: Colors.white),
         ),
       ),
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          Listener(
-            onPointerDown: (_) {
-              if (mounted) {
-                setState(() {
-                  _pointerCount += 1;
-                });
-              }
-            },
-            onPointerUp: (_) {
-              if (mounted) {
-                setState(() {
-                  _pointerCount -= 1;
-                });
-              }
-            },
-            child: GestureDetector(
-              onScaleStart: _onScaleStart,
-              onScaleUpdate: _onScaleUpdate,
-              onTapDown: (details) {
-                // Handle the manual approach touch
-                final size = MediaQuery.of(context).size;
-                _onViewFinderTap(
-                    details,
-                    BoxConstraints(
-                      maxWidth: size.width,
-                      maxHeight: size.height,
-                    ));
-              },
-              onVerticalDragStart: (details) {
-                if (_pointerCount == 1) {
-                  // Show slider only for single-finger drag
-                  if (mounted) {
-                    setState(() {
-                      _showExposureSlider = true;
-                    });
-                  }
-                }
-              },
-              onVerticalDragUpdate: (details) {
-                if (Platform.isAndroid) {
-                  return; // Ignore exposure adjustments on Android
-                }
-                if (_pointerCount == 1) {
-                  // Update exposure only for single-finger drag
-                  // Update the exposure value according to the vertical movement
-                  final double delta = details.primaryDelta ?? 0.0;
-                  final double sensitivity = 0.005;
-                  double newValue =
-                      _currentExposureOffset - delta * sensitivity;
-                  newValue = newValue.clamp(
-                      _minAvailableExposureOffset, _maxAvailableExposureOffset);
-                  if (mounted) {
-                    setState(() {
-                      _currentExposureOffset = newValue;
-                      _showExposureIndicator = true;
-                    });
-                  }
-                  controller?.setExposureOffset(_currentExposureOffset);
+          // Camera Preview
+          _buildOptimizedCameraPreview(isPortrait, screenSize),
 
-                  // Restart the timer to hide the indicator
-                  _exposureIndicatorTimer?.cancel();
-                  _exposureIndicatorTimer =
-                      Timer(const Duration(seconds: 1), () {
-                    if (mounted) {
-                      setState(() {
-                        _showExposureIndicator = false;
-                      });
-                    }
-                  });
-
-                  // Restart the timer to hide the slider
-                  _exposureSliderTimer?.cancel();
-                  _exposureSliderTimer = Timer(const Duration(seconds: 1), () {
-                    if (mounted) {
-                      setState(() {
-                        _showExposureSlider = false;
-                      });
-                    }
-                  });
-                }
-              },
-              onVerticalDragEnd: (details) {
-                if (_pointerCount == 1) {
-                  // Hide slider after single-finger drag
-                  // Hide the slider after 1 second
-                  _exposureSliderTimer?.cancel();
-                  _exposureSliderTimer = Timer(const Duration(seconds: 1), () {
-                    if (mounted) {
-                      setState(() {
-                        _showExposureSlider = false;
-                      });
-                    }
-                  });
-                }
-              },
-              child: CameraPreview(controller!),
+          // Controls Layer
+          Positioned.fill(
+            child: SafeArea(
+              child: _buildControlsOverlay(isPortrait, screenSize, padding),
             ),
           ),
 
-          // Zoom indicator
-          if (_isZooming)
-            Positioned(
-              top: 20,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                color: Colors.black.withOpacity(0.3),
-                child: Text(
-                  '${_currentZoomLevel.toStringAsFixed(1)}x',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
+          // Recording Timer
+          if (_isRecording) _buildRecordingTimer(),
 
-          // Focus indicator
-          if (_isFocusing && _focusPoint != null)
-            Positioned(
-              left: _focusPoint!.dx - 25,
-              top: _focusPoint!.dy - 25,
-              child: Opacity(
-                opacity: 1.0 - _focusAnimationController!.value,
-                child: Transform.scale(
-                  scale: _focusAnimation!.value,
-                  child: Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: const Color(0xFFFFD700),
-                        width: 2,
-                      ),
-                      shape: BoxShape.rectangle,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-          // Flash tooltip
-          if (_showFlashTooltip && _flashTooltipText != null)
-            Positioned(
-              top: 80,
-              right: 20,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                color: const Color.fromRGBO(0, 0, 0, 0.4),
-                child: Text(
-                  _flashTooltipText!,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ),
-
-          // Exposure value indicator for iOS only
-          if (_showExposureIndicator && Platform.isIOS)
-            Positioned(
-              right: 60,
-              top: MediaQuery.of(context).size.height * 0.25 +
-                  (MediaQuery.of(context).size.height *
-                      0.5 *
-                      (1 -
-                          (_currentExposureOffset -
-                                  _minAvailableExposureOffset) /
-                              (_maxAvailableExposureOffset -
-                                  _minAvailableExposureOffset))) -
-                  10,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                color: const Color.fromRGBO(0, 0, 0, 0.4),
-                child: Text(
-                  _currentExposureOffset.toStringAsFixed(1),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ),
-
-          // Android message in Spanish
-          if (Platform.isAndroid && _showExposureIndicator)
-            Positioned(
-              bottom: 100,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    'Ajuste de exposición no disponible en Android',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-          // Exposure slider - only show on iOS
-          if (Platform.isIOS)
-            Positioned(
-              right: 20,
-              top: MediaQuery.of(context).size.height * 0.25,
-              bottom: MediaQuery.of(context).size.height * 0.25,
-              child: RotatedBox(
-                quarterTurns: 3,
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: 2,
-                    activeTrackColor: const Color(0xFFB0B0B0),
-                    inactiveTrackColor: const Color(0xFFB0B0B0),
-                    thumbShape: const SunThumbShape(thumbRadius: 15),
-                    overlayShape: SliderComponentShape.noOverlay,
-                    thumbColor: Colors.transparent,
-                  ),
-                  child: Slider(
-                    value: _currentExposureOffset,
-                    min: _minAvailableExposureOffset,
-                    max: _maxAvailableExposureOffset,
-                    onChanged: (value) {
-                      if (mounted) {
-                        setState(() {
-                          _currentExposureOffset = value;
-                          _showExposureIndicator = true;
-                        });
-                      }
-                      controller?.setExposureOffset(value);
-
-                      // Restart the timer to hide the indicator
-                      _exposureIndicatorTimer?.cancel();
-                      _exposureIndicatorTimer =
-                          Timer(const Duration(seconds: 1), () {
-                        if (mounted) {
-                          setState(() {
-                            _showExposureIndicator = false;
-                          });
-                        }
-                      });
-
-                      // Restart the timer to hide the slider
-                      _exposureSliderTimer?.cancel();
-                      _exposureSliderTimer =
-                          Timer(const Duration(seconds: 2), () {
-                        if (mounted) {
-                          setState(() {
-                            _showExposureSlider = false;
-                          });
-                        }
-                      });
-                    },
-                    onChangeStart: (value) {
-                      if (mounted) {
-                        setState(() {
-                          _showExposureIndicator = true;
-                        });
-                      }
-                    },
-                    onChangeEnd: (value) {
-                      _exposureIndicatorTimer?.cancel();
-                      _exposureIndicatorTimer =
-                          Timer(const Duration(seconds: 1), () {
-                        if (mounted) {
-                          setState(() {
-                            _showExposureIndicator = false;
-                          });
-                        }
-                      });
-                    },
-                  ),
-                ),
-              ),
-            ),
-
-          // Flash button
+          // Camera Controls - Keep at bottom
           Positioned(
-            top: 20,
-            right: 20,
-            child: SizedBox(
-              width: 40,
-              height: 40,
-              child: IconButton(
-                icon: Icon(
-                  _flashMode == FlashMode.always
-                      ? Icons.flash_on
-                      : _flashMode == FlashMode.off
-                          ? Icons.flash_off
-                          : Icons.flash_auto,
-                ),
-                color: _flashMode == FlashMode.always
-                    ? const Color(0xFFFFD700)
-                    : Colors.white,
-                onPressed: _onFlashModeButtonPressed,
-                iconSize: 24, // Adjust the icon size
-                padding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-
-          Positioned(
-            bottom: 20,
             left: 0,
             right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                FloatingActionButton(
-                  onPressed: _onTakePictureButtonPressed,
-                  heroTag: 'takePhotoFAB',
-                  child: const Icon(Icons.photo_camera),
-                ),
-                FloatingActionButton(
-                  onPressed: _onRecordVideoButtonPressed,
-                  heroTag: 'recordVideoFAB',
-                  child: Icon(_isRecording ? Icons.stop : Icons.videocam),
-                ),
-                FloatingActionButton(
-                  onPressed: _lastCapturedThumbnail != null
-                      ? () {
-                          _navigateToLastCapturedMedia(context);
-                        }
-                      : () {
-                          _navigateToGallery(context);
-                        },
-                  heroTag: 'lastCapturedMediaFAB',
-                  child: _lastCapturedThumbnail != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8.0),
-                          child: Image.memory(
-                            _lastCapturedThumbnail!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                          ),
-                        )
-                      : const Icon(Icons.photo_library),
-                ),
-              ],
+            bottom: 0,
+            child: SafeArea(
+              minimum: EdgeInsets.only(bottom: isPortrait ? 20 : 10),
+              child: _buildCameraControls(isPortrait),
             ),
           ),
-          _buildRecordingTimer(),
         ],
       ),
     );
+  }
+
+  // New optimized camera preview builder
+  Widget _buildOptimizedCameraPreview(bool isPortrait, Size screenSize) {
+    if (!_isCameraInitialized || !_isOrientationInitialized) {
+      return const SizedBox.expand();
+    }
+
+    return ValueListenableBuilder<Size>(
+      valueListenable: _previewSizeNotifier,
+      builder: (context, previewSize, child) {
+        if (previewSize == Size.zero) return const SizedBox.shrink();
+
+        return ValueListenableBuilder<double>(
+          valueListenable: _scaleFactor,
+          builder: (context, scale, child) {
+            return Container(
+              color: Colors.black,
+              child: Center(
+                // Envolvemos todo en un Center
+                child: AspectRatio(
+                  aspectRatio: isPortrait
+                      ? previewSize.height /
+                          previewSize.width // cuando es portrait
+                      : previewSize.width /
+                          previewSize.height, // cuando es landscape
+                  child: CameraPreview(
+                    controller!,
+                    child: _buildPreviewGestureDetector(screenSize),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPreviewGestureDetector(Size screenSize) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onScaleStart: _onScaleStart,
+          onScaleUpdate: _onScaleUpdate,
+          onTapDown: (details) {
+            final RenderBox box = context.findRenderObject() as RenderBox;
+            final Offset localPoint = box.globalToLocal(details.globalPosition);
+
+            _onViewFinderTap(
+              TapDownDetails(localPosition: localPoint),
+              constraints,
+            );
+          },
+          onVerticalDragStart: (details) => _handleExposureDragStart(details),
+          onVerticalDragUpdate: (details) => _handleExposureDragUpdate(details),
+          onVerticalDragEnd: (details) => _handleExposureDragEnd(details),
+        );
+      },
+    );
+  }
+
+  Widget _buildControlsOverlay(
+      bool isPortrait, Size screenSize, EdgeInsets padding) {
+    return Stack(
+      children: [
+        // Flash Control - Adjusted position
+        Positioned(
+          top: isPortrait ? padding.top + 10 : 10,
+          right: isPortrait ? 20 : padding.right + 10,
+          child: _buildFlashControl(),
+        ),
+
+        // Exposure Slider - iOS only with adjusted position
+        if (Platform.isIOS)
+          Positioned(
+            right: isPortrait ? 20 : padding.right + 60,
+            top: isPortrait ? screenSize.height * 0.25 : 10,
+            bottom: isPortrait ? screenSize.height * 0.25 : null,
+            child: _buildExposureSlider(isPortrait),
+          ),
+
+        // Focus Indicator
+        if (_isFocusing && _focusPoint != null) _buildFocusIndicator(),
+
+        // Zoom Indicator with adjusted position
+        if (_isZooming)
+          Positioned(
+            top: isPortrait ? padding.top + 20 : 20,
+            left: isPortrait ? 20 : padding.left + 20,
+            child: _buildZoomIndicator(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildCameraControls(bool isPortrait) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isPortrait ? 20 : 40,
+        vertical: isPortrait ? 20 : 10,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          FloatingActionButton(
+            heroTag: 'takePhotoFAB',
+            onPressed: _onTakePictureButtonPressed,
+            child: const Icon(Icons.photo_camera),
+          ),
+          FloatingActionButton(
+            heroTag: 'recordVideoFAB',
+            onPressed: _onRecordVideoButtonPressed,
+            child: Icon(_isRecording ? Icons.stop : Icons.videocam),
+          ),
+          _buildGalleryButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFlashControl() {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: IconButton(
+        icon: Icon(
+          _flashMode == FlashMode.always
+              ? Icons.flash_on
+              : _flashMode == FlashMode.off
+                  ? Icons.flash_off
+                  : Icons.flash_auto,
+        ),
+        color: _flashMode == FlashMode.always
+            ? const Color(0xFFFFD700)
+            : Colors.white,
+        onPressed: _onFlashModeButtonPressed,
+        iconSize: 24, // Adjust the icon size
+        padding: EdgeInsets.zero,
+      ),
+    );
+  }
+
+  Widget _buildExposureSlider(bool isPortrait) {
+    return RotatedBox(
+      quarterTurns: 3,
+      child: SliderTheme(
+        data: SliderTheme.of(context).copyWith(
+          trackHeight: 2,
+          activeTrackColor: const Color(0xFFB0B0B0),
+          inactiveTrackColor: const Color(0xFFB0B0B0),
+          thumbShape: const SunThumbShape(thumbRadius: 15),
+          overlayShape: SliderComponentShape.noOverlay,
+          thumbColor: Colors.transparent,
+        ),
+        child: Slider(
+          value: _currentExposureOffset,
+          min: _minAvailableExposureOffset,
+          max: _maxAvailableExposureOffset,
+          onChanged: (value) {
+            if (mounted) {
+              setState(() {
+                _currentExposureOffset = value;
+                _showExposureIndicator = true;
+              });
+            }
+            controller?.setExposureOffset(value);
+
+            // Restart the timer to hide the indicator
+            _exposureIndicatorTimer?.cancel();
+            _exposureIndicatorTimer = Timer(const Duration(seconds: 1), () {
+              if (mounted) {
+                setState(() {
+                  _showExposureIndicator = false;
+                });
+              }
+            });
+
+            // Restart the timer to hide the slider
+            _exposureSliderTimer?.cancel();
+            _exposureSliderTimer = Timer(const Duration(seconds: 2), () {
+              if (mounted) {
+                setState(() {
+                  _showExposureSlider = false;
+                });
+              }
+            });
+          },
+          onChangeStart: (value) {
+            if (mounted) {
+              setState(() {
+                _showExposureIndicator = true;
+              });
+            }
+          },
+          onChangeEnd: (value) {
+            _exposureIndicatorTimer?.cancel();
+            _exposureIndicatorTimer = Timer(const Duration(seconds: 1), () {
+              if (mounted) {
+                setState(() {
+                  _showExposureIndicator = false;
+                });
+              }
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFocusIndicator() {
+    return Positioned(
+      left: _focusPoint!.dx - 25,
+      top: _focusPoint!.dy - 25,
+      child: Opacity(
+        opacity: 1.0 - _focusAnimationController!.value,
+        child: Transform.scale(
+          scale: _focusAnimation!.value,
+          child: Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: const Color(0xFFFFD700),
+                width: 2,
+              ),
+              shape: BoxShape.rectangle,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildZoomIndicator() {
+    return Positioned(
+      top: 20,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        color: Colors.black.withAlpha(76), // 0.3 * 255 ≈ 76
+        child: Text(
+          '${_currentZoomLevel.toStringAsFixed(1)}x',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGalleryButton() {
+    return FloatingActionButton(
+      heroTag: 'lastCapturedMediaFAB',
+      onPressed: _lastCapturedThumbnail != null
+          ? () {
+              _navigateToLastCapturedMedia(context);
+            }
+          : () {
+              _navigateToGallery(context);
+            },
+      child: _lastCapturedThumbnail != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(8.0),
+              child: Image.memory(
+                _lastCapturedThumbnail!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+            )
+          : const Icon(Icons.photo_library),
+    );
+  }
+
+  void _handleExposureDragStart(DragStartDetails details) {
+    if (_pointerCount == 1) {
+      // Show slider only for single-finger drag
+      if (mounted) {
+        setState(() {
+          _showExposureSlider = true;
+        });
+      }
+    }
+  }
+
+  void _handleExposureDragUpdate(DragUpdateDetails details) {
+    if (Platform.isAndroid) {
+      return; // Ignore exposure adjustments on Android
+    }
+    if (_pointerCount == 1) {
+      // Update exposure only for single-finger drag
+      // Update the exposure value according to the vertical movement
+      final double delta = details.primaryDelta ?? 0.0;
+      final double sensitivity = 0.005;
+      double newValue = _currentExposureOffset - delta * sensitivity;
+      newValue = newValue.clamp(
+          _minAvailableExposureOffset, _maxAvailableExposureOffset);
+      if (mounted) {
+        setState(() {
+          _currentExposureOffset = newValue;
+          _showExposureIndicator = true;
+        });
+      }
+      controller?.setExposureOffset(_currentExposureOffset);
+
+      // Restart the timer to hide the indicator
+      _exposureIndicatorTimer?.cancel();
+      _exposureIndicatorTimer = Timer(const Duration(seconds: 1), () {
+        if (mounted) {
+          setState(() {
+            _showExposureIndicator = false;
+          });
+        }
+      });
+
+      // Restart the timer to hide the slider
+      _exposureSliderTimer?.cancel();
+      _exposureSliderTimer = Timer(const Duration(seconds: 1), () {
+        if (mounted) {
+          setState(() {
+            _showExposureSlider = false;
+          });
+        }
+      });
+    }
+  }
+
+  void _handleExposureDragEnd(DragEndDetails details) {
+    if (_pointerCount == 1) {
+      // Hide slider after single-finger drag
+      // Hide the slider after 1 second
+      _exposureSliderTimer?.cancel();
+      _exposureSliderTimer = Timer(const Duration(seconds: 1), () {
+        if (mounted) {
+          setState(() {
+            _showExposureSlider = false;
+          });
+        }
+      });
+    }
   }
 }
