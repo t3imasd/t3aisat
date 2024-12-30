@@ -144,6 +144,8 @@ class CameraScreenState extends State<CameraScreen>
   late ValueNotifier<Size> _previewSizeNotifier;
   late ValueNotifier<double> _scaleFactor;
 
+  CameraDescription? _currentCamera;
+
   @override
   void initState() {
     super.initState();
@@ -186,9 +188,14 @@ class CameraScreenState extends State<CameraScreen>
       return;
     }
 
+    _currentCamera ??= widget.cameras.firstWhere(
+      (camera) => camera.lensDirection == CameraLensDirection.back,
+      orElse: () => widget.cameras.first,
+    );
+
     try {
       final newController = CameraController(
-        widget.cameras[0],
+        _currentCamera!,
         ResolutionPreset.high,
         enableAudio: true,
         imageFormatGroup: Platform.isAndroid
@@ -252,6 +259,27 @@ class CameraScreenState extends State<CameraScreen>
     } catch (e) {
       Logger.root.severe('Error initializing camera: $e');
     }
+  }
+
+  Future<void> _switchCamera() async {
+    if (widget.cameras.length < 2) return;
+    
+    final CameraDescription newCamera = widget.cameras.firstWhere(
+      (camera) => camera.lensDirection != _currentCamera!.lensDirection,
+      orElse: () => widget.cameras.first,
+    );
+    
+    if (newCamera == _currentCamera) return;
+    
+    if (controller != null) {
+      await controller!.dispose();
+    }
+    
+    _currentCamera = newCamera;
+    setState(() {
+      _isCameraInitialized = false;
+    });
+    await _initializeCamera();
   }
 
   void _updatePreviewScaling(Size screenSize) {
@@ -915,6 +943,24 @@ class CameraScreenState extends State<CameraScreen>
       bool isPortrait, Size screenSize, EdgeInsets padding) {
     return Stack(
       children: [
+        // Camera Switch Button - Solo en modo Portrait
+        if (widget.cameras.length > 1 && isPortrait)
+          Positioned(
+            top: padding.top + 10,
+            left: 20,
+            child: IconButton(
+              icon: const Icon(Icons.flip_camera_ios),
+              color: Colors.white,
+              iconSize: 28,
+              padding: const EdgeInsets.all(12),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shape: null,
+              ),
+              onPressed: _switchCamera,
+            ),
+          ),
+
         // Flash Control - Adjusted position
         Positioned(
           top: isPortrait ? padding.top + 10 : 10,
@@ -948,23 +994,37 @@ class CameraScreenState extends State<CameraScreen>
   Widget _buildCameraControls(bool isPortrait) {
     return Container(
       padding: EdgeInsets.symmetric(
+        // Reduce horizontal padding in landscape mode by half
         horizontal: isPortrait ? 20 : 40,
-        vertical: isPortrait ? 20 : 10,
+        // Slightly adjust vertical padding
+        vertical: isPortrait ? 20 : 8,
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.center, // Change to center
         children: [
+          SizedBox(width: isPortrait ? 20 : 40), // Add small spacing from left edge
           FloatingActionButton(
             heroTag: 'takePhotoFAB',
             onPressed: _onTakePictureButtonPressed,
             child: const Icon(Icons.photo_camera),
           ),
+          SizedBox(width: isPortrait ? 40 : 60), // Add fixed spacing between buttons
           FloatingActionButton(
             heroTag: 'recordVideoFAB',
             onPressed: _onRecordVideoButtonPressed,
             child: Icon(_isRecording ? Icons.stop : Icons.videocam),
           ),
+          SizedBox(width: isPortrait ? 40 : 60), // Add fixed spacing between buttons
           _buildGalleryButton(),
+          if (!isPortrait && widget.cameras.length > 1) ...[
+            const SizedBox(width: 60),
+            FloatingActionButton(
+              heroTag: 'switchCameraFAB',
+              onPressed: _switchCamera,
+              child: const Icon(Icons.flip_camera_ios),
+            ),
+          ],
+          SizedBox(width: isPortrait ? 20 : 40), // Add small spacing from right edge
         ],
       ),
     );
