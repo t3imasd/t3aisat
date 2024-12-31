@@ -1012,7 +1012,10 @@ class CameraScreenState extends State<CameraScreen>
           FloatingActionButton(
             heroTag: 'recordVideoFAB',
             onPressed: _onRecordVideoButtonPressed,
-            child: Icon(_isRecording ? Icons.stop : Icons.videocam),
+            child: Icon(
+              _isRecording ? Icons.stop : Icons.videocam,
+              color: _isRecording ? Colors.red : null,
+            ),
           ),
           SizedBox(width: isPortrait ? 40 : 60), // Add fixed spacing between buttons
           _buildGalleryButton(),
