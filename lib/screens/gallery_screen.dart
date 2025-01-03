@@ -75,7 +75,8 @@ class GalleryScreenState extends State<GalleryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Color(0xFF1976D2)), // Add this line
+        iconTheme:
+            const IconThemeData(color: Color(0xFF1976D2)), // Add this line
         title: const Text(
           "Galería de Fotos",
           style: TextStyle(color: Color(0xFF1976D2)),
@@ -84,6 +85,10 @@ class GalleryScreenState extends State<GalleryScreen> {
       body: ValueListenableBuilder<List<Photo>>(
         valueListenable: photoNotifier, // Escucha cambios en photoNotifier
         builder: (context, photoList, _) {
+          // Add orientation detection
+          final orientation = MediaQuery.of(context).orientation;
+          final crossAxisCount = orientation == Orientation.portrait ? 3 : 5;
+
           return FutureBuilder<List<AssetEntity>>(
             future: _loadAndFilterMedia(photoList),
             builder: (context, snapshot) {
@@ -94,9 +99,8 @@ class GalleryScreenState extends State<GalleryScreen> {
                     snapshot.data!.isNotEmpty &&
                     mediaFiles.isNotEmpty) {
                   return GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3, // Number of columns in the grid
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount, // Dynamic column count
                       crossAxisSpacing: 4, // Space between columns
                       mainAxisSpacing: 4, // Space between rows
                       childAspectRatio: 1, // Ensure square thumbnails
