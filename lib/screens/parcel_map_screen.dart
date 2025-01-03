@@ -66,6 +66,9 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   late AnimationController _searchBarAnimationController;
   late Animation<double> _searchBarOpacity;
 
+  // Add new state variable
+  bool _isBottomSheetVisible = true;
+
   @override
   void initState() {
     super.initState();
@@ -767,6 +770,12 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       mapbox.MapAnimationOptions(duration: 1000),
     );
     await _fetchParcelData(result.latitude, result.longitude);
+    
+    setState(() {
+      _isSearchBarVisible = false;
+      _isSearchBarActive = false;
+      _isBottomSheetVisible = true;
+    });
   }
 
   // BottomSheet UI for selected parcels
@@ -1098,6 +1107,10 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         setState(() {
           _isSearchBarVisible = false;
           _isSearchBarActive = false;
+          // Show BottomSheet again if there are selected parcels
+          if (_selectedParcels.isNotEmpty) {
+            _isBottomSheetVisible = true;
+          }
         });
       });
     } else {
@@ -1105,6 +1118,10 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       setState(() {
         _isSearchBarVisible = true;
         _isSearchBarActive = false;
+        // Hide BottomSheet in landscape mode when search is active
+        if (MediaQuery.of(context).orientation == Orientation.landscape) {
+          _isBottomSheetVisible = false;
+        }
       });
       _searchBarAnimationController.forward();
     }
@@ -1132,11 +1149,33 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   void setSearchBarActive(bool active) {
     setState(() {
       _isSearchBarActive = active;
+      // Hide BottomSheet in landscape mode when search is active
+      if (active && MediaQuery.of(context).orientation == Orientation.landscape) {
+        _isBottomSheetVisible = false;
+      }
     });
+  }
+
+  // Add method to handle orientation changes
+  void _handleOrientationChange(Orientation orientation) {
+    if (orientation == Orientation.portrait) {
+      setState(() {
+        _isBottomSheetVisible = true;
+      });
+    } else if (_isSearchBarActive) {
+      setState(() {
+        _isBottomSheetVisible = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Handle orientation directly
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _handleOrientationChange(MediaQuery.of(context).orientation);
+    });
+
     return Scaffold(
       appBar: AppBar(
         iconTheme:
@@ -1248,7 +1287,15 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
               bottom: 0,
               left: 0,
               right: 0,
-              child: _buildBottomSheet(context),
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 300),
+                opacity: _isBottomSheetVisible ? 1.0 : 0.0,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  height: _isBottomSheetVisible ? null : 0,
+                  child: _buildBottomSheet(context),
+                ),
+              ),
             ),
           if (_isErrorMessageVisible)
             Positioned(
