@@ -73,6 +73,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
   String? _fontFilePath;
   AssetEntity? _lastAsset; // Variable to store the last media asset
   AssetEntity? _lastCapturedAsset; // Variable to store the last captured media
+  bool _isLandscape = false; // Add this variable if not already present
 
   @override
   void initState() {
@@ -926,6 +927,8 @@ $appName ©''';
     setState(() {
       _isMuted = !_isMuted;
       _videoController!.setVolume(_isMuted ? 0.0 : 1.0);
+      _showControls = true;
+      _startHideControlsTimer();
     });
   }
 
@@ -933,9 +936,11 @@ $appName ©''';
   void _startHideControlsTimer() {
     _hideControlsTimer?.cancel();
     _hideControlsTimer = Timer(const Duration(seconds: 2), () {
-      setState(() {
-        _showControls = false;
-      });
+      if (mounted) {
+        setState(() {
+          _showControls = false;
+        });
+      }
     });
   }
 
@@ -992,6 +997,9 @@ $appName ©''';
 
   @override
   Widget build(BuildContext context) {
+    // Update _isLandscape based on MediaQuery orientation
+    _isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
@@ -1002,7 +1010,8 @@ $appName ©''';
       },
       child: Scaffold(
         appBar: AppBar(
-          iconTheme: const IconThemeData(color: Color(0xFF1976D2)), // Add this line
+          iconTheme:
+              const IconThemeData(color: Color(0xFF1976D2)), // Add this line
           title: const Text('GeoPosición',
               style: TextStyle(
                 fontFamily: 'Roboto',
@@ -1031,18 +1040,77 @@ $appName ©''';
                             ? _updatedMediaPath != null &&
                                     _videoController != null &&
                                     _videoController!.value.isInitialized
-                                ? GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    onTap: () {
-                                      setState(() {
-                                        _showControls = true;
-                                        _startHideControlsTimer();
-                                      });
-                                    },
-                                    child: VideoPlayer(_videoController!),
+                                ? Center(
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () {
+                                        setState(() {
+                                          _showControls = true;
+                                          _startHideControlsTimer();
+                                        });
+                                      },
+                                      child: AspectRatio(
+                                        aspectRatio:
+                                            _videoController!.value.aspectRatio,
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            VideoPlayer(_videoController!),
+                                            if (_showControls)
+                                              Container(
+                                                color: Colors.black
+                                                    .withOpacity(0.3),
+                                              ),
+                                            // Barra de progreso del video
+                                            if (_showControls)
+                                              Positioned(
+                                                bottom: 20,
+                                                left: 20,
+                                                right: 20,
+                                                child: VideoProgressIndicator(
+                                                  _videoController!,
+                                                  allowScrubbing: true,
+                                                  colors:
+                                                      const VideoProgressColors(
+                                                    playedColor: Colors.blue,
+                                                    bufferedColor: Colors.grey,
+                                                    backgroundColor:
+                                                        Colors.black,
+                                                  ),
+                                                ),
+                                              ),
+                                            // Botón de volumen con fondo circular y opacidad
+                                            if (!_isProcessingVideo &&
+                                                _showControls)
+                                              Positioned(
+                                                bottom: 50,
+                                                right: 20,
+                                                child: GestureDetector(
+                                                  onTap: _toggleMute,
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      color: Colors.black
+                                                          .withOpacity(0.5),
+                                                    ),
+                                                    padding:
+                                                        const EdgeInsets.all(8),
+                                                    child: Icon(
+                                                      _isMuted
+                                                          ? Icons.volume_off
+                                                          : Icons.volume_up,
+                                                      color: Colors.white,
+                                                      size: 24,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                   )
-                                : const SizedBox
-                                    .shrink() // Do not show anything if not initialized
+                                : const SizedBox.shrink()
                             : _updatedMediaPath != null
                                 ? Image.file(
                                     File(_updatedMediaPath!),
@@ -1050,7 +1118,7 @@ $appName ©''';
                                     width: double.infinity,
                                     height: double.infinity,
                                   )
-                                : const SizedBox.shrink(), // No media to show
+                                : const SizedBox.shrink(),
 
                         // Overlay para el spinner de procesamiento de video
                         if (widget.isVideo && _isProcessingVideo)
@@ -1127,49 +1195,6 @@ $appName ©''';
                                       ),
                                     )
                                   : const SizedBox.shrink(),
-                            ),
-                        if (widget.isVideo &&
-                            _videoController != null &&
-                            _videoController!.value.isInitialized)
-                          if (!_isProcessingVideo)
-                            Positioned(
-                              bottom: 50,
-                              right: 20,
-                              child: GestureDetector(
-                                onTap: _toggleMute,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.black.withOpacity(0.5),
-                                  ),
-                                  padding: const EdgeInsets.all(8),
-                                  child: Icon(
-                                    _isMuted
-                                        ? Icons.volume_off
-                                        : Icons.volume_up,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        if (widget.isVideo &&
-                            _videoController != null &&
-                            _videoController!.value.isInitialized)
-                          if (!_isProcessingVideo)
-                            Positioned(
-                              bottom: 20,
-                              left: 20,
-                              right: 20,
-                              child: VideoProgressIndicator(
-                                _videoController!,
-                                allowScrubbing: true,
-                                colors: const VideoProgressColors(
-                                  playedColor: Colors.blue,
-                                  bufferedColor: Colors.grey,
-                                  backgroundColor: Colors.black,
-                                ),
-                              ),
                             ),
                       ],
                     ),
