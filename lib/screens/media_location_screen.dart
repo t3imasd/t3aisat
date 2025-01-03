@@ -995,11 +995,259 @@ $appName ©''';
     }
   }
 
+  // New helper methods for UI components
+  Widget _buildGalleryButton() {
+    if (_lastCapturedAsset == null) return const SizedBox.shrink();
+    
+    return GestureDetector(
+      onTap: _showGallery,
+      child: FutureBuilder<Uint8List?>(
+        future: (_lastCapturedAsset ?? _lastAsset)!.thumbnailDataWithSize(
+          const ThumbnailSize.square(100),
+        ),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+            return SizedBox(
+              width: 80, // Larger in landscape
+              height: 80,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8.0),
+                child: Image.memory(
+                  snapshot.data!,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            );
+          }
+          return Container(
+            width: 80,
+            height: 80,
+            color: Colors.grey,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCoordinatesSection() {
+    if (_currentPosition == null) return const SizedBox.shrink();
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.location_on,
+            color: Color(0xFF388E3C),
+            size: 30,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Latitud: ${_currentPosition!.latitude.toStringAsFixed(6)}\nLongitud: ${_currentPosition!.longitude.toStringAsFixed(6)}',
+              textAlign: TextAlign.left,
+              style: const TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: 16,
+                color: Color(0xFF424242),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddressSection() {
+    if (_address == null) return const SizedBox.shrink();
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.home,
+            color: Color(0xFF388E3C),
+            size: 30,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _address!,
+              textAlign: TextAlign.left,
+              style: const TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: 16,
+                color: Color(0xFF424242),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMediaContent() {
+    return Stack(
+      children: [
+        // Media display
+        if (widget.isVideo)
+          _updatedMediaPath != null &&
+                  _videoController != null &&
+                  _videoController!.value.isInitialized
+              ? _buildVideoPlayer()
+              : const SizedBox.shrink()
+        else if (_updatedMediaPath != null)
+          Image.file(
+            File(_updatedMediaPath!),
+            fit: BoxFit.contain,
+            width: double.infinity,
+            height: double.infinity,
+          ),
+
+        // Processing overlays
+        if (widget.isVideo && _isProcessingVideo)
+          _buildVideoProcessingOverlay(),
+        if (!widget.isVideo && _isProcessingImage)
+          const Center(
+            child: CircularProgressIndicator(
+              color: Color(0xFF1976D2),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildVideoPlayer() {
+    return Center(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          setState(() {
+            _showControls = true;
+            _startHideControlsTimer();
+          });
+        },
+        child: AspectRatio(
+          aspectRatio: _videoController!.value.aspectRatio,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              VideoPlayer(_videoController!),
+              if (_showControls) ...[
+                Container(color: Colors.black.withOpacity(0.3)),
+                _buildVideoControls(),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideoProcessingOverlay() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Progress bar
+          SizedBox(
+            width: MediaQuery.of(context).size.width * 0.8,
+            child: LinearProgressIndicator(
+              value: _videoProcessingProgress,
+              backgroundColor: Colors.grey[300],
+              color: const Color(0xFF1976D2),
+              minHeight: 8,
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Informative text with pulsating opacity animation
+          FadeTransition(
+            opacity: _textOpacityAnimation,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: MediaQuery.of(context).size.width * 0.10,
+              ),
+              child: const Text(
+                'Escribiendo metadatos en los fotogramas del vídeo. Puedes continuar usando la aplicación mientras se completa el procesamiento.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFF1976D2),
+                  fontSize: 16,
+                  fontFamily: 'Roboto',
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVideoControls() {
+    return Stack(
+      children: [
+        // Play/Pause button in center
+        Center(
+          child: GestureDetector(
+            onTap: _togglePlayPause,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black.withOpacity(0.5),
+              ),
+              padding: const EdgeInsets.all(12),
+              child: Icon(
+                _videoController!.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                color: Colors.white,
+                size: 48,
+              ),
+            ),
+          ),
+        ),
+        // Progress bar at bottom
+        Positioned(
+          bottom: 20,
+          left: 20,
+          right: 20,
+          child: VideoProgressIndicator(
+            _videoController!,
+            allowScrubbing: true,
+            colors: const VideoProgressColors(
+              playedColor: Colors.blue,
+              bufferedColor: Colors.grey,
+              backgroundColor: Colors.black,
+            ),
+          ),
+        ),
+        // Mute button at bottom right
+        Positioned(
+          bottom: 50,
+          right: 20,
+          child: GestureDetector(
+            onTap: _toggleMute,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black.withOpacity(0.5),
+              ),
+              padding: const EdgeInsets.all(8),
+              child: Icon(
+                _isMuted ? Icons.volume_off : Icons.volume_up,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Update _isLandscape based on MediaQuery orientation
-    _isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
-
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
@@ -1010,285 +1258,68 @@ $appName ©''';
       },
       child: Scaffold(
         appBar: AppBar(
-          iconTheme:
-              const IconThemeData(color: Color(0xFF1976D2)), // Add this line
-          title: const Text('GeoPosición',
-              style: TextStyle(
-                fontFamily: 'Roboto',
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1976D2),
-              )),
-          backgroundColor: const Color(0xFFE6E6E6), // Light gray
-          foregroundColor: const Color(0xFF1976D2), // Navy blue for text
-          elevation: 0, // No shadow in the AppBar
+          iconTheme: const IconThemeData(color: Color(0xFF1976D2)),
+          title: const Text(
+            'GeoPosición',
+            style: TextStyle(
+              fontFamily: 'Roboto',
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1976D2),
+            ),
+          ),
+          backgroundColor: const Color(0xFFE6E6E6),
+          elevation: 0,
         ),
         body: _isLoading
             ? const Center(
                 child: CircularProgressIndicator(
-                  color: Color(0xFF1976D2), // Navy blue spinner
+                  color: Color(0xFF1976D2),
                 ),
               )
-            : Column(
-                children: [
-                  // Media area with Expanded to take available space
-                  Expanded(
-                    child: Stack(
+            : LayoutBuilder(
+                builder: (context, constraints) {
+                  final isLandscape =
+                      MediaQuery.of(context).orientation == Orientation.landscape;
+
+                  if (!isLandscape) {
+                    return Column(
                       children: [
-                        // Mostrar video o imagen
-                        widget.isVideo
-                            ? _updatedMediaPath != null &&
-                                    _videoController != null &&
-                                    _videoController!.value.isInitialized
-                                ? Center(
-                                    child: GestureDetector(
-                                      behavior: HitTestBehavior.opaque,
-                                      onTap: () {
-                                        setState(() {
-                                          _showControls = true;
-                                          _startHideControlsTimer();
-                                        });
-                                      },
-                                      child: AspectRatio(
-                                        aspectRatio:
-                                            _videoController!.value.aspectRatio,
-                                        child: Stack(
-                                          alignment: Alignment.center,
-                                          children: [
-                                            VideoPlayer(_videoController!),
-                                            if (_showControls)
-                                              Container(
-                                                color: Colors.black
-                                                    .withOpacity(0.3),
-                                              ),
-                                            // Barra de progreso del video
-                                            if (_showControls)
-                                              Positioned(
-                                                bottom: 20,
-                                                left: 20,
-                                                right: 20,
-                                                child: VideoProgressIndicator(
-                                                  _videoController!,
-                                                  allowScrubbing: true,
-                                                  colors:
-                                                      const VideoProgressColors(
-                                                    playedColor: Colors.blue,
-                                                    bufferedColor: Colors.grey,
-                                                    backgroundColor:
-                                                        Colors.black,
-                                                  ),
-                                                ),
-                                              ),
-                                            // Botón de volumen con fondo circular y opacidad
-                                            if (!_isProcessingVideo &&
-                                                _showControls)
-                                              Positioned(
-                                                bottom: 50,
-                                                right: 20,
-                                                child: GestureDetector(
-                                                  onTap: _toggleMute,
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      color: Colors.black
-                                                          .withOpacity(0.5),
-                                                    ),
-                                                    padding:
-                                                        const EdgeInsets.all(8),
-                                                    child: Icon(
-                                                      _isMuted
-                                                          ? Icons.volume_off
-                                                          : Icons.volume_up,
-                                                      color: Colors.white,
-                                                      size: 24,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                : const SizedBox.shrink()
-                            : _updatedMediaPath != null
-                                ? Image.file(
-                                    File(_updatedMediaPath!),
-                                    fit: BoxFit.contain,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                  )
-                                : const SizedBox.shrink(),
-
-                        // Overlay para el spinner de procesamiento de video
-                        if (widget.isVideo && _isProcessingVideo)
-                          Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Progress bar
-                                SizedBox(
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.8,
-                                  child: LinearProgressIndicator(
-                                    value: _videoProcessingProgress,
-                                    backgroundColor: Colors.grey[300],
-                                    color: const Color(0xFF1976D2), // Navy blue
-                                    minHeight: 8,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                // Informative text with pulsating opacity animation
-                                FadeTransition(
-                                  opacity: _textOpacityAnimation,
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(
-                                        horizontal:
-                                            MediaQuery.of(context).size.width *
-                                                0.10),
-                                    child: Text(
-                                      'Escribiendo metadatos en los fotogramas del vídeo. Puedes continuar usando la aplicación mientras se completa el procesamiento.',
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        color: Color(0xFF1976D2), // Navy blue
-                                        fontSize: 16,
-                                        fontFamily: 'Roboto',
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                        // Overlay para el spinner de procesamiento de imagen
-                        if (!widget.isVideo && _isProcessingImage)
-                          const Center(
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF1976D2), // Navy blue spinner
-                            ),
-                          ),
-
-                        // Overlay para los controles de video
-                        if (widget.isVideo &&
-                            _videoController != null &&
-                            _videoController!.value.isInitialized)
-                          if (!_isProcessingVideo)
-                            Align(
-                              alignment: Alignment.center,
-                              child: _showControls
-                                  ? GestureDetector(
-                                      onTap: _togglePlayPause,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Colors.black.withOpacity(0.5),
-                                        ),
-                                        padding: const EdgeInsets.all(12),
-                                        child: Icon(
-                                          _videoController!.value.isPlaying
-                                              ? Icons.pause
-                                              : Icons.play_arrow,
-                                          color: Colors.white,
-                                          size: 48,
-                                        ),
-                                      ),
-                                    )
-                                  : const SizedBox.shrink(),
-                            ),
+                        Expanded(child: _buildMediaContent()),
+                        const SizedBox(height: 20),
+                        _buildCoordinatesSection(),
+                        _buildAddressSection(),
+                        const SizedBox(height: 20),
                       ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // Información de ubicación
-                  if (_currentPosition != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(
-                            Icons.location_on,
-                            color: Color(0xFF388E3C), // Dark green
-                            size: 30, // Increased icon size
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(height: 20),
+                              _buildGalleryButton(),
+                              const SizedBox(height: 20),
+                              _buildCoordinatesSection(),
+                              const SizedBox(height: 20),
+                              _buildAddressSection(),
+                              const SizedBox(height: 20),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Latitud: ${_currentPosition!.latitude.toStringAsFixed(6)}\nLongitud: ${_currentPosition!.longitude.toStringAsFixed(6)}',
-                              textAlign: TextAlign.left,
-                              style: const TextStyle(
-                                  fontFamily: 'Roboto',
-                                  fontSize: 16,
-                                  color: Color(0xFF424242)), // Dark gray
-                            ),
-                          ),
-                          if (_lastCapturedAsset != null)
-                            GestureDetector(
-                              onTap:
-                                  _showGallery, // Show the gallery when tapped
-                              child: FutureBuilder<Uint8List?>(
-                                future: (_lastCapturedAsset ?? _lastAsset)!
-                                    .thumbnailDataWithSize(
-                                  const ThumbnailSize.square(100),
-                                ),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                          ConnectionState.done &&
-                                      snapshot.hasData) {
-                                    return SizedBox(
-                                      width: 50, // Small size
-                                      height: 50, // Small and square size
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(
-                                            8.0), // Rounded edges
-                                        child: Image.memory(
-                                          snapshot.data!,
-                                          fit: BoxFit
-                                              .cover, // The image fills the square container
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  return Container(
-                                    width: 50,
-                                    height: 50,
-                                    color: Colors.grey, // Placeholder color
-                                  );
-                                },
-                              ),
-                            ),
-                        ],
+                        ),
                       ),
-                    ),
-                  if (_address != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16.0, vertical: 8.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(
-                            Icons.home,
-                            color: Color(0xFF388E3C), // Dark green
-                            size: 30, // Increased icon size
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '$_address',
-                              textAlign: TextAlign.left,
-                              style: const TextStyle(
-                                  fontFamily: 'Roboto',
-                                  fontSize: 16,
-                                  color: Color(0xFF424242)), // Dark gray
-                            ),
-                          ),
-                        ],
+                      Expanded(
+                        flex: 2,
+                        child: _buildMediaContent(),
                       ),
-                    ),
-                  const SizedBox(height: 20),
-                ],
+                    ],
+                  );
+                },
               ),
       ),
     );
