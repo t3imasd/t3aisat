@@ -1287,13 +1287,78 @@ $appName ©''';
                       children: [
                         Expanded(child: _buildMediaContent()),
                         const SizedBox(height: 20),
-                        _buildCoordinatesSection(),
-                        _buildAddressSection(),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Coordenadas y dirección
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (_currentPosition != null)
+                                      Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Icon(
+                                            Icons.location_on,
+                                            color: Color(0xFF388E3C),
+                                            size: 30,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              'Latitud: ${_currentPosition!.latitude.toStringAsFixed(6)}\nLongitud: ${_currentPosition!.longitude.toStringAsFixed(6)}',
+                                              textAlign: TextAlign.left,
+                                              style: const TextStyle(
+                                                fontFamily: 'Roboto',
+                                                fontSize: 16,
+                                                color: Color(0xFF424242),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    const SizedBox(height: 16),
+                                    if (_address != null)
+                                      Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Icon(
+                                            Icons.home,
+                                            color: Color(0xFF388E3C),
+                                            size: 30,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              _address!,
+                                              textAlign: TextAlign.left,
+                                              style: const TextStyle(
+                                                fontFamily: 'Roboto',
+                                                fontSize: 16,
+                                                color: Color(0xFF424242),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              // Botón de galería
+                              const SizedBox(width: 16),
+                              _buildGalleryButton(),
+                            ],
+                          ),
+                        ),
                         const SizedBox(height: 20),
                       ],
                     );
                   }
 
+                  // Diseño landscape (sin cambios)
                   return Row(
                     children: [
                       Expanded(
