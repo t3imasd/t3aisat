@@ -1058,7 +1058,9 @@ $appName ©''';
     if (_currentPosition == null) return const SizedBox.shrink();
     
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: EdgeInsets.only(
+        left: _isLandscapeRight ? 40.0 : 16.0,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1088,7 +1090,9 @@ $appName ©''';
     if (_address == null) return const SizedBox.shrink();
     
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: EdgeInsets.only(
+        left: _isLandscapeRight ? 40.0 : 16.0,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
