@@ -74,6 +74,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
   AssetEntity? _lastAsset; // Variable to store the last media asset
   AssetEntity? _lastCapturedAsset; // Variable to store the last captured media
   bool _isLandscape = false; // Add this variable if not already present
+  bool _isLandscapeRight = false;
 
   @override
   void initState() {
@@ -93,6 +94,16 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
 
     _textOpacityAnimation =
         Tween<double>(begin: 0.5, end: 1.0).animate(_textAnimationController);
+
+    // Agregar listener para la orientación
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    
+    // Detectar orientación inicial
+    _checkOrientation();
   }
 
   @override
@@ -115,6 +126,20 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
       _checkPermissionStatus();
       _openedSettings = false; // Reset the flag once we've checked
     }
+  }
+
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    _checkOrientation();
+  }
+
+  void _checkOrientation() {
+    final windowPadding = WidgetsBinding.instance.window.viewPadding;
+    final isLandscape = windowPadding.left > 0;
+    setState(() {
+      _isLandscapeRight = isLandscape;
+    });
   }
 
   Future<void> _checkPermissionStatus() async {
@@ -1248,6 +1273,12 @@ $appName ©''';
 
   @override
   Widget build(BuildContext context) {
+    // Obtener la orientación específica del dispositivo
+    final orientation = MediaQuery.of(context).orientation;
+    final deviceOrientation = MediaQuery.of(context).orientation;
+    final isLandscapeRight = deviceOrientation == Orientation.landscape;
+    final isLandscape = orientation == Orientation.landscape;
+
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
@@ -1279,9 +1310,6 @@ $appName ©''';
               )
             : LayoutBuilder(
                 builder: (context, constraints) {
-                  final isLandscape =
-                      MediaQuery.of(context).orientation == Orientation.landscape;
-
                   if (!isLandscape) {
                     return Column(
                       children: [
@@ -1358,7 +1386,7 @@ $appName ©''';
                     );
                   }
 
-                  // Diseño landscape (sin cambios)
+                  // Diseño landscape con padding condicional
                   return Row(
                     children: [
                       Expanded(
@@ -1381,7 +1409,9 @@ $appName ©''';
                       Expanded(
                         flex: 2,
                         child: Padding(
-                          padding: const EdgeInsets.only(right: 20.0),
+                          padding: EdgeInsets.only(
+                            right: _isLandscapeRight ? 10.0 : 40.0,
+                          ),
                           child: _buildMediaContent(),
                         ),
                       ),
