@@ -1380,7 +1380,10 @@ $appName ©''';
                       ),
                       Expanded(
                         flex: 2,
-                        child: _buildMediaContent(),
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 20.0),
+                          child: _buildMediaContent(),
+                        ),
                       ),
                     ],
                   );
