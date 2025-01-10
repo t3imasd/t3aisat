@@ -10,8 +10,9 @@ import '../objectbox.g.dart';
 import 'media_location_screen.dart';
 import 'gallery_screen.dart';
 import '../helpers/media_helpers.dart'; // Added import
-import 'dart:io' show Platform;
+import 'dart:io';
 import 'package:sensors_plus/sensors_plus.dart';
+import 'package:image/image.dart' as img; // Add this import at the top
 
 // Add a personalized class for the Slider's Thumb with the sun icon
 class SunThumbShape extends SliderComponentShape {
@@ -146,6 +147,9 @@ class CameraScreenState extends State<CameraScreen>
 
   CameraDescription? _currentCamera;
 
+  bool _isTransitioning = false;
+  Completer<void>? _orientationCompleter;
+
   @override
   void initState() {
     super.initState();
@@ -175,25 +179,37 @@ class CameraScreenState extends State<CameraScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_isInitializing) {
-      _initializeCamera();
+      // Añadir delay para asegurar orientación estable
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _safeInitializeCamera();
+      });
       _isInitializing = false;
-    } else {
-      _updateOrientationSafely();
     }
   }
 
-  Future<void> _initializeCamera() async {
+  Future<void> _safeInitializeCamera() async {
     if (widget.cameras.isEmpty) {
-      Logger.root.severe('No cameras found');
+      Logger.root.severe('No cameras available');
       return;
     }
 
-    _currentCamera ??= widget.cameras.firstWhere(
-      (camera) => camera.lensDirection == CameraLensDirection.back,
-      orElse: () => widget.cameras.first,
-    );
+    // Wait for any pending transitions
+    if (_orientationCompleter != null) {
+      await _orientationCompleter!.future;
+    }
+
+    _orientationCompleter = Completer<void>();
 
     try {
+      // 1. Select camera safely
+      if (_currentCamera == null) {
+        _currentCamera = widget.cameras.firstWhere(
+          (camera) => camera.lensDirection == CameraLensDirection.back,
+          orElse: () => widget.cameras.first,
+        );
+      }
+
+      // 2. Create controller with safe configuration
       final newController = CameraController(
         _currentCamera!,
         ResolutionPreset.high,
@@ -203,78 +219,104 @@ class CameraScreenState extends State<CameraScreen>
             : ImageFormatGroup.bgra8888,
       );
 
-      // Wait for controller to initialize
-      await newController.initialize();
+      // 3. Initialize controller with detailed error handling
+      try {
+        await newController.initialize();
+      } catch (e) {
+        Logger.root.severe('Camera controller initialization failed: $e');
+        return;
+      }
 
       if (!mounted) return;
 
+      // 4. Configure camera after successful initialization
       controller = newController;
 
-      // Detect the current device orientation
-      final mediaQuery = MediaQuery.of(context);
-      final orientation = mediaQuery.orientation;
-      final deviceOrientation = orientation == Orientation.portrait
-          ? DeviceOrientation.portraitUp
-          : mediaQuery.platformBrightness == Brightness.light
-              ? DeviceOrientation.landscapeRight
-              : DeviceOrientation.landscapeLeft;
+      // 5. Update camera parameters safely
+      try {
+        await Future.wait([
+          controller!
+              .getMaxZoomLevel()
+              .then((value) => _maxAvailableZoom = value),
+          controller!
+              .getMinZoomLevel()
+              .then((value) => _minAvailableZoom = value),
+          controller!
+              .getMaxExposureOffset()
+              .then((value) => _maxAvailableExposureOffset = value),
+          controller!
+              .getMinExposureOffset()
+              .then((value) => _minAvailableExposureOffset = value),
+        ]);
+      } catch (e) {
+        Logger.root.warning('Error setting camera parameters: $e');
+      }
 
-      // Establish the orientation detected
-      await newController.lockCaptureOrientation(deviceOrientation);
-      _currentOrientation = deviceOrientation;
-
-      // Configure camera settings
-      await Future.wait([
-        controller!
-            .getMaxZoomLevel()
-            .then((value) => _maxAvailableZoom = value),
-        controller!
-            .getMinZoomLevel()
-            .then((value) => _minAvailableZoom = value),
-        controller!
-            .getMaxExposureOffset()
-            .then((value) => _maxAvailableExposureOffset = value),
-        controller!
-            .getMinExposureOffset()
-            .then((value) => _minAvailableExposureOffset = value),
-      ]);
-
-      // Update initial preview ratio
-      _updatePreviewRatio(MediaQuery.of(context).size);
-
-      // Update preview size
-      _previewSizeNotifier.value = controller!.value.previewSize!;
-
-      _updatePreviewScaling(MediaQuery.of(context).size);
-
+      // 6. Update UI state
       if (mounted) {
         setState(() {
           _isCameraInitialized = true;
           _isOrientationInitialized = true;
         });
-      }
 
-      // Load last captured asset after camera initialization
-      await _loadLastCapturedAsset();
+        // 7. Update preview configuration
+        if (controller?.value.previewSize != null) {
+          _previewSizeNotifier.value = controller!.value.previewSize!;
+          _updatePreviewRatio(MediaQuery.of(context).size);
+          _updatePreviewScaling(MediaQuery.of(context).size);
+        }
+      }
     } catch (e) {
-      Logger.root.severe('Error initializing camera: $e');
+      Logger.root.severe('Error in safe camera initialization: $e');
+    } finally {
+      _orientationCompleter?.complete();
+      _orientationCompleter = null;
+    }
+  }
+
+  Future<void> _initializeCamera() async {
+    if (widget.cameras.isEmpty) return;
+
+    _currentCamera ??= widget.cameras.first;
+
+    // 1. Primero detectar la orientación actual
+    _currentOrientation = await _detectDeviceOrientation();
+
+    // 2. Luego inicializar el controlador con la orientación correcta
+    controller = CameraController(
+      _currentCamera!,
+      ResolutionPreset.high,
+      enableAudio: true,
+      imageFormatGroup: ImageFormatGroup.jpeg,
+    );
+
+    // 3. Establecer la orientación antes de inicializar
+    await controller!.lockCaptureOrientation(_currentOrientation);
+
+    // 4. Inicializar el controlador
+    await controller!.initialize();
+
+    if (mounted) {
+      setState(() {
+        _isCameraInitialized = true;
+      });
     }
   }
 
   Future<void> _switchCamera() async {
     if (widget.cameras.length < 2) return;
-    
+
     final CameraDescription newCamera = widget.cameras.firstWhere(
       (camera) => camera.lensDirection != _currentCamera!.lensDirection,
       orElse: () => widget.cameras.first,
     );
-    
+
     if (newCamera == _currentCamera) return;
-    
+
     if (controller != null) {
       await controller!.dispose();
     }
-    
+
     _currentCamera = newCamera;
     setState(() {
       _isCameraInitialized = false;
@@ -356,52 +398,43 @@ class CameraScreenState extends State<CameraScreen>
   }
 
   Future<DeviceOrientation> _detectDeviceOrientation() async {
+    if (!mounted) return DeviceOrientation.portraitUp;
+
     try {
-      // Esperar un momento para que el sensor se estabilice
-      await Future.delayed(const Duration(milliseconds: 100));
-
-      // Tomar varias muestras para asegurar una lectura estable
-      final List<AccelerometerEvent> samples = [];
-      for (int i = 0; i < 3; i++) {
-        final event = await accelerometerEventStream().first;
-        samples.add(event);
-        await Future.delayed(const Duration(milliseconds: 50));
-      }
-
-      // Calcular el promedio de las lecturas
-      final avgX =
-          samples.map((e) => e.x).reduce((a, b) => a + b) / samples.length;
-
-      if (avgX.abs() < 1) {
-        return DeviceOrientation.portraitUp;
-      } else {
-        return avgX > 0
-            ? DeviceOrientation.landscapeLeft
-            : DeviceOrientation.landscapeRight;
-      }
-    } catch (e) {
-      Logger.root.warning('Error in _detectDeviceOrientation: $e');
-      // Fallback a MediaQuery
       final orientation = MediaQuery.of(context).orientation;
       return orientation == Orientation.portrait
           ? DeviceOrientation.portraitUp
           : DeviceOrientation.landscapeRight;
+    } catch (e) {
+      Logger.root.warning('Error detecting orientation: $e');
+      return DeviceOrientation.portraitUp;
     }
   }
 
   void _updateOrientationSafely() async {
-    if (!mounted || controller?.value.isInitialized != true) return;
+    if (_isTransitioning || !mounted) return;
 
+    _isTransitioning = true;
     try {
-      final deviceOrientation = await _detectDeviceOrientation();
-      if (_currentOrientation != deviceOrientation) {
-        _currentOrientation = deviceOrientation;
-        await controller?.lockCaptureOrientation(deviceOrientation);
-        _updatePreviewRatio(MediaQuery.of(context).size);
+      final newOrientation = await _detectDeviceOrientation();
+      if (_currentOrientation != newOrientation) {
+        await _handleOrientationChange(newOrientation);
       }
-    } catch (e) {
-      Logger.root.warning('Error updating orientation: $e');
+    } finally {
+      _isTransitioning = false;
     }
+  }
+
+  Future<void> _handleOrientationChange(
+      DeviceOrientation newOrientation) async {
+    await _pauseCamera();
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    _currentOrientation = newOrientation;
+    await controller?.lockCaptureOrientation(newOrientation);
+    _updatePreviewRatio(MediaQuery.of(context).size);
+
+    await _resumeCamera();
   }
 
   void _updatePreviewRatio(Size screenSize) {
@@ -474,21 +507,25 @@ class CameraScreenState extends State<CameraScreen>
       return;
     }
 
-    if (controller!.value.isTakingPicture) {
-      // A capture is already pending, do nothing.
-      return;
-    }
+    if (controller!.value.isTakingPicture) return;
 
     try {
-      XFile picture = await controller!.takePicture();
+      // Get current screen orientation and set it for capture
+      final currentOrientation = await _detectDeviceOrientation();
+      await controller!.lockCaptureOrientation(currentOrientation);
+
+      // Take picture with native orientation
+      final XFile picture = await controller!.takePicture();
+
+      if (!mounted) return;
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => MediaLocationScreen(
             mediaPath: picture.path,
             isVideo: false,
-            store:
-                widget.store, // Pass the ObjectBox store to MediaLocationScreen
+            store: widget.store,
           ),
         ),
       );
@@ -821,15 +858,6 @@ class CameraScreenState extends State<CameraScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (!_isCameraInitialized || controller == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Cámara'),
-        ),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
     final mediaQuery = MediaQuery.of(context);
     final screenSize = mediaQuery.size;
     final isPortrait = mediaQuery.orientation == Orientation.portrait;
@@ -847,34 +875,73 @@ class CameraScreenState extends State<CameraScreen>
           style: TextStyle(color: Colors.white),
         ),
       ),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Camera Preview
-          _buildOptimizedCameraPreview(isPortrait, screenSize),
+      body: !_isCameraInitialized || controller == null
+          ? const Center(child: CircularProgressIndicator())
+          : Stack(
+              fit: StackFit.expand,
+              children: [
+                // Camera Preview
+                _buildOptimizedCameraPreview(isPortrait, screenSize),
 
-          // Controls Layer
-          Positioned.fill(
-            child: SafeArea(
-              child: _buildControlsOverlay(isPortrait, screenSize, padding),
+                // Controls Layer
+                Positioned.fill(
+                  child: SafeArea(
+                    child:
+                        _buildControlsOverlay(isPortrait, screenSize, padding),
+                  ),
+                ),
+
+                // Recording Timer
+                if (_isRecording) _buildRecordingTimer(),
+
+                // Camera Controls at bottom
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: SafeArea(
+                    minimum: EdgeInsets.only(bottom: isPortrait ? 20 : 10),
+                    child: _buildCameraControls(isPortrait),
+                  ),
+                ),
+
+                // Flash Tooltip
+                if (_showFlashTooltip)
+                  Positioned(
+                    top: padding.top + 60,
+                    right: 20,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        _flashTooltipText ?? '',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+
+                // Exposure Indicator
+                if (_showExposureIndicator)
+                  Positioned(
+                    top: isPortrait ? padding.top + 60 : 60,
+                    right: isPortrait ? 70 : padding.right + 70,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'EV: ${_currentExposureOffset.toStringAsFixed(1)}',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ),
-
-          // Recording Timer
-          if (_isRecording) _buildRecordingTimer(),
-
-          // Camera Controls - Keep at bottom
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SafeArea(
-              minimum: EdgeInsets.only(bottom: isPortrait ? 20 : 10),
-              child: _buildCameraControls(isPortrait),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1002,13 +1069,15 @@ class CameraScreenState extends State<CameraScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center, // Change to center
         children: [
-          SizedBox(width: isPortrait ? 20 : 40), // Add small spacing from left edge
+          SizedBox(
+              width: isPortrait ? 20 : 40), // Add small spacing from left edge
           FloatingActionButton(
             heroTag: 'takePhotoFAB',
             onPressed: _onTakePictureButtonPressed,
             child: const Icon(Icons.photo_camera),
           ),
-          SizedBox(width: isPortrait ? 40 : 60), // Add fixed spacing between buttons
+          SizedBox(
+              width: isPortrait ? 40 : 60), // Add fixed spacing between buttons
           FloatingActionButton(
             heroTag: 'recordVideoFAB',
             onPressed: _onRecordVideoButtonPressed,
@@ -1017,7 +1086,8 @@ class CameraScreenState extends State<CameraScreen>
               color: _isRecording ? Colors.red : null,
             ),
           ),
-          SizedBox(width: isPortrait ? 40 : 60), // Add fixed spacing between buttons
+          SizedBox(
+              width: isPortrait ? 40 : 60), // Add fixed spacing between buttons
           _buildGalleryButton(),
           if (!isPortrait && widget.cameras.length > 1) ...[
             const SizedBox(width: 60),
@@ -1027,7 +1097,8 @@ class CameraScreenState extends State<CameraScreen>
               child: const Icon(Icons.flip_camera_ios),
             ),
           ],
-          SizedBox(width: isPortrait ? 20 : 40), // Add small spacing from right edge
+          SizedBox(
+              width: isPortrait ? 20 : 40), // Add small spacing from right edge
         ],
       ),
     );
