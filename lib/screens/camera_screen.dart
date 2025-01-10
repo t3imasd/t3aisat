@@ -116,7 +116,7 @@ class CameraScreenState extends State<CameraScreen>
   bool _showExposureSlider = false;
   Timer? _exposureSliderTimer;
 
-  int _pointerCount = 0; // Add pointer count tracking
+  final int _pointerCount = 0; // Add pointer count tracking
 
   // Add this to your state class
   Timer? _recordingTimer;
@@ -202,12 +202,10 @@ class CameraScreenState extends State<CameraScreen>
 
     try {
       // 1. Select camera safely
-      if (_currentCamera == null) {
-        _currentCamera = widget.cameras.firstWhere(
-          (camera) => camera.lensDirection == CameraLensDirection.back,
-          orElse: () => widget.cameras.first,
-        );
-      }
+      _currentCamera ??= widget.cameras.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.back,
+        orElse: () => widget.cameras.first,
+      );
 
       // 2. Create controller with safe configuration
       final newController = CameraController(
@@ -252,7 +250,7 @@ class CameraScreenState extends State<CameraScreen>
         Logger.root.warning('Error setting camera parameters: $e');
       }
 
-      // 6. Update UI state
+      // 6. Update UI state and load last asset
       if (mounted) {
         setState(() {
           _isCameraInitialized = true;
@@ -265,6 +263,9 @@ class CameraScreenState extends State<CameraScreen>
           _updatePreviewRatio(MediaQuery.of(context).size);
           _updatePreviewScaling(MediaQuery.of(context).size);
         }
+
+        // 8. Load the last captured asset after camera is fully initialized
+        await _loadLastCapturedAsset();
       }
     } catch (e) {
       Logger.root.severe('Error in safe camera initialization: $e');
@@ -519,7 +520,8 @@ class CameraScreenState extends State<CameraScreen>
 
       if (!mounted) return;
 
-      Navigator.pushReplacement(
+      // Navigate and update thumbnail after taking picture
+      await Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => MediaLocationScreen(
@@ -529,6 +531,9 @@ class CameraScreenState extends State<CameraScreen>
           ),
         ),
       );
+
+      // Update thumbnail after returning
+      await _loadLastCapturedAsset();
     } catch (e) {
       Logger.root.severe('Error taking picture: $e');
     }
@@ -550,17 +555,21 @@ class CameraScreenState extends State<CameraScreen>
             _isRecording = false;
           });
         }
-        Navigator.pushReplacement(
+
+        // Navigate and update thumbnail after recording
+        await Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => MediaLocationScreen(
               mediaPath: videoFile.path,
               isVideo: true,
-              store: widget
-                  .store, // Pass the ObjectBox store to MediaLocationScreen
+              store: widget.store,
             ),
           ),
         );
+
+        // Update thumbnail after returning
+        await _loadLastCapturedAsset();
       } catch (e) {
         Logger.root.severe('Error stopping video recording: $e');
       }
