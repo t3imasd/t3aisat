@@ -145,24 +145,93 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
     // Show confirmation dialog
     final bool? shouldDelete = await showDialog<bool>(
       context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: Text(widget.isVideo ? 'Eliminar vídeo' : 'Eliminar foto'),
-        content: Text(widget.isVideo
-            ? '¿Estás seguro de que deseas eliminar este vídeo? Esta acción no se puede deshacer.'
-            : '¿Estás seguro de que deseas eliminar esta foto? Esta acción no se puede deshacer.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+      barrierDismissible: false,
+      builder: (BuildContext context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.0),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.all(Radius.circular(16.0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
           ),
-          TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Eliminar'),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  widget.isVideo ? 'Eliminar vídeo' : 'Eliminar foto',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF212121),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Text(
+                  widget.isVideo
+                      ? '¿Estás seguro de que deseas eliminar este vídeo? Esta acción no se puede deshacer.'
+                      : '¿Estás seguro de que deseas eliminar esta foto? Esta acción no se puede deshacer.',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF666666),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      style: ButtonStyle(
+                        padding: MaterialStateProperty.all(
+                          const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        ),
+                        minimumSize: MaterialStateProperty.all(const Size(0, 36)),
+                      ),
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text(
+                        'Cancelar',
+                        style: TextStyle(fontSize: 14.0),
+                      ),
+                    ),
+                    const SizedBox(width: 8.0),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                        minimumSize: const Size(0, 48),
+                      ),
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text(
+                        'Eliminar',
+                        style: TextStyle(fontSize: 16.0),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
 
