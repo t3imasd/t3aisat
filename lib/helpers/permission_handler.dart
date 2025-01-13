@@ -435,22 +435,22 @@ class PermissionHelper {
 
     switch (permission) {
       case Permission.camera:
-        return 'La app necesita acceso a la cámara para capturar fotos y videos de las parcelas.';
+        return 'Captura fotos o videos geolocalizados para documentar tus proyectos.';
       case Permission.microphone:
-        return 'El micrófono es necesario para grabar audio en los vídeos.';
+        return 'Graba notas de voz durante la captura de videos.';
       case Permission.photos:
       case Permission.videos:
       case Permission.storage:
         return isIOS
-            ? 'Necesitamos acceso a tu galería para guardar y gestionar las fotos y vídeos capturados.'
-            : 'Necesitamos acceso al almacenamiento para guardar las fotos y vídeos capturados.';
+            ? 'Guarda y consulta tus fotos o videos con información geolocalizada.'
+            : 'Guarda y consulta tus fotos o videos con información geolocalizada.';
       case Permission.locationWhenInUse:
       case Permission.location:
         return context == 'camera'
-            ? 'La ubicación es necesaria para geolocalizar las fotos y vídeos capturados.'
-            : 'La ubicación es necesaria para mostrar tu posición en el mapa y dibujar las parcelas.';
+            ? 'Añade ubicación precisa a tus fotos y videos.'
+            : 'Visualiza tu posición y las parcelas en el mapa.';
       default:
-        return 'Este permiso es necesario para el funcionamiento de la aplicación.';
+        return 'Necesario para el funcionamiento de la app.';
     }
   }
 

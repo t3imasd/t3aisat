@@ -29,21 +29,21 @@
 	<key>NSAppleMusicUsageDescription</key>
 	<string>Esta aplicación requiere acceso a Apple Music para mejorar la experiencia de audio en los videos grabados.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>La App necesita tener permiso a tu cámara para hacer fotos.</string>
+	<string>Necesitamos acceso a la cámara para que puedas capturar fotos o videos geolocalizados de propiedades, parcelas o siniestros, permitiéndote documentar con precisión tus proyectos profesionales.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>La App necesita tener acceso a tu ubicación mientras la aplicación está en uso y en segundo plano.</string>
+	<string>La ubicación es necesaria para geolocalizar con precisión tus fotos o videos, y para mostrar tu posición en el mapa junto con información precisa sobre parcelas y propiedades, incluso cuando la app está en segundo plano.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>La App necesita tener acceso a tu ubicación incluso cuando la aplicación está en segundo plano.</string>
+	<string>La ubicación es necesaria para geolocalizar con precisión tus fotos o videos, y para mostrar tu posición en el mapa junto con información precisa sobre parcelas y propiedades, incluso cuando la app está en segundo plano.</string>
 	<key>NSLocationUsageDescription</key>
-	<string>Los dispositivos más antiguos necesitan la ubicación.</string>
+	<string>La ubicación es necesaria para geolocalizar con precisión tus fotos o videos, y para mostrar tu posición en el mapa junto con información precisa sobre parcelas y propiedades.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>La App necesita tener acceso a tu ubicación mientras la aplicación está en uso.</string>
+	<string>La ubicación es necesaria para geolocalizar con precisión tus fotos o videos, y para mostrar tu posición en el mapa junto con información precisa sobre parcelas y propiedades.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>La aplicación necesita acceso al micrófono para grabar videos.</string>
+	<string>El acceso al micrófono te permite grabar notas de voz durante la captura de videos, facilitando la documentación detallada de inspecciones, peritajes o validaciones en campo.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Necesitamos añadir fotos a tu libería de Fotos.</string>
+	<string>La app necesita guardar en tu galería las fotos o videos geolocalizados capturados durante inspecciones, validaciones o documentación de campo, para que puedas consultarlos posteriormente.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>La App necesita permiso de acceso a tu librería de fotos.</string>
+	<string>Necesitamos acceso a tu galería para guardar y consultar las fotos o videos geolocalizados de tus inspecciones, peritajes o documentación en campo.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
