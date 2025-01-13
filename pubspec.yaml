@@ -1,7 +1,7 @@
 name: t3aisat
 description: 'A new Flutter project.'
 publish_to: 'none'
-version: 1.0.7+5
+version: 1.0.7+42
 
 environment:
   sdk: '>=3.4.3 <4.0.0'
@@ -71,13 +71,13 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icon/app_icon.png"
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  image_path: 'assets/icon/app_icon.png'
+  adaptive_icon_background: '#FFFFFF'
+  adaptive_icon_foreground: 'assets/icon/app_icon.png'
 
 flutter_native_splash:
-  color: "#FFFFFF"
-  image: "assets/icon/app_icon.png"
+  color: '#FFFFFF'
+  image: 'assets/icon/app_icon.png'
   android: true
   ios: true
   fullscreen: true
