@@ -201,10 +201,10 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
                   children: [
                     TextButton(
                       style: ButtonStyle(
-                        padding: MaterialStateProperty.all(
+                        padding: WidgetStateProperty.all(
                           const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                         ),
-                        minimumSize: MaterialStateProperty.all(const Size(0, 36)),
+                        minimumSize: WidgetStateProperty.all(const Size(0, 36)),
                       ),
                       onPressed: () => Navigator.of(context).pop(false),
                       child: const Text(

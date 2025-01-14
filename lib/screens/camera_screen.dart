@@ -11,8 +11,6 @@ import 'media_location_screen.dart';
 import 'gallery_screen.dart';
 import '../helpers/media_helpers.dart'; // Added import
 import 'dart:io';
-import 'package:sensors_plus/sensors_plus.dart';
-import 'package:image/image.dart' as img; // Add this import at the top
 
 // Add a personalized class for the Slider's Thumb with the sun icon
 class SunThumbShape extends SliderComponentShape {

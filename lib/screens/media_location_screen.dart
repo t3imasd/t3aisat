@@ -73,7 +73,6 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
   String? _fontFilePath;
   AssetEntity? _lastAsset; // Variable to store the last media asset
   AssetEntity? _lastCapturedAsset; // Variable to store the last captured media
-  bool _isLandscape = false; // Add this variable if not already present
   bool _isLandscapeRight = false;
 
   @override
@@ -181,11 +180,6 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
     if (mediaFiles.isNotEmpty) {
       _lastAsset = mediaFiles.first;
     }
-
-    setState(() {
-      // TODO: Update state to show the files in the UI
-      // Example: _mediaFiles = mediaFiles;
-    });
   }
 
   Future<void> _savePhotoToDatabase() async {
