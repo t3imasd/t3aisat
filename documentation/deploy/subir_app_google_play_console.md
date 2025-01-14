@@ -29,6 +29,41 @@ Puedes general una salida detalla al construir el archivo AAB con el comando ant
 flutter build appbundle --release --verbose > build_log_full.txt 2>&1
 ```
 
+## Configuración de Mapbox SDK
+
+Si al ejecutar `flutter run --release` aparece el error "SDK Registry token is null", es necesario configurar los tokens de Mapbox en dos ubicaciones:
+
+1. En `~/.gradle/gradle.properties` (crear si no existe):
+
+```properties
+MAPBOX_DOWNLOADS_TOKEN=sk.eyJ...Q
+SDK_REGISTRY_TOKEN=sk.eyJ...Q
+```
+
+2. En `android/app/build.gradle` asegurar las siguientes propiedades:
+
+```properties
+org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=2G -XX:+HeapDumpOnOutOfMemoryError
+android.useAndroidX=true
+android.enableJetifier=true
+android.defaults.buildfeatures.buildconfig=true
+android.nonTransitiveRClass=false
+android.nonFinalResIds=false
+```
+
+Después de configurar los archivos, ejecutar:
+
+```bash
+flutter clean
+flutter pub get
+cd android
+./gradlew clean
+cd ..
+flutter run --release
+```
+
+## Verificación del AAB
+
 Para verificar el contenido del archivo AAB:
 
 ```bash
