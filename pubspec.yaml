@@ -67,6 +67,7 @@ flutter:
     - assets/fonts/roboto_bold/Roboto-Bold-20-size-white-color.ttf.zip
     - assets/fonts/roboto/Roboto-Bold.ttf
     - assets/documents/privacy_policy_t3aisat.md
+    - assets/images/location-marker.png
 
 flutter_launcher_icons:
   android: true

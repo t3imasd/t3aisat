@@ -2,40 +2,85 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:video_player/video_player.dart';
 import 'dart:async'; // For Timer
+import 'dart:typed_data';
 import 'package:photo_manager/photo_manager.dart'; // Import photo_manager
 import 'package:objectbox/objectbox.dart'; // Import ObjectBox
 import '../objectbox.g.dart'; // Import the generated ObjectBox code
 import 'package:share_plus/share_plus.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mapbox;
+import 'package:geotypes/geotypes.dart' as geojson;
+import '../model/media_model.dart';
+import 'parcel_map_screen.dart';
+import 'package:logging/logging.dart'; // Add Logger import
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Add dotenv import
+import 'package:flutter/services.dart'; // for rootBundle
+import 'dart:math' show min;
+import 'package:flutter/foundation.dart' show Factory;
+import 'package:flutter/gestures.dart' show OneSequenceGestureRecognizer, PanGestureRecognizer, ScaleGestureRecognizer;
 
 class MediaViewerScreen extends StatefulWidget {
   final String mediaPath;
   final bool isVideo;
-  final Store store; // Add Store parameter
+  final Store store;
+  final Media? media; // Add media parameter
 
   const MediaViewerScreen({
     super.key,
     required this.mediaPath,
     required this.isVideo,
-    required this.store, // Initialize Store
+    required this.store,
+    this.media, // Optional media parameter
   });
 
   @override
   MediaViewerScreenState createState() => MediaViewerScreenState();
 }
 
-class MediaViewerScreenState extends State<MediaViewerScreen> {
+class MediaViewerScreenState extends State<MediaViewerScreen>
+    with TickerProviderStateMixin {
+  final Logger log = Logger('MediaViewerScreen'); // Add Logger instance
+  // Add access token field
+  final String accessToken = dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
   VideoPlayerController? _videoController;
   bool _isMuted = false;
   bool _showControls = true;
   bool _isPlaying = false;
   Timer? _hideControlsTimer;
+  final List<mapbox.MapboxMap> _mapControllers = [];
+  bool _isExpanded = false;
+  String? _staticMapUrl;
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+  bool _isMapLoading = true;
+
+  // Add map style state variables
+  String _mapStyle = "mapbox://styles/mapbox/outdoors-v12";
+  mapbox.MapboxMap? _mapController;
+  bool _showMap = true; // Add this field
 
   @override
   void initState() {
     super.initState();
+    // Set Mapbox Access Token
+    mapbox.MapboxOptions.setAccessToken(accessToken);
     if (widget.isVideo) {
       _initializeVideoPlayer();
     }
+    // Initialize animation controller
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
+    if (widget.media != null) {
+      setState(() {
+        _staticMapUrl = _generateStaticMapUrl();
+      });
+    }
+    _isMapLoading = true;
   }
 
   Future<void> _initializeVideoPlayer() async {
@@ -44,13 +89,61 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
         setState(() {
           _isPlaying = false;
         });
+        // Add listener for video completion
+        _videoController!.addListener(() {
+          if (_videoController!.value.position >= _videoController!.value.duration) {
+            setState(() {
+              _isPlaying = false;
+              _showMap = true; // Show map when video ends
+            });
+          }
+        });
       });
+  }
+
+  String _generateStaticMapUrl() {
+    // Skip map generation for media without dimensions
+    if (widget.media == null || widget.media?.width == null || widget.media?.height == null) {
+      return '';
+    }
+    
+    final accessToken = dotenv.env['MAPBOX_ACCESS_TOKEN'];
+    return 'https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/'
+           'pin-s+ff0000(${widget.media!.longitude},${widget.media!.latitude})/'
+           '${widget.media!.longitude},${widget.media!.latitude},15,0/'
+           '300x300@2x'
+           '?access_token=$accessToken';
+  }
+
+  Future<String> _generateStaticMap(double lat, double lon) async {
+    if (widget.media?.width == null || widget.media?.height == null) {
+      return '';
+    }
+
+    final width = 300;
+    final height = 300;
+    final zoom = 15;
+
+    return 'https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/pin-s+ff0000($lon,$lat)/$lon,$lat,$zoom/$width'
+        'x$height@2x?access_token=$accessToken';
   }
 
   @override
   void dispose() {
+    _animationController.dispose();
     _videoController?.dispose();
     _hideControlsTimer?.cancel();
+
+    // Safe disposal of all map controllers
+    for (final controller in _mapControllers) {
+      try {
+        controller.dispose();
+      } catch (e) {
+        log.warning('Error disposing map controller: $e');
+      }
+    }
+    _mapControllers.clear();
+
     super.dispose();
   }
 
@@ -59,9 +152,11 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
       if (_videoController!.value.isPlaying) {
         _videoController!.pause();
         _isPlaying = false;
+        _showMap = true; // Show map when paused
       } else {
         _videoController!.play();
         _isPlaying = true;
+        _showMap = false; // Hide map when playing
         _startHideControlsTimer(); // Start hiding the controls
       }
     });
@@ -118,25 +213,49 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
           ),
         ],
       ),
-      body: Center(
-        child: widget.isVideo
-            ? _videoController != null && _videoController!.value.isInitialized
-                ? GestureDetector(
-                    onTap: _showControlsTemporarily, // Show controls on tap
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        AspectRatio(
-                          aspectRatio: _videoController!.value.aspectRatio,
-                          child: VideoPlayer(_videoController!),
-                        ),
-                        if (_showControls)
-                          _buildVideoControls(), // Show controls
-                      ],
-                    ),
-                  )
-                : const CircularProgressIndicator()
-            : _buildZoomableImage(), // Add zoom functionality for images
+      body: Stack(
+        children: [
+          Center(
+            child: widget.isVideo
+                ? _videoController?.value.isInitialized == true
+                    ? _buildVideoPlayer()
+                    : const CircularProgressIndicator()
+                : _buildZoomableImage(),
+          ),
+
+          if (!_isExpanded && _staticMapUrl != null && (!widget.isVideo || _showMap))
+            Positioned(
+              top: widget.isVideo ? 16 : null,
+              bottom: !widget.isVideo ? 8 : null,
+                right: widget.isVideo 
+                ? (MediaQuery.of(context).orientation == Orientation.landscape ? 36 : 16)
+                : (MediaQuery.of(context).orientation == Orientation.landscape ? 36 : 8),
+              child: GestureDetector(
+                onTap: () {
+                  setState(() => _isExpanded = true);
+                  _animationController.forward();
+                },
+                child: _buildStaticMapThumbnail(),
+              ),
+            ),
+
+          if (_isExpanded)
+            Positioned.fill(
+              child: Stack(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      _animationController.reverse().then((_) {
+                        setState(() => _isExpanded = false);
+                      });
+                    },
+                    child: Container(color: Colors.black54),
+                  ),
+                  Center(child: _buildExpandedMap()),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -195,14 +314,16 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
               ),
               const Divider(height: 1),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
                       style: ButtonStyle(
                         padding: WidgetStateProperty.all(
-                          const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                          const EdgeInsets.symmetric(
+                              horizontal: 16.0, vertical: 8.0),
                         ),
                         minimumSize: WidgetStateProperty.all(const Size(0, 36)),
                       ),
@@ -217,7 +338,8 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 12.0),
                         minimumSize: const Size(0, 48),
                       ),
                       onPressed: () => Navigator.of(context).pop(true),
@@ -348,9 +470,30 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
     );
   }
 
+  Widget _buildVideoPlayer() {
+    return Center(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _showControlsTemporarily,
+        child: AspectRatio(
+          aspectRatio: _videoController!.value.aspectRatio,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              VideoPlayer(_videoController!),
+              if (_showControls) ...[
+                Container(color: Colors.black.withOpacity(0.3)),
+                _buildVideoControls(),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildVideoControls() {
     return Stack(
-      alignment: Alignment.bottomCenter,
       children: [
         // Play/Pause Button
         Center(
@@ -358,8 +501,7 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
             onTap: _togglePlayPause,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black
-                    .withOpacity(0.7), // Dark background for visibility
+                color: Colors.black.withOpacity(0.7),
                 shape: BoxShape.circle,
               ),
               padding: const EdgeInsets.all(12),
@@ -373,7 +515,7 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
         ),
         // Mute/Unmute Button
         Positioned(
-          bottom: 80,
+          bottom: 40,
           right: 30,
           child: GestureDetector(
             onTap: _toggleMute,
@@ -392,19 +534,231 @@ class MediaViewerScreenState extends State<MediaViewerScreen> {
           ),
         ),
         // Video Progress Bar
-        Padding(
-          padding:
-              const EdgeInsets.only(bottom: 50.0), // Espacio desde el borde
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 20,
           child: VideoProgressIndicator(
             _videoController!,
             allowScrubbing: true,
             colors: const VideoProgressColors(
-              playedColor: Colors.red, // Color de la barra de progreso
-              backgroundColor: Colors.black38, // Color de fondo
+              playedColor: Color(0xFF1976D2),
+              backgroundColor: Colors.black38,
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildStaticMapThumbnail() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isLandscape = screenWidth > screenHeight;
+    final mapSize = isLandscape ? screenWidth * 0.20 : screenWidth * 0.33;
+
+    return Hero(
+      tag: 'map-${widget.media!.id}',
+      child: Container(
+        width: mapSize,
+        height: mapSize,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.white, width: 2),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: Image.network(
+            _staticMapUrl!,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Center(
+                child: CircularProgressIndicator(
+                  value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded / 
+                      loadingProgress.expectedTotalBytes!
+                    : null,
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                color: Colors.grey[300],
+                child: const Icon(Icons.map_outlined, size: 40),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpandedMap() {
+    if (widget.media == null) return const SizedBox.shrink();
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    final size = min(screenWidth, screenHeight) * 0.8;
+
+    return Hero(
+      tag: 'map-${widget.media!.id}',
+      child: AnimatedBuilder(
+        animation: _animation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _animation.value,
+            child: child,
+          );
+        },
+        child: Center(
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white, width: 2),
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Stack(
+                    children: [
+                      mapbox.MapWidget(
+                        key: ValueKey("${widget.media!.id}_overlay"),
+                        mapOptions: mapbox.MapOptions(
+                          pixelRatio: MediaQuery.of(context).devicePixelRatio,
+                        ),
+                        gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                            Factory<PanGestureRecognizer>(() => PanGestureRecognizer()),
+                            Factory<ScaleGestureRecognizer>(() => ScaleGestureRecognizer()),
+                        },
+                        onMapCreated: (controller) async {
+                          _mapController = controller;
+                          final coordinates = geojson.Position(
+                            widget.media!.longitude,
+                            widget.media!.latitude,
+                          );
+                          final point = mapbox.Point(coordinates: coordinates);
+
+                          try {
+                            await controller.loadStyleURI(_mapStyle);
+                            await controller.setCamera(
+                              mapbox.CameraOptions(
+                                center: point,
+                                zoom: 15.0,
+                              ),
+                            );
+
+                            final ByteData bytes = await rootBundle.load('assets/images/location-marker.png');
+                            final Uint8List list = bytes.buffer.asUint8List();
+
+                            await controller.style.addStyleImage(
+                              "custom-marker",
+                              2.0,
+                              mapbox.MbxImage(width: 44, height: 44, data: list),
+                              false, [], [], null
+                            );
+
+                            final pointAnnotationManager = await controller.annotations.createPointAnnotationManager();
+                            await pointAnnotationManager.create(
+                              mapbox.PointAnnotationOptions(
+                                geometry: point,
+                                iconImage: "custom-marker",
+                                iconSize: 0.8,
+                              ),
+                            );
+                          } catch (e) {
+                            log.severe('Error initializing overlay map: $e');
+                            // Fallback to default marker if custom image fails
+                            try {
+                              final pointAnnotationManager = await controller.annotations.createPointAnnotationManager();
+                              await pointAnnotationManager.create(
+                                mapbox.PointAnnotationOptions(
+                                  geometry: point,
+                                  iconImage: "marker",
+                                  iconSize: 1.0,
+                                ),
+                              );
+                            } catch (e) {
+                              log.severe('Error creating default marker in overlay: $e');
+                            }
+                          } finally {
+                            setState(() {
+                              _isMapLoading = false;
+                            });
+                          }
+                        },
+                      ),
+                      if (_isMapLoading)
+                        Container(
+                          color: Colors.white.withOpacity(0.7),
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  right: 8,
+                  bottom: 8,
+                  child: Material(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(16),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () async {
+                        setState(() => _isMapLoading = true);
+                        final newStyle = _mapStyle == "mapbox://styles/mapbox/outdoors-v12"
+                            ? "mapbox://styles/mapbox/satellite-streets-v12"
+                            : "mapbox://styles/mapbox/outdoors-v12";
+                        
+                        try {
+                          await _mapController?.loadStyleURI(newStyle);
+                          setState(() {
+                            _mapStyle = newStyle;
+                            _isMapLoading = false;
+                          });
+                        } catch (e) {
+                          log.severe('Error changing map style: $e');
+                          setState(() => _isMapLoading = false);
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Icon(
+                          _mapStyle == "mapbox://styles/mapbox/outdoors-v12"
+                              ? Icons.satellite_alt
+                              : Icons.terrain,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

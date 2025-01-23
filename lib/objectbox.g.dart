@@ -14,6 +14,7 @@ import 'package:objectbox/internal.dart'
 import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
+import 'model/media_model.dart';
 import 'model/photo_model.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
@@ -39,6 +40,65 @@ final _entities = <obx_int.ModelEntity>[
             id: const obx_int.IdUid(4, 1098208634247936322),
             name: 'galleryId',
             type: 9,
+            flags: 0)
+      ],
+      relations: <obx_int.ModelRelation>[],
+      backlinks: <obx_int.ModelBacklink>[]),
+  obx_int.ModelEntity(
+      id: const obx_int.IdUid(2, 4166876266755976682),
+      name: 'Media',
+      lastPropertyId: const obx_int.IdUid(10, 6888638822771786344),
+      flags: 0,
+      properties: <obx_int.ModelProperty>[
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(1, 6567032572261037844),
+            name: 'id',
+            type: 6,
+            flags: 1),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(2, 7944187188132686087),
+            name: 'path',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(3, 8058876595369739984),
+            name: 'isVideo',
+            type: 1,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(4, 6361498806110048278),
+            name: 'latitude',
+            type: 8,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(5, 5022621848819639854),
+            name: 'longitude',
+            type: 8,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(6, 9118262124126547053),
+            name: 'address',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(7, 1309076990501241707),
+            name: 'galleryId',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(8, 8164913300386545428),
+            name: 'mediaStoreId',
+            type: 6,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(9, 1626538339423415469),
+            name: 'width',
+            type: 6,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(10, 6888638822771786344),
+            name: 'height',
+            type: 6,
             flags: 0)
       ],
       relations: <obx_int.ModelRelation>[],
@@ -80,7 +140,7 @@ Future<obx.Store> openStore(
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
       entities: _entities,
-      lastEntityId: const obx_int.IdUid(1, 343638898507321583),
+      lastEntityId: const obx_int.IdUid(2, 4166876266755976682),
       lastIndexId: const obx_int.IdUid(0, 0),
       lastRelationId: const obx_int.IdUid(0, 0),
       lastSequenceId: const obx_int.IdUid(0, 0),
@@ -125,6 +185,69 @@ obx_int.ModelDefinition getObjectBoxModel() {
               captureDate: captureDateParam);
 
           return object;
+        }),
+    Media: obx_int.EntityDefinition<Media>(
+        model: _entities[1],
+        toOneRelations: (Media object) => [],
+        toManyRelations: (Media object) => {},
+        getId: (Media object) => object.id,
+        setId: (Media object, int id) {
+          object.id = id;
+        },
+        objectToFB: (Media object, fb.Builder fbb) {
+          final pathOffset = fbb.writeString(object.path);
+          final addressOffset = fbb.writeString(object.address);
+          final galleryIdOffset = object.galleryId == null
+              ? null
+              : fbb.writeString(object.galleryId!);
+          fbb.startTable(11);
+          fbb.addInt64(0, object.id);
+          fbb.addOffset(1, pathOffset);
+          fbb.addBool(2, object.isVideo);
+          fbb.addFloat64(3, object.latitude);
+          fbb.addFloat64(4, object.longitude);
+          fbb.addOffset(5, addressOffset);
+          fbb.addOffset(6, galleryIdOffset);
+          fbb.addInt64(7, object.mediaStoreId);
+          fbb.addInt64(8, object.width);
+          fbb.addInt64(9, object.height);
+          fbb.finish(fbb.endTable());
+          return object.id;
+        },
+        objectFromFB: (obx.Store store, ByteData fbData) {
+          final buffer = fb.BufferContext(fbData);
+          final rootOffset = buffer.derefObject(0);
+          final pathParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGet(buffer, rootOffset, 6, '');
+          final isVideoParam =
+              const fb.BoolReader().vTableGet(buffer, rootOffset, 8, false);
+          final latitudeParam =
+              const fb.Float64Reader().vTableGet(buffer, rootOffset, 10, 0);
+          final longitudeParam =
+              const fb.Float64Reader().vTableGet(buffer, rootOffset, 12, 0);
+          final addressParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGet(buffer, rootOffset, 14, '');
+          final galleryIdParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGetNullable(buffer, rootOffset, 16);
+          final mediaStoreIdParam =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 18);
+          final widthParam =
+              const fb.Int64Reader().vTableGet(buffer, rootOffset, 20, 0);
+          final heightParam =
+              const fb.Int64Reader().vTableGet(buffer, rootOffset, 22, 0);
+          final object = Media(
+              path: pathParam,
+              isVideo: isVideoParam,
+              latitude: latitudeParam,
+              longitude: longitudeParam,
+              address: addressParam,
+              galleryId: galleryIdParam,
+              mediaStoreId: mediaStoreIdParam,
+              width: widthParam,
+              height: heightParam)
+            ..id = const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0);
+
+          return object;
         })
   };
 
@@ -143,4 +266,46 @@ class Photo_ {
   /// See [Photo.galleryId].
   static final galleryId =
       obx.QueryStringProperty<Photo>(_entities[0].properties[2]);
+}
+
+/// [Media] entity fields to define ObjectBox queries.
+class Media_ {
+  /// See [Media.id].
+  static final id = obx.QueryIntegerProperty<Media>(_entities[1].properties[0]);
+
+  /// See [Media.path].
+  static final path =
+      obx.QueryStringProperty<Media>(_entities[1].properties[1]);
+
+  /// See [Media.isVideo].
+  static final isVideo =
+      obx.QueryBooleanProperty<Media>(_entities[1].properties[2]);
+
+  /// See [Media.latitude].
+  static final latitude =
+      obx.QueryDoubleProperty<Media>(_entities[1].properties[3]);
+
+  /// See [Media.longitude].
+  static final longitude =
+      obx.QueryDoubleProperty<Media>(_entities[1].properties[4]);
+
+  /// See [Media.address].
+  static final address =
+      obx.QueryStringProperty<Media>(_entities[1].properties[5]);
+
+  /// See [Media.galleryId].
+  static final galleryId =
+      obx.QueryStringProperty<Media>(_entities[1].properties[6]);
+
+  /// See [Media.mediaStoreId].
+  static final mediaStoreId =
+      obx.QueryIntegerProperty<Media>(_entities[1].properties[7]);
+
+  /// See [Media.width].
+  static final width =
+      obx.QueryIntegerProperty<Media>(_entities[1].properties[8]);
+
+  /// See [Media.height].
+  static final height =
+      obx.QueryIntegerProperty<Media>(_entities[1].properties[9]);
 }

@@ -26,9 +26,68 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "2:4166876266755976682",
+      "lastPropertyId": "10:6888638822771786344",
+      "name": "Media",
+      "properties": [
+        {
+          "id": "1:6567032572261037844",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:7944187188132686087",
+          "name": "path",
+          "type": 9
+        },
+        {
+          "id": "3:8058876595369739984",
+          "name": "isVideo",
+          "type": 1
+        },
+        {
+          "id": "4:6361498806110048278",
+          "name": "latitude",
+          "type": 8
+        },
+        {
+          "id": "5:5022621848819639854",
+          "name": "longitude",
+          "type": 8
+        },
+        {
+          "id": "6:9118262124126547053",
+          "name": "address",
+          "type": 9
+        },
+        {
+          "id": "7:1309076990501241707",
+          "name": "galleryId",
+          "type": 9
+        },
+        {
+          "id": "8:8164913300386545428",
+          "name": "mediaStoreId",
+          "type": 6
+        },
+        {
+          "id": "9:1626538339423415469",
+          "name": "width",
+          "type": 6
+        },
+        {
+          "id": "10:6888638822771786344",
+          "name": "height",
+          "type": 6
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "1:343638898507321583",
+  "lastEntityId": "2:4166876266755976682",
   "lastIndexId": "0:0",
   "lastRelationId": "0:0",
   "lastSequenceId": "0:0",

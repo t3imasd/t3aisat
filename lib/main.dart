@@ -16,10 +16,12 @@ import 'screens/terms_and_condition_screen.dart';
 import 'objectbox.g.dart'; // Import ObjectBox generated code
 // Add this for jsonEncode
 import 'package:device_info_plus/device_info_plus.dart'; // Add this for DeviceInfoPlugin
+import 'model/media_model.dart'; // Asegúrate de que este import existe
 
 List<CameraDescription> cameras = [];
 late Store store; // ObjectBox store
 late ValueNotifier<List<Photo>> photoNotifier;
+late ValueNotifier<List<Media>> mediaNotifier; // Add near the other global variables
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +54,12 @@ Future<void> main() async {
   store = await openStore(); // Initialize ObjectBox store
   photoNotifier = ValueNotifier<List<Photo>>(
       _getPhotosFromStore()); // Initialize the ValueNotifier after store
+  mediaNotifier = ValueNotifier<List<Media>>(_getMediaFromStore()); // Add this line
+  _initializeMediaStore(); // Add this line
+
+  // Initialize both notifiers
+  photoNotifier.value = store.box<Photo>().getAll();
+  mediaNotifier.value = store.box<Media>().getAll();
 
   runApp(const MyApp());
 
@@ -93,6 +101,24 @@ void _setupLogging() {
       print('${record.level.name}: ${record.time}: ${record.message}');
     }
   });
+}
+
+// Update this helper method
+void _initializeMediaStore() {
+  final box = store.box<Media>();
+  try {
+    // Try to access the box to verify it's working
+    box.isEmpty;
+    Logger.root.info('Media store initialized successfully');
+  } catch (e) {
+    Logger.root.severe('Failed to initialize Media store: $e');
+  }
+}
+
+// Add this helper method similar to _getPhotosFromStore
+List<Media> _getMediaFromStore() {
+  final box = store.box<Media>();
+  return box.getAll();
 }
 
 class MyApp extends StatelessWidget {

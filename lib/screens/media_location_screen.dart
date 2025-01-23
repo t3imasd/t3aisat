@@ -19,10 +19,12 @@ import 'package:ffmpeg_kit_flutter_full_gpl/return_code.dart';
 import 'package:video_player/video_player.dart';
 import 'package:saver_gallery/saver_gallery.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:ffmpeg_kit_flutter_full_gpl/ffprobe_kit.dart'; // Add this import
 import 'gallery_screen.dart'; // Import the GalleryScreen class
 import '../model/photo_model.dart';
 import '../main.dart';
 import '../objectbox.g.dart';
+import '../model/media_model.dart';
 
 class MediaLocationScreen extends StatefulWidget {
   final String mediaPath;
@@ -40,7 +42,7 @@ class MediaLocationScreen extends StatefulWidget {
 }
 
 class MediaLocationScreenState extends State<MediaLocationScreen>
-    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+    with WidgetsBindingObserver, TickerProviderStateMixin {  // Cambiado de SingleTickerProviderStateMixin
   Position? _currentPosition;
   String? _address;
   final Logger log = Logger('MediaLocationScreen');
@@ -74,6 +76,22 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
   AssetEntity? _lastAsset; // Variable to store the last media asset
   AssetEntity? _lastCapturedAsset; // Variable to store the last captured media
   bool _isLandscapeRight = false;
+  bool _showMap = true; // Add this state variable
+
+  // Añadir controladores y animaciones para el botón y el mapa
+  late AnimationController _mapAnimationController;
+  late Animation<double> _mapScaleAnimation;
+  late Animation<double> _mapOpacityAnimation;
+  String? _cachedMapUrl;
+  bool _isMapLoaded = false;
+  bool _isVideoReady = false; // Nueva variable para controlar cuando el video está listo
+
+  // Añadir nuevo controlador para el botón
+  late AnimationController _buttonAnimationController;
+  late Animation<double> _buttonScaleAnimation;
+  late Animation<double> _buttonOpacityAnimation;
+
+  bool _wasMapShownBeforePlaying = false; // Nueva variable para recordar el estado del mapa
 
   @override
   void initState() {
@@ -103,6 +121,50 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
     
     // Detectar orientación inicial
     _checkOrientation();
+
+    // Inicializar el controlador de animación para el mapa
+    _mapAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _mapScaleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _mapAnimationController,
+      curve: Curves.easeOutBack,
+    ));
+
+    _mapOpacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _mapAnimationController,
+      curve: Curves.easeIn,
+    ));
+
+    // Inicializar el controlador de animación para el botón
+    _buttonAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _buttonScaleAnimation = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _buttonAnimationController,
+      curve: Curves.elasticOut,
+    ));
+
+    _buttonOpacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _buttonAnimationController,
+      curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+    ));
   }
 
   @override
@@ -114,6 +176,8 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
     _hideControlsTimer?.cancel();
     _videoProgressTimer?.cancel();
     _textAnimationController.dispose();
+    _mapAnimationController.dispose();
+    _buttonAnimationController.dispose();
     super.dispose();
   }
 
@@ -168,17 +232,33 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
   }
 
   Future<void> _loadGalleryAssets() async {
-    final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
-      type: RequestType.all, // To get both photos and videos
-    );
+    try {
+      final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
+        type: RequestType.all, // To get both photos and videos
+      );
 
-    // Specify page and size explicitly
-    final List<AssetEntity> mediaFiles =
-        await albums[0].getAssetListPaged(page: 0, size: 100);
+      if (albums.isEmpty) {
+        _lastAsset = null; // Explícitamente establecer como null
+        log.info('No albums found in gallery, _lastAsset set to null');
+        return;
+      }
 
-    // Get the last media file
-    if (mediaFiles.isNotEmpty) {
-      _lastAsset = mediaFiles.first;
+      // Obtener la lista de archivos multimedia del primer álbum
+      final List<AssetEntity> mediaFiles =
+          await albums[0].getAssetListPaged(page: 0, size: 100);
+
+      // Verificar si hay archivos multimedia
+      if (mediaFiles.isNotEmpty) {
+        _lastAsset = mediaFiles.first;
+        log.info('Last asset loaded successfully');
+      } else {
+        log.info('No media files found in the gallery');
+      }
+    } catch (e) {
+      _lastAsset = null; // También asegurar null en caso de error
+      log.severe('Error loading gallery assets: $e');
+      // No necesitamos hacer setState aquí ya que el widget se construirá correctamente
+      // incluso sin un último asset (_lastAsset será null)
     }
   }
 
@@ -551,6 +631,16 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
     }
   }
 
+  Future<String> _generateStaticMap(double lat, double lon) async {
+    final accessToken = dotenv.env['MAPBOX_ACCESS_TOKEN'];
+    final width = 300;
+    final height = 300;
+    final zoom = 15;
+    
+    return 'https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/pin-s+ff0000($lon,$lat)/$lon,$lat,$zoom/$width'
+           'x$height@2x?access_token=$accessToken';
+  }
+
   // Function to save the photo with the location on the device and the gallery
   Future<void> _writeTextOnImageAndSaveToGallery(String imagePath) async {
     if (_currentPosition == null) {
@@ -562,6 +652,32 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
       // Read the original image file as bytes
       final bytes = await File(imagePath).readAsBytes();
       final img.Image originalImage = img.decodeImage(bytes)!;
+
+      // Generate static map
+      final mapUrl = await _generateStaticMap(
+        _currentPosition!.latitude,
+        _currentPosition!.longitude,
+      );
+
+      // Download map image
+      final mapResponse = await http.get(Uri.parse(mapUrl));
+      final mapImage = img.decodeImage(mapResponse.bodyBytes)!;
+
+      // Resize map image to desired size
+      final resizedMapImage = img.copyResize(mapImage, width: 250, height: 250);
+
+      // Calculate map position (bottom right corner)
+      final mapX = originalImage.width - resizedMapImage.width;
+      final mapY = originalImage.height - resizedMapImage.height;
+
+      // Draw map on original image first
+      img.compositeImage(
+        originalImage,
+        resizedMapImage,
+        dstX: mapX,
+        dstY: mapY,
+        blend: img.BlendMode.direct  // Changed from source to direct
+      );
 
       // Load the font from the assets to draw text on the image
       final fontData = await rootBundle.load(
@@ -599,7 +715,7 @@ T3 AI SAT Copr.''';
 
       // Draw the address and coordinates on the image
       final updatedImage = img.drawString(
-        originalImage,
+        originalImage, // Esta imagen ya contiene el mapa
         formattedText,
         font: font,
         x: 20, // Left margin
@@ -690,6 +806,23 @@ T3 AI SAT Copr.''';
         _updatedMediaPath = updatedImagePath;
         // _isLoading is already false; no need to set here
       });
+
+      // Save media info with dimensions
+      final media = Media(
+        path: updatedImagePath,
+        isVideo: false,
+        latitude: _currentPosition!.latitude,
+        longitude: _currentPosition!.longitude,
+        address: _address ?? 'Unknown location',
+        galleryId: Platform.isIOS ? _lastCapturedAsset?.id : null,
+        mediaStoreId: Platform.isAndroid ? await _getMediaStoreId(updatedImagePath) : null,
+        width: originalImage.width,
+        height: originalImage.height,
+      );
+      
+      final box = widget.store.box<Media>();
+      box.put(media);
+
     } catch (e) {
       // Log any errors that occur during the image processing
       log.severe('Failed to process image: $e');
@@ -726,6 +859,17 @@ T3 AI SAT Copr.''';
     }
 
     try {
+      // Obtener dimensiones del video eficientemente usando FFprobeKit
+      final dimensionSession = await FFprobeKit.execute(
+        '-v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 $videoPath'
+      );
+      final String? dimensionOutput = await dimensionSession.getOutput();
+      final List<String> dimensions = dimensionOutput?.split(',') ?? [];
+      final int videoWidth = int.parse(dimensions[0]);
+      final int videoHeight = int.parse(dimensions[1]);
+      
+      log.info('Video dimensions: ${videoWidth}x$videoHeight');
+
       // Verify that the font file path is set
       if (_fontFilePath == null) {
         log.severe('Font file path is not initialized.');
@@ -858,10 +1002,11 @@ $appName ©''';
         log.info('FFmpeg command executed successfully');
         final outputFile = File(outputPath);
         if (await outputFile.exists()) {
+          // Usar el formattedFileName antes de crear el Media
+          final formattedFileName = 't3aisat_${DateFormat('yyyyMMdd_HHmmss').format(now)}_data.mp4';
           final result = await SaverGallery.saveFile(
             filePath: outputPath,
-            fileName:
-                't3aisat_${DateFormat('yyyyMMdd_HHmmss').format(now)}_data.mp4',
+            fileName: formattedFileName,
             androidRelativePath: 'Movies/t3aisat',
             skipIfExists: false,
           );
@@ -882,11 +1027,42 @@ $appName ©''';
           _videoController!.setLooping(false); // Do not loop the video
           _videoController!.addListener(_videoListener);
 
-          // Update the state to hide the spinner
+          // Update the state to hide the spinner and marcar el video como listo
           setState(() {
-            // _isProcessingVideo will be set to false in the calling Future
-            _showControls = true; // Show play button initially
+            _isVideoReady = true; // Marcar el video como listo
+            _showControls = true;
+            // Ahora iniciar la precarga del mapa
+            if (!_isMapLoaded) {
+              _preloadMap();
+            }
           });
+
+          // Usar el mismo nombre al crear el Media con las dimensiones ya obtenidas
+          final media = Media(
+            path: path.join(path.dirname(outputPath), formattedFileName),
+            isVideo: true,
+            latitude: _currentPosition!.latitude,
+            longitude: _currentPosition!.longitude,
+            address: _address ?? 'Unknown location',
+            galleryId: Platform.isIOS ? _lastCapturedAsset?.id : null,
+            mediaStoreId: Platform.isAndroid ? await _getMediaStoreId(outputPath) : null,
+            width: videoWidth,    // Usar dimensión obtenida al inicio
+            height: videoHeight,  // Usar dimensión obtenida al inicio
+          );
+
+          final box = widget.store.box<Media>();
+          box.put(media);
+          // Añadir después de box.put(media) en ambos métodos:
+          final savedMedia = box.get(media.id);
+          log.info('''
+          Media guardado en ObjectBox:
+          ID: ${savedMedia?.id}
+          Path: ${savedMedia?.path}
+          IsVideo: ${savedMedia?.isVideo}
+          GalleryId: ${savedMedia?.galleryId}
+          MediaStoreId: ${savedMedia?.mediaStoreId}
+          ''');
+
         } else {
           log.severe('Processed video file does not exist.');
           setState(() {
@@ -918,6 +1094,13 @@ $appName ©''';
         !_videoController!.value.isPlaying) {
       setState(() {
         _showControls = true; // Show play button when video ends
+        // Restaurar el mapa si estaba visible antes de reproducir
+        if (_wasMapShownBeforePlaying) {
+          _showMap = true;
+          _mapAnimationController.forward();
+        }
+        // Al finalizar el video, mostrar el botón con animación
+        _buttonAnimationController.forward();
       });
     }
   }
@@ -931,7 +1114,23 @@ $appName ©''';
         _videoController!.pause();
         _showControls = true; // Show pause button when paused
         _hideControlsTimer?.cancel();
+        // Restaurar el mapa si estaba visible antes de reproducir
+        if (_wasMapShownBeforePlaying) {
+          _showMap = true;
+          _mapAnimationController.forward();
+        }
+        // Al pausar, mostrar el botón con animación
+        _buttonAnimationController.forward();
       } else {
+        // Guardar el estado actual del mapa antes de reproducir
+        _wasMapShownBeforePlaying = _showMap;
+        // Ocultar el mapa si está visible
+        if (_showMap) {
+          _showMap = false;
+          _mapAnimationController.reverse();
+        }
+        // Ocultar el botón con animación
+        _buttonAnimationController.reverse();
         _videoController!.play();
         _showControls = false; // Hide play button when playing
         _startHideControlsTimer();
@@ -1016,7 +1215,7 @@ $appName ©''';
 
   // New helper methods for UI components
   Widget _buildGalleryButton() {
-    if (_lastCapturedAsset == null) return const SizedBox.shrink();
+    if (_lastCapturedAsset == null && _lastAsset == null) return const SizedBox.shrink();
     
     return GestureDetector(
       onTap: _showGallery,
@@ -1143,6 +1342,11 @@ $appName ©''';
     );
   }
 
+  Future<String?> _cacheMapUrl() async {
+    if (_currentPosition == null) return null;
+    return _generateStaticMap(_currentPosition!.latitude, _currentPosition!.longitude);
+  }
+
   Widget _buildVideoPlayer() {
     return Center(
       child: GestureDetector(
@@ -1153,18 +1357,28 @@ $appName ©''';
             _startHideControlsTimer();
           });
         },
-        child: AspectRatio(
-          aspectRatio: _videoController!.value.aspectRatio,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              VideoPlayer(_videoController!),
-              if (_showControls) ...[
-                Container(color: Colors.black.withOpacity(0.3)),
-                _buildVideoControls(),
-              ],
-            ],
-          ),
+        child: Stack(
+          children: [
+            AspectRatio(
+              aspectRatio: _videoController!.value.aspectRatio,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  VideoPlayer(_videoController!),
+                  if (_showControls) ...[
+                    Container(color: Colors.black.withOpacity(0.3)),
+                    _buildVideoControls(),
+                  ],
+                ],
+              ),
+            ),
+            if (_showMap && _isMapLoaded)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: _buildMapOverlay(),
+              ),
+          ],
         ),
       ),
     );
@@ -1265,7 +1479,185 @@ $appName ©''';
             ),
           ),
         ),
+        // Add map toggle button
+        if (_isMapLoaded && (!_videoController!.value.isPlaying || _showControls))
+          Positioned(
+            top: 50,
+            left: 20,
+            child: _buildMapToggleButton(),
+          ),
       ],
+    );
+  }
+
+  Future<int?> _getMediaStoreId(String filePath) async {
+    if (Platform.isAndroid) {
+      try {
+        final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
+          type: RequestType.all,
+        );
+        if (albums.isNotEmpty) {
+          final List<AssetEntity> recentAssets = await albums[0].getAssetListRange(
+            start: 0,
+            end: 1,
+          );
+          if (recentAssets.isNotEmpty) {
+            return recentAssets.first.id.hashCode;
+          }
+        }
+      } catch (e) {
+        log.severe('Error getting MediaStore ID: $e');
+      }
+    }
+    return null;
+  }
+
+  // Modificar el método para pre-cargar el mapa
+  Future<void> _preloadMap() async {
+    if (_currentPosition == null || (widget.isVideo && !_isVideoReady)) return;
+    
+    final mapUrl = await _generateStaticMap(
+      _currentPosition!.latitude,
+      _currentPosition!.longitude,
+    );
+    
+    final imageProvider = NetworkImage(mapUrl);
+    final imageStream = imageProvider.resolve(ImageConfiguration.empty);
+    
+    final completer = Completer<void>();
+    final listener = ImageStreamListener(
+      (ImageInfo info, bool synchronousCall) {
+        if (!completer.isCompleted) {
+          setState(() {
+            _cachedMapUrl = mapUrl;
+            _isMapLoaded = true;
+          });
+          // Primero mostrar el mapa
+          _mapAnimationController.forward().then((_) {
+            // Después de que el mapa aparezca, mostrar el botón
+            Future.delayed(const Duration(milliseconds: 300), () {
+              _buttonAnimationController.forward();
+            });
+          });
+          completer.complete();
+        }
+      },
+      onError: (dynamic exception, StackTrace? stackTrace) {
+        if (!completer.isCompleted) {
+          completer.completeError(exception);
+        }
+      },
+    );
+    
+    imageStream.addListener(listener);
+    return completer.future;
+  }
+
+  void _toggleMap() {
+    setState(() {
+      _showMap = !_showMap;
+    });
+  }
+
+  Widget _buildMapToggleButton() {
+    if (!_isMapLoaded) return const SizedBox.shrink();
+
+    return AnimatedBuilder(
+      animation: _buttonAnimationController,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _buttonScaleAnimation.value,
+          child: Opacity(
+            opacity: _buttonOpacityAnimation.value,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black.withOpacity(0.5),
+              ),
+              padding: const EdgeInsets.all(8),
+              child: GestureDetector(
+                onTap: () {
+                  _toggleMap();
+                  // Añadir efecto de "bounce" al botón cuando se pulsa
+                  _buttonAnimationController.forward(from: 0.8);
+                },
+                child: Icon(
+                  _showMap ? Icons.map : Icons.map_outlined,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMapOverlay() {
+    if (!_isMapLoaded || _cachedMapUrl == null || !_showMap) {
+      return const SizedBox.shrink();
+    }
+
+    // Get video dimensions to determine orientation
+    final videoWidth = _videoController?.value.size.width ?? 0.0;
+    final videoHeight = _videoController?.value.size.height ?? 0.0;
+    final isLandscapeVideo = videoWidth > videoHeight;
+    
+    // Get screen dimensions
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    // Calculate actual video dimensions on screen
+    final videoAspectRatio = videoWidth / videoHeight;
+    double actualVideoWidth;
+    double actualVideoHeight;
+    
+    if (screenWidth / screenHeight > videoAspectRatio) {
+      actualVideoHeight = screenHeight;
+      actualVideoWidth = screenHeight * videoAspectRatio;
+    } else {
+      actualVideoWidth = screenWidth;
+      actualVideoHeight = screenWidth / videoAspectRatio;
+    }
+
+    // Calculate map size based on video orientation
+    double mapSize;
+    if (isLandscapeVideo) {
+      mapSize = actualVideoWidth * 0.20; // 1/5 for landscape videos
+    } else {
+      mapSize = actualVideoWidth * 0.33; // Keep 1/3 for portrait videos
+    }
+
+    // Ensure map size doesn't exceed 50% of video height
+    final maxHeight = actualVideoHeight * 0.5;
+    mapSize = mapSize > maxHeight ? maxHeight : mapSize;
+
+    return AnimatedBuilder(
+      animation: _mapAnimationController,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _mapScaleAnimation.value,
+          child: Opacity(
+            opacity: _mapOpacityAnimation.value,
+            child: Container(
+              width: mapSize,
+              height: mapSize,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.white, width: 2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.network(
+                  _cachedMapUrl!,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
