@@ -225,9 +225,11 @@ class MediaViewerScreenState extends State<MediaViewerScreen>
 
           if (!_isExpanded && _staticMapUrl != null && (!widget.isVideo || _showMap))
             Positioned(
-              top: widget.isVideo ? 16 : null,
-              bottom: !widget.isVideo ? 8 : null,
-                right: widget.isVideo 
+                top: widget.isVideo ? 16 : null,
+                bottom: Platform.isIOS && !widget.isVideo
+                ? (MediaQuery.of(context).orientation == Orientation.portrait ? 38 : 8)
+                : (!widget.isVideo ? 8 : null),
+              right: widget.isVideo
                 ? (MediaQuery.of(context).orientation == Orientation.landscape ? 36 : 16)
                 : (MediaQuery.of(context).orientation == Orientation.landscape ? 36 : 8),
               child: GestureDetector(

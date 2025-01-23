@@ -92,51 +92,125 @@ class GalleryScreenState extends State<GalleryScreen> {
 
   // Method to load and filter media based on EXIF and metadata
   Future<List<AssetEntity>> _loadAndFilterMedia(List<Photo> photoList, List<Media> mediaList) async {
-    // Fetch the list of media albums (both photos and videos)
+    log.info('Loading and filtering media files');
+    
     final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
-      type: RequestType.all, // Fetch both photos and videos
+      type: RequestType.all,
     );
 
     if (albums.isNotEmpty) {
-      // Load the first 100 media files from the first album
       final List<AssetEntity> mediaFiles = await albums[0].getAssetListPaged(
         page: 0,
-        size: 100, // Limit to 100 files
+        size: 100,
       );
 
-      // Filter media based on metadata
       List<AssetEntity> filteredMedia = [];
 
       for (var media in mediaFiles) {
-        if (media.type == AssetType.image) {
-          // Check if the image is valid on both platforms
-          final bool photoValid = await isValidPhoto(media, widget.store);
-          if (photoValid) {
-            // Pre-cargar el objeto Media en el cache
-            await _getMediaForAsset(media);
-            filteredMedia.add(media);
-          }
-        } else if (media.type == AssetType.video) {
-          // Check if the video has the correct MPEG Comment
-          final bool videoValid = await isValidVideo(media);
-          if (videoValid) {
-            // Pre-cargar el objeto Media en el cache
-            await _getMediaForAsset(media);
-            filteredMedia.add(media);
-          }
+        log.info('Processing media: ${media.id} - Type: ${media.type}');
+        
+        final bool isValid = media.type == AssetType.image 
+            ? await isValidPhoto(media, widget.store)
+            : await isValidVideo(media);
+            
+        if (isValid) {
+          log.info('Media validated successfully');
+          await _getMediaForAsset(media); // Pre-cache media object
+          filteredMedia.add(media);
+        } else {
+          log.info('Media validation failed');
         }
       }
 
-      // Sort media by creation date (newest first)
-      filteredMedia
-          .sort((a, b) => b.createDateTime.compareTo(a.createDateTime));
-
+      filteredMedia.sort((a, b) => b.createDateTime.compareTo(a.createDateTime));
       _lastAsset = filteredMedia.isNotEmpty ? filteredMedia[0] : null;
-
-      return filteredMedia; // Return the filtered and sorted list
+      
+      log.info('Filtered media count: ${filteredMedia.length}');
+      return filteredMedia;
     }
 
-    return []; // Return an empty list if no media found
+    log.info('No albums found');
+    return [];
+  }
+
+  Future<void> _navigateToMediaViewer(AssetEntity asset, Media? media) async {
+    log.info('Navigating to media viewer for asset: ${asset.id}');
+    
+    final file = await asset.file;
+    if (file == null) {
+      log.warning('Could not get file for asset: ${asset.id}');
+      return;
+    }
+
+    if (!mounted) return;
+
+    final deleted = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MediaViewerScreen(
+          mediaPath: file.path,
+          isVideo: asset.type == AssetType.video,
+          store: widget.store,
+          media: media, // Pass media even if dimensions are null
+        ),
+      ),
+    );
+
+    if (deleted == true) {
+      setState(() {});
+      if (_lastAsset?.id == asset.id) {
+        Navigator.of(context).pop(true);
+      }
+    }
+  }
+
+  Widget _buildGalleryGrid(List<AssetEntity> mediaFiles) {
+    final orientation = MediaQuery.of(context).orientation;
+    final crossAxisCount = orientation == Orientation.portrait ? 3 : 5;
+
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: 4,
+        mainAxisSpacing: 4,
+        childAspectRatio: 1,
+      ),
+      itemCount: mediaFiles.length,
+      itemBuilder: (context, index) {
+        return FutureBuilder<Media?>(
+          future: _getMediaForAsset(mediaFiles[index]),
+          builder: (context, mediaSnapshot) {
+            if (mediaSnapshot.connectionState == ConnectionState.done) {
+              final media = mediaSnapshot.data;
+              
+              return GestureDetector(
+                onTap: () => _navigateToMediaViewer(mediaFiles[index], media),
+                child: FutureBuilder<Uint8List?>(
+                  future: mediaFiles[index].thumbnailDataWithSize(
+                    const ThumbnailSize.square(200),
+                  ),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.done &&
+                        snapshot.hasData) {
+                      return Image.memory(
+                        snapshot.data!,
+                        fit: BoxFit.cover,
+                      );
+                    }
+                    return const SizedBox(
+                      child: CircularProgressIndicator(),
+                    );
+                  },
+                ),
+              );
+            }
+            return const SizedBox(
+              child: CircularProgressIndicator(),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -156,105 +230,22 @@ class GalleryScreenState extends State<GalleryScreen> {
           return ValueListenableBuilder<List<Media>>(
             valueListenable: mediaNotifier,
             builder: (context, mediaList, _) {
-              final orientation = MediaQuery.of(context).orientation;
-              final crossAxisCount = orientation == Orientation.portrait ? 3 : 5;
-
               return FutureBuilder<List<AssetEntity>>(
                 future: _loadAndFilterMedia(photoList, mediaList), // Updated to take both lists
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.done &&
                       snapshot.hasData) {
                     final mediaFiles = snapshot.data!;
-                    if (snapshot.hasData &&
-                        snapshot.data!.isNotEmpty &&
-                        mediaFiles.isNotEmpty) {
-                      return GridView.builder(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount, // Dynamic column count
-                          crossAxisSpacing: 4, // Space between columns
-                          mainAxisSpacing: 4, // Space between rows
-                          childAspectRatio: 1, // Ensure square thumbnails
-                        ),
-                        itemCount: mediaFiles.length,
-                        itemBuilder: (context, index) {
-                          return FutureBuilder<Media?>(
-                            future: _getMediaForAsset(mediaFiles[index]),
-                            builder: (context, mediaSnapshot) {
-                              if (mediaSnapshot.connectionState == ConnectionState.done) {
-                                // Capturar el objeto Media fuera del onTap
-                                final media = mediaSnapshot.data;
-                                
-                                return GestureDetector(
-                                  onTap: () async {
-                                    _selectedAsset = mediaFiles[index];
-                                    final file = await mediaFiles[index].file;
-                                    if (file != null && media != null) { // Verificar que media no sea null
-                                      final deleted = await Navigator.push<bool>(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => MediaViewerScreen(
-                                            mediaPath: file.path,
-                                            isVideo: mediaFiles[index].type == AssetType.video,
-                                            store: widget.store,
-                                            media: media, // Usar el objeto media capturado
-                                          ),
-                                        ),
-                                      );
-
-                                      if (deleted == true) {
-                                        setState(() {});
-                                        if (_lastAsset != null && _selectedAsset != null) {
-                                          if (_lastAsset!.id == _selectedAsset!.id) {
-                                            Navigator.of(context).pop(true);
-                                          }
-                                        }
-                                      }
-                                    }
-                                  },
-                                  child: FutureBuilder<Uint8List?>(
-                                    future: mediaFiles[index].thumbnailDataWithSize(
-                                      const ThumbnailSize.square(200), // Request square thumbnails (200x200)
-                                    ),
-                                    builder: (context, snapshot) {
-                                      if (snapshot.connectionState == ConnectionState.done &&
-                                          snapshot.hasData) {
-                                        return Image.memory(
-                                          snapshot.data!, // Display the image thumbnail
-                                          fit: BoxFit.cover, // Ensure the image covers the square thumbnail space
-                                        );
-                                      }
-                                      return const SizedBox(
-                                        child: CircularProgressIndicator(), // Show loading while fetching thumbnail
-                                      );
-                                    },
-                                  ),
-                                );
-                              }
-                              return const SizedBox(
-                                child: CircularProgressIndicator(),
-                              );
-                            },
-                          );
-                        },
-                      );
-                    } else {
-                      // Display Icons.videocam_off when mediaFiles is empty
-                      return GridView(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 1, // Single column grid
-                        ),
-                        children: [
-                          Center(
-                            child: Icon(
-                              Icons.videocam_off,
-                              size: 100,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      );
+                    if (mediaFiles.isNotEmpty) {
+                      return _buildGalleryGrid(mediaFiles);
                     }
+                    return const Center(
+                      child: Icon(
+                        Icons.videocam_off,
+                        size: 100,
+                        color: Colors.grey,
+                      ),
+                    );
                   }
                   return const Center(child: CircularProgressIndicator());
                 },
