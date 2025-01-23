@@ -494,7 +494,6 @@ class CameraScreenState extends State<CameraScreen>
     _zoomIndicatorTimer?.cancel();
     _flashTooltipTimer?.cancel();
     _exposureIndicatorTimer?.cancel();
-    _exposureSliderTimer?.cancel();
     _recordingTimer?.cancel();
     _exposureSliderTimer?.cancel();
     super.dispose();
@@ -509,12 +508,25 @@ class CameraScreenState extends State<CameraScreen>
     if (controller!.value.isTakingPicture) return;
 
     try {
-      // Get current screen orientation and set it for capture
-      final currentOrientation = await _detectDeviceOrientation();
-      await controller!.lockCaptureOrientation(currentOrientation);
-
-      // Take picture with native orientation
+      if (_currentOrientation != null) {
+        if (_currentCamera?.lensDirection == CameraLensDirection.front) {
+          // Para la cámara frontal:
+          // En portrait, usar portraitUp 
+          // En landscape, usar landscapeRight
+          final orientation = MediaQuery.of(context).orientation;
+          final targetOrientation = orientation == Orientation.portrait 
+            ? DeviceOrientation.portraitUp
+            : DeviceOrientation.landscapeRight;
+          
+          await controller?.lockCaptureOrientation(targetOrientation);
+        } else {
+          // Para la cámara trasera mantener orientación actual
+          await controller?.lockCaptureOrientation(_currentOrientation!);
+        }
+      }
+      
       final XFile picture = await controller!.takePicture();
+      await controller?.unlockCaptureOrientation();
 
       if (!mounted) return;
 
