@@ -49,8 +49,8 @@ Combina tecnología avanzada con un diseño intuitivo para validar fácilmente l
 🛠️ Características principales:
 
 - 📸 Cámara GPS inteligente: Captura fotos y vídeos con metadatos de ubicación visibles e incrustados automáticamente. Obtén imágenes y vídeos de alta calidad con iluminación, flash y autoenfoque, tanto en exteriores como en interiores.
-- 🗺️ Mapa interactivo de parcelas: Explora y localiza parcelas catastrales cercanas. Accede a información detallada como área y el identificador de registro catastral directamente desde el mapa.
-- 🎞️ Gestión multimedia: Captura y accede a tus fotos y vídeos geolocalizados, que se guardan automáticamente en la galería del dispositivo para su fácil visualización y para compartir. Controla tus archivos con opciones para eliminarlos de la galería y del dispositivo.
+- 🗺️ Mapas interactivos: Visualiza la ubicación exacta de tus capturas en tiempo real. Explora el mapa en vista satélite o plano, y accede a información detallada de parcelas catastrales cercanas.
+- 🎞️ Gestión multimedia: Visualiza y gestiona tus fotos y vídeos geolocalizados con mapas integrados que muestran dónde se tomaron. Comparte o elimina contenido fácilmente desde la galería.
 - 📍 Geolocalización precisa: Obtén coordenadas exactas y direcciones, perfectas para validaciones profesionales o personales.
 - 🔒 Metadatos avanzados: Asegura la autenticidad de tus capturas con fecha, coordenadas y dirección incrustadas en archivos JPG y MP4.
 

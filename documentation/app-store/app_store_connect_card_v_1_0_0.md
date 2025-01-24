@@ -19,9 +19,9 @@ Añadir las capturas de pantalla de la app para iPhone con Pantalla de 6.9" y 6.
 
 Con T3 AI SAT puedes:
 
-- Capturar fotos y vídeos con GPS integrado: Incrusta automáticamente coordenadas, fecha y dirección en tus fotos y vídeos. Ideal para validaciones y documentación profesional.
+- Capturar fotos y vídeos con GPS integrado: Incrusta automáticamente coordenadas, fecha y dirección en tus fotos y vídeos. Las fotos incluyen además un mapa integrado que muestra la ubicación de la captura.
 - Explorar parcelas catastrales en España: Accede a mapas interactivos con información detallada de parcelas, incluyendo área y referencia catastral.
-- Gestionar tus archivos multimedia: Visualiza y comparte tus fotos y vídeos directamente desde la app.
+- Gestionar tus archivos multimedia: Visualiza tus fotos y vídeos con un mapa interactivo que muestra la ubicación exacta donde fueron capturados. Alterna entre vistas de satélite y plano para una mejor perspectiva.
 - Obtener geolocalización precisa: Consigue coordenadas exactas y direcciones detalladas para tus proyectos.
 - Asegurar la autenticidad de tus capturas: Los metadatos se incrustan en formatos JPG y MP4, garantizando la validez de tu documentación.
 
