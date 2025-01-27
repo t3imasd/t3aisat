@@ -28,14 +28,14 @@ class GalleryScreenState extends State<GalleryScreen> {
   final Logger log = Logger('GalleryScreen'); // Add Logger instance
   AssetEntity? _lastAsset; // Variable to store the last media asset
   AssetEntity? _selectedAsset; // Variable to store the selected media asset
-  final Map<String, Media> _mediaCache = {}; // Cache de objetos Media
+  final Map<String, Media> _mediaCache = {}; // Cache of Media objects
 
-  // Método para obtener el objeto Media asociado a un AssetEntity
+  // Get the Media object associated with an AssetEntity
   Future<Media?> _getMediaForAsset(AssetEntity asset) async {
-    log.info('Buscando Media para asset: ${asset.id} - Tipo: ${asset.type}');
+    log.info('Looking for Media for asset: ${asset.id} - Type: ${asset.type}');
     
     if (_mediaCache.containsKey(asset.id)) {
-      log.info('Encontrado en caché');
+      log.info('Found in cache');
       return _mediaCache[asset.id];
     }
 
@@ -45,26 +45,26 @@ class GalleryScreenState extends State<GalleryScreen> {
     if (Platform.isIOS) {
       final query = box.query(Media_.galleryId.equals(asset.id)).build();
       media = query.findFirst();
-      log.info('Búsqueda iOS por galleryId: ${asset.id} -> ${media != null ? "✅" : "❌"}');
+      log.info('iOS search by galleryId: ${asset.id} -> ${media != null ? "✅" : "❌"}');
       query.close();
     } else {
       final assetFile = await asset.file;
       if (assetFile != null) {
         final fileName = assetFile.path.split('/').last;
-        log.info('Buscando por nombre de archivo: $fileName');
+        log.info('Searching by filename: $fileName');
         
-        // Buscar primero por nombre de archivo
+        // First search by filename
         final allMedia = box.getAll();
         media = allMedia.firstWhereOrNull((m) {
           final mediaFileName = m.path.split('/').last;
           final match = mediaFileName == fileName;
-          log.info('Comparando: $mediaFileName con $fileName -> ${match ? "✅" : "❌"}');
+          log.info('Comparing: $mediaFileName with $fileName -> ${match ? "✅" : "❌"}');
           return match;
         });
         
-        // Si no se encuentra, buscar por ruta completa
+        // If not found, search by full path
         if (media == null) {
-          log.info('Buscando por ruta completa: ${assetFile.path}');
+          log.info('Searching by full path: ${assetFile.path}');
           final query = box.query(Media_.path.equals(assetFile.path)).build();
           media = query.findFirst();
           query.close();
@@ -74,7 +74,7 @@ class GalleryScreenState extends State<GalleryScreen> {
 
     if (media != null) {
       log.info('''
-      ✅ Media encontrado:
+      ✅ Media found:
       ID: ${media.id}
       Path: ${media.path}
       IsVideo: ${media.isVideo}
@@ -83,7 +83,7 @@ class GalleryScreenState extends State<GalleryScreen> {
       ''');
       _mediaCache[asset.id] = media;
     } else {
-      log.info('❌ No se encontró Media para este asset');
+      log.info('❌ No Media found for this asset');
     }
 
     return media;
@@ -224,7 +224,7 @@ class GalleryScreenState extends State<GalleryScreen> {
         ),
       ),
       body: ValueListenableBuilder<List<Photo>>(
-        valueListenable: photoNotifier, // Escucha cambios en photoNotifier
+        valueListenable: photoNotifier, // Listen to changes in photoNotifier
         builder: (context, photoList, _) {
           return ValueListenableBuilder<List<Media>>(
             valueListenable: mediaNotifier,

@@ -1,4 +1,4 @@
-// lib/services/search_service.dart
+// Search service for addresses
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -25,10 +25,10 @@ class MapboxSearchService {
       if (response.statusCode == 200) {
         return SearchResult.fromFeatureCollection(json.decode(response.body));
       }
-      _logger.warning('Search failed: ${response.statusCode}');
+      _logger.warning('Search request failed: ${response.statusCode}');
       return [];
     } catch (e) {
-      _logger.severe('Search error: $e');
+      _logger.severe('Search error occurred: $e');
       return [];
     }
   }

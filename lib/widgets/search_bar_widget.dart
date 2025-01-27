@@ -148,7 +148,7 @@ class _ExpandableSearchBarState extends State<ExpandableSearchBar> {
   }
 
   bool _isCoordinates(String query) {
-    // Patrón para coordenadas: dos números decimales separados por coma
+    // Pattern for coordinates: two decimal numbers separated by comma
     final coordPattern = RegExp(r'^[-]?\d+\.?\d*,\s*[-]?\d+\.?\d*$');
     return coordPattern.hasMatch(query);
   }

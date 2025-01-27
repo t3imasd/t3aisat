@@ -9,7 +9,7 @@ import 'package:vibration/vibration.dart'; // For haptic feedback
 import '../objectbox.g.dart';
 import 'media_location_screen.dart';
 import 'gallery_screen.dart';
-import '../helpers/media_helpers.dart'; // Added import
+import '../helpers/media_helpers.dart';
 import 'dart:io';
 
 // Add a personalized class for the Slider's Thumb with the sun icon
@@ -177,7 +177,7 @@ class CameraScreenState extends State<CameraScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_isInitializing) {
-      // Añadir delay para asegurar orientación estable
+      // Add delay to ensure stable orientation
       Future.delayed(const Duration(milliseconds: 100), () {
         _safeInitializeCamera();
       });
@@ -510,9 +510,9 @@ class CameraScreenState extends State<CameraScreen>
     try {
       if (_currentOrientation != null) {
         if (_currentCamera?.lensDirection == CameraLensDirection.front) {
-          // Para la cámara frontal:
-          // En portrait, usar portraitUp 
-          // En landscape, usar landscapeRight
+          // For front camera:
+          // In portrait mode, use portraitUp 
+          // In landscape mode, use landscapeRight
           final orientation = MediaQuery.of(context).orientation;
           final targetOrientation = orientation == Orientation.portrait 
             ? DeviceOrientation.portraitUp
@@ -520,7 +520,7 @@ class CameraScreenState extends State<CameraScreen>
           
           await controller?.lockCaptureOrientation(targetOrientation);
         } else {
-          // Para la cámara trasera mantener orientación actual
+          // For back camera keep current orientation
           await controller?.lockCaptureOrientation(_currentOrientation!);
         }
       }
@@ -981,13 +981,13 @@ class CameraScreenState extends State<CameraScreen>
             return Container(
               color: Colors.black,
               child: Center(
-                // Envolvemos todo en un Center
+                // Wrap everything in a Center widget
                 child: AspectRatio(
                   aspectRatio: isPortrait
                       ? previewSize.height /
-                          previewSize.width // cuando es portrait
+                          previewSize.width // When in portrait mode
                       : previewSize.width /
-                          previewSize.height, // cuando es landscape
+                          previewSize.height, // When in landscape mode
                   child: CameraPreview(
                     controller!,
                     child: _buildPreviewGestureDetector(screenSize),
@@ -1294,7 +1294,7 @@ class CameraScreenState extends State<CameraScreen>
     }
     if (_pointerCount == 1) {
       // Update exposure only for single-finger drag
-      // Update the exposure value according to the vertical movement
+      // Update the exposure value based on vertical movement
       final double delta = details.primaryDelta ?? 0.0;
       final double sensitivity = 0.005;
       double newValue = _currentExposureOffset - delta * sensitivity;

@@ -19,7 +19,7 @@ import 'package:ffmpeg_kit_flutter_full_gpl/return_code.dart';
 import 'package:video_player/video_player.dart';
 import 'package:saver_gallery/saver_gallery.dart';
 import 'package:photo_manager/photo_manager.dart';
-import 'package:ffmpeg_kit_flutter_full_gpl/ffprobe_kit.dart'; // Add this import
+import 'package:ffmpeg_kit_flutter_full_gpl/ffprobe_kit.dart';
 import 'gallery_screen.dart'; // Import the GalleryScreen class
 import '../model/photo_model.dart';
 import '../main.dart';
@@ -42,7 +42,7 @@ class MediaLocationScreen extends StatefulWidget {
 }
 
 class MediaLocationScreenState extends State<MediaLocationScreen>
-    with WidgetsBindingObserver, TickerProviderStateMixin {  // Cambiado de SingleTickerProviderStateMixin
+    with WidgetsBindingObserver, TickerProviderStateMixin {  // Changed from SingleTickerProviderStateMixin
   Position? _currentPosition;
   String? _address;
   final Logger log = Logger('MediaLocationScreen');
@@ -78,20 +78,20 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
   bool _isLandscapeRight = false;
   bool _showMap = true; // Add this state variable
 
-  // Añadir controladores y animaciones para el botón y el mapa
+  // Add controllers and animations for the button and map
   late AnimationController _mapAnimationController;
   late Animation<double> _mapScaleAnimation;
   late Animation<double> _mapOpacityAnimation;
   String? _cachedMapUrl;
   bool _isMapLoaded = false;
-  bool _isVideoReady = false; // Nueva variable para controlar cuando el video está listo
+  bool _isVideoReady = false; // New variable to control when the video is ready
 
-  // Añadir nuevo controlador para el botón
+  // Add new controller for the button
   late AnimationController _buttonAnimationController;
   late Animation<double> _buttonScaleAnimation;
   late Animation<double> _buttonOpacityAnimation;
 
-  bool _wasMapShownBeforePlaying = false; // Nueva variable para recordar el estado del mapa
+  bool _wasMapShownBeforePlaying = false; // New variable to remember the map state
 
   @override
   void initState() {
@@ -112,17 +112,17 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
     _textOpacityAnimation =
         Tween<double>(begin: 0.5, end: 1.0).animate(_textAnimationController);
 
-    // Agregar listener para la orientación
+    // Add listener for orientation
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
     
-    // Detectar orientación inicial
+    // Detect initial orientation
     _checkOrientation();
 
-    // Inicializar el controlador de animación para el mapa
+    // Initialize the animation controller for the map
     _mapAnimationController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
@@ -144,7 +144,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
       curve: Curves.easeIn,
     ));
 
-    // Inicializar el controlador de animación para el botón
+    // Initialize the animation controller for the button
     _buttonAnimationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -238,16 +238,16 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
       );
 
       if (albums.isEmpty) {
-        _lastAsset = null; // Explícitamente establecer como null
+        _lastAsset = null; // Explicitly set to null
         log.info('No albums found in gallery, _lastAsset set to null');
         return;
       }
 
-      // Obtener la lista de archivos multimedia del primer álbum
+      // Get the list of media files from the first album
       final List<AssetEntity> mediaFiles =
           await albums[0].getAssetListPaged(page: 0, size: 100);
 
-      // Verificar si hay archivos multimedia
+      // Check if there are media files
       if (mediaFiles.isNotEmpty) {
         _lastAsset = mediaFiles.first;
         log.info('Last asset loaded successfully');
@@ -255,10 +255,10 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
         log.info('No media files found in the gallery');
       }
     } catch (e) {
-      _lastAsset = null; // También asegurar null en caso de error
+      _lastAsset = null; // Also ensure null in case of error
       log.severe('Error loading gallery assets: $e');
-      // No necesitamos hacer setState aquí ya que el widget se construirá correctamente
-      // incluso sin un último asset (_lastAsset será null)
+      // No need to setState here as the widget will build correctly
+      // even without a last asset (_lastAsset will be null)
     }
   }
 
@@ -450,7 +450,7 @@ class MediaLocationScreenState extends State<MediaLocationScreen>
             _isProcessingVideo = false; // Hide video processing spinner
           });
 
-          // Detener el Timer y asegurar que la barra de progreso llegue al 100%
+          // Stop the Timer and ensure the progress bar reaches 100%
           _videoProgressTimer?.cancel();
           setState(() {
             _videoProcessingProgress = 1.0;
@@ -715,7 +715,7 @@ T3 AI SAT Copr.''';
 
       // Draw the address and coordinates on the image
       final updatedImage = img.drawString(
-        originalImage, // Esta imagen ya contiene el mapa
+        originalImage, // This image already contains the map
         formattedText,
         font: font,
         x: 20, // Left margin
@@ -859,7 +859,7 @@ T3 AI SAT Copr.''';
     }
 
     try {
-      // Obtener dimensiones del video eficientemente usando FFprobeKit
+      // Get video dimensions efficiently using FFprobeKit
       final dimensionSession = await FFprobeKit.execute(
         '-v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 $videoPath'
       );
@@ -926,7 +926,7 @@ T3 AI SAT Copr.''';
       log.info('Formatted location: $descriptionLocationDMS');
 
       // Format the address and location for displaying on the video
-      String formattedAddress = _address ?? 'Sin direccion';
+      String formattedAddress = _address ?? 'No address';
 
       // Escape special characters
       formattedAddress = formattedAddress
@@ -1002,7 +1002,7 @@ $appName ©''';
         log.info('FFmpeg command executed successfully');
         final outputFile = File(outputPath);
         if (await outputFile.exists()) {
-          // Usar el formattedFileName antes de crear el Media
+          // Use the formattedFileName before creating the Media
           final formattedFileName = 't3aisat_${DateFormat('yyyyMMdd_HHmmss').format(now)}_data.mp4';
           final result = await SaverGallery.saveFile(
             filePath: outputPath,
@@ -1027,17 +1027,17 @@ $appName ©''';
           _videoController!.setLooping(false); // Do not loop the video
           _videoController!.addListener(_videoListener);
 
-          // Update the state to hide the spinner and marcar el video como listo
+          // Update the state to hide the spinner and mark the video as ready
           setState(() {
-            _isVideoReady = true; // Marcar el video como listo
+            _isVideoReady = true; // Mark the video as ready
             _showControls = true;
-            // Ahora iniciar la precarga del mapa
+            // Now start preloading the map
             if (!_isMapLoaded) {
               _preloadMap();
             }
           });
 
-          // Usar el mismo nombre al crear el Media con las dimensiones ya obtenidas
+          // Use the same name when creating the Media with the dimensions already obtained
           final media = Media(
             path: path.join(path.dirname(outputPath), formattedFileName),
             isVideo: true,
@@ -1046,16 +1046,16 @@ $appName ©''';
             address: _address ?? 'Unknown location',
             galleryId: Platform.isIOS ? _lastCapturedAsset?.id : null,
             mediaStoreId: Platform.isAndroid ? await _getMediaStoreId(outputPath) : null,
-            width: videoWidth,    // Usar dimensión obtenida al inicio
-            height: videoHeight,  // Usar dimensión obtenida al inicio
+            width: videoWidth,    // Use dimension obtained at the beginning
+            height: videoHeight,  // Use dimension obtained at the beginning
           );
 
           final box = widget.store.box<Media>();
           box.put(media);
-          // Añadir después de box.put(media) en ambos métodos:
+          // Add after box.put(media) in both methods:
           final savedMedia = box.get(media.id);
           log.info('''
-          Media guardado en ObjectBox:
+          Media saved in ObjectBox:
           ID: ${savedMedia?.id}
           Path: ${savedMedia?.path}
           IsVideo: ${savedMedia?.isVideo}
@@ -1094,12 +1094,12 @@ $appName ©''';
         !_videoController!.value.isPlaying) {
       setState(() {
         _showControls = true; // Show play button when video ends
-        // Restaurar el mapa si estaba visible antes de reproducir
+        // Restore the map if it was visible before playing
         if (_wasMapShownBeforePlaying) {
           _showMap = true;
           _mapAnimationController.forward();
         }
-        // Al finalizar el video, mostrar el botón con animación
+        // At the end of the video, show the button with animation
         _buttonAnimationController.forward();
       });
     }
@@ -1114,22 +1114,22 @@ $appName ©''';
         _videoController!.pause();
         _showControls = true; // Show pause button when paused
         _hideControlsTimer?.cancel();
-        // Restaurar el mapa si estaba visible antes de reproducir
+        // Restore the map if it was visible before playing
         if (_wasMapShownBeforePlaying) {
           _showMap = true;
           _mapAnimationController.forward();
         }
-        // Al pausar, mostrar el botón con animación
+        // When pausing, show the button with animation
         _buttonAnimationController.forward();
       } else {
-        // Guardar el estado actual del mapa antes de reproducir
+        // Save the current state of the map before playing
         _wasMapShownBeforePlaying = _showMap;
-        // Ocultar el mapa si está visible
+        // Hide the map if it is visible
         if (_showMap) {
           _showMap = false;
           _mapAnimationController.reverse();
         }
-        // Ocultar el botón con animación
+        // Hide the button with animation
         _buttonAnimationController.reverse();
         _videoController!.play();
         _showControls = false; // Hide play button when playing
@@ -1512,7 +1512,7 @@ $appName ©''';
     return null;
   }
 
-  // Modificar el método para pre-cargar el mapa
+  // Modify the method to preload the map
   Future<void> _preloadMap() async {
     if (_currentPosition == null || (widget.isVideo && !_isVideoReady)) return;
     
@@ -1532,9 +1532,9 @@ $appName ©''';
             _cachedMapUrl = mapUrl;
             _isMapLoaded = true;
           });
-          // Primero mostrar el mapa
+          // First show the map
           _mapAnimationController.forward().then((_) {
-            // Después de que el mapa aparezca, mostrar el botón
+            // After the map appears, show the button
             Future.delayed(const Duration(milliseconds: 300), () {
               _buttonAnimationController.forward();
             });
@@ -1578,7 +1578,7 @@ $appName ©''';
               child: GestureDetector(
                 onTap: () {
                   _toggleMap();
-                  // Añadir efecto de "bounce" al botón cuando se pulsa
+                  // Add "bounce" effect to the button when pressed
                   _buttonAnimationController.forward(from: 0.8);
                 },
                 child: Icon(
@@ -1663,7 +1663,7 @@ $appName ©''';
 
   @override
   Widget build(BuildContext context) {
-    // Obtener la orientación específica del dispositivo
+    // Get the specific orientation of the device
     final orientation = MediaQuery.of(context).orientation;
     final deviceOrientation = MediaQuery.of(context).orientation;
     final isLandscapeRight = deviceOrientation == Orientation.landscape;
@@ -1710,7 +1710,7 @@ $appName ©''';
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Coordenadas y dirección
+                              // Coordinates and address
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1765,7 +1765,7 @@ $appName ©''';
                                   ],
                                 ),
                               ),
-                              // Botón de galería
+                              // Gallery button
                               const SizedBox(width: 16),
                               _buildGalleryButton(),
                             ],
@@ -1776,7 +1776,7 @@ $appName ©''';
                     );
                   }
 
-                  // Diseño landscape con padding condicional
+                  // Landscape layout with conditional padding
                   return Row(
                     children: [
                       Expanded(

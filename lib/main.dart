@@ -14,9 +14,8 @@ import 'helpers/permission_handler.dart';
 import 'model/photo_model.dart';
 import 'screens/terms_and_condition_screen.dart';
 import 'objectbox.g.dart'; // Import ObjectBox generated code
-// Add this for jsonEncode
 import 'package:device_info_plus/device_info_plus.dart'; // Add this for DeviceInfoPlugin
-import 'model/media_model.dart'; // Asegúrate de que este import existe
+import 'model/media_model.dart'; // Make sure this import exists
 
 List<CameraDescription> cameras = [];
 late Store store; // ObjectBox store
@@ -26,12 +25,12 @@ late ValueNotifier<List<Media>> mediaNotifier; // Add near the other global vari
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Configurar el color de la barra de estado
+  // Set the status bar color
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
-      statusBarColor: Color(0xFFF8F9FA), // Color del fondo
+      statusBarColor: Color(0xFFF8F9FA), // Background color
       statusBarIconBrightness:
-          Brightness.dark, // Iconos oscuros para fondo claro
+          Brightness.dark, // Dark icons for light background
     ),
   );
 
@@ -320,9 +319,9 @@ class MyHomePageState extends State<MyHomePage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor:
-          const Color(0xFFF8F9FA), // Mismo color que statusBarColor
+          const Color(0xFFF8F9FA), // Same color as statusBarColor
       extendBodyBehindAppBar:
-          true, // Extiende el contenido detrás de la barra de estado
+          true, // Extend content behind the status bar
       body: OrientationBuilder(
         builder: (context, orientation) {
           final isPortrait = orientation == Orientation.portrait;

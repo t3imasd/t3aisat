@@ -184,20 +184,20 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   void _onMapCreated(mapbox.MapboxMap mapboxMap) {
     _mapboxMap = mapboxMap;
 
-    // Cargar el estilo satelital y esperar a que se cargue completamente
+    // Load satellite style and wait for complete loading
     _mapboxMap.loadStyleURI(mapbox.MapboxStyles.SATELLITE_STREETS).then((_) {
       log.info('Estilo de Mapbox cargado y listo.');
 
-      // Ahora que el estilo está cargado, podemos agregar la capa de ubicación del usuario
+      // Initialize Map and add user location layer after loading
       _addUserLocationLayer();
 
-      // Opcionalmente, mover el mapa a la ubicación actual
+      // Move map to current location if needed
       _moveToCurrentLocation();
 
-      // Establecer la posición inicial de la cámara si es necesario
+      // Set initial camera position if needed
       _setInitialCameraPosition();
 
-      // Configurar escuchadores si es necesario
+      // Set up listeners if needed
       _mapboxMap.setOnMapMoveListener(_onMapMove);
     }).catchError((e) {
       log.severe('Error al cargar el estilo: $e');
@@ -292,36 +292,36 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
     _addUserLocationLayer();
   }
 
-  // Genera datos GeoJSON a partir del XML
+  // Generate GeoJSON data from XML
   String _generateGeoJsonData(XmlDocument xml) {
-    // Obtener todos los elementos de parcelas usando <member>
+    // Get all parcel elements using <member>
     final List<XmlElement> parcelElements =
         xml.findAllElements('member').toList();
 
-    // Reutilizar la proyección registrada para EPSG:4326
+    // Reuse registered projection for EPSG:4326
     final adapter = epsg4326;
 
-    // Crear datos GeoJSON
+    // Create GeoJSON data
     final geoJsonData = jsonEncode({
       'type': 'FeatureCollection',
       'features': parcelElements.map((parcel) {
-        // Obtener las coordenadas de la parcela
+        // Get parcel coordinates
         final String coordinatesString =
             parcel.findAllElements('gml:posList').first.innerText;
 
         final List<String> coordinates = coordinatesString.split(' ');
 
-        // Convertir coordenadas a formato GeoJSON
+        // Convert coordinates to GeoJSON format
         final List<List<double>> geometryCoordinates = [];
         for (var i = 0; i < coordinates.length; i += 2) {
           final double x = double.parse(coordinates[i]);
           final double y = double.parse(coordinates[i + 1]);
 
-          // Crear un objeto Point con coordenadas UTM
+          // Create Point object with UTM coordinates
           final pointUTM = Projected(x: x, y: y);
 
           try {
-            // Convertir coordenadas UTM Zone 30N a WGS84
+            // Convert UTM Zone 30N coordinates to WGS84
             final Geographic pointWGS84 = pointUTM.project(adapter.forward);
             geometryCoordinates.add([pointWGS84.lon, pointWGS84.lat]);
           } catch (e) {
@@ -329,7 +329,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
           }
         }
 
-        // Extraer la referencia catastral y el valor del área del XML
+        // Get cadastral reference and area value from XML
         final String cadastralReference = parcel
             .findAllElements('cp:nationalCadastralReference')
             .first
@@ -337,10 +337,10 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         final String areaValue =
             parcel.findAllElements('cp:areaValue').first.innerText;
 
-        // Calcular el centroide de la parcela para el etiquetado
+        // Calculate parcel centroid for labels
         final centroid = _calculateCentroid(geometryCoordinates);
 
-        // Retornar el objeto GeoJSON
+        // Return GeoJSON object
         return {
           'type': 'Feature',
           'geometry': {
@@ -366,7 +366,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
 
   // Add layers to show the plots
   void _addParcelLayers() {
-    // Add the line layer to draw the boundaries of the parcels
+    // Add line layer to draw parcel boundaries
     _mapboxMap.style.addLayer(
       mapbox.LineLayer(
         id: 'parcel-lines',
@@ -395,7 +395,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       ),
     );
 
-    // Add line layer to highlight the selected plot
+    // Add line layer to highlight selected parcel
     _mapboxMap.style.addLayer(
       mapbox.LineLayer(
         id: 'selected-parcel-line',
@@ -410,14 +410,14 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       ),
     );
 
-    // Añadir FillLayer para capturar clics dentro de las parcelas
+    // Add FillLayer to detect clicks inside parcels
     _mapboxMap.style.addLayer(
       mapbox.FillLayer(
         id: 'parcel-fill',
         sourceId: 'source-id',
-        fillColor: Colors.transparent.value, // Relleno transparente
+        fillColor: Colors.transparent.value, // Fill is transparent
         fillOutlineColor:
-            const Color(0xFFD32F2F).value, // Mismo color que las líneas
+            const Color(0xFFD32F2F).value, // Same color as lines
       ),
     );
   }
@@ -434,7 +434,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
     mapbox.CameraState cameraState = await _mapboxMap.getCameraState();
 
     try {
-      // Use the camera status to calculate the bbox
+      // Use camera status to calculate the bbox
       final bbox = _calculateBBox(latitude, longitude, cameraState);
       final url =
           'http://ovc.catastro.meh.es/INSPIRE/wfsCP.aspx?service=WFS&version=2.0.0&request=GetFeature&typeNames=CP:CadastralParcel&srsName=EPSG:25830&bbox=$bbox';
@@ -444,13 +444,13 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         if (_isValidXmlContent(response.body)) {
           final xmlDocument = XmlDocument.parse(response.body);
           // Continue with existing logic
-          // Generate the new Geojson data
+          // Generate new GeoJSON data
           final newGeoJsonData = _generateGeoJsonData(xmlDocument);
 
           final isSourceIdExists =
               await _mapboxMap.style.styleSourceExists('source-id');
           if (isSourceIdExists) {
-            // If the source already exists, we update the property `data` with the new data
+            // If source already exists, update the property 'data' with new data
             await _mapboxMap.style.setStyleSourceProperty(
               'source-id',
               'data',
@@ -458,7 +458,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
             );
             log.info("Source 'source-id' updated with new parcel data.");
           } else {
-            // If there is no source, we create it and add the necessary layers
+            // If source doesn't exist, create it and add necessary layers
             final geoJsonSource = mapbox.GeoJsonSource(
               id: 'source-id',
               data: newGeoJsonData,
@@ -466,11 +466,11 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
 
             _mapboxMap.style.addSource(geoJsonSource);
 
-            // Add the layers again if the source did not exist
+            // Add layers again if source did not exist
             _addParcelLayers();
           }
 
-          // Esperar un breve momento para asegurar que los datos se han renderizado
+          // Wait briefly to ensure data has rendered
           await Future.delayed(const Duration(milliseconds: 500));
         } else {
           _showTemporaryMessage();
@@ -497,7 +497,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
     // Get the zoom level from the camera state
     double zoomLevel = cameraState.zoom;
 
-    // Calculate the radius based on zoom level. As zoom increases, the radius decreases.
+    // Calculate radius based on zoom level
     double radius = _radiusForZoomLevel(zoomLevel);
 
     // Reuse the registered projection for EPSG:25830
@@ -577,7 +577,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
     bool fillLayerExists =
         await _mapboxMap.style.styleLayerExists('selected-parcel-fill');
 
-    // Update or add the line layer to highlight the contours of the selected plots
+    // Update if layer exists
     if (lineLayerExists) {
       // Update if there is already
       _mapboxMap.style.updateLayer(
@@ -594,7 +594,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         ),
       );
     } else {
-      // Add if there is no
+      // Add if layer doesn't exist
       await _mapboxMap.style.addLayer(
         mapbox.LineLayer(
           id: 'selected-parcel-line',
@@ -611,19 +611,19 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       );
     }
 
-    // Eliminate the filling layer if it already exists
+    // Remove fill layer if it exists
     if (fillLayerExists) {
       await _mapboxMap.style.removeStyleLayer('selected-parcel-fill');
     }
 
-    // Add or update the filling layer for selected plots
+    // Add or update fill layer for selected parcels
     await _mapboxMap.style.addLayer(
       mapbox.FillLayer(
         id: 'selected-parcel-fill',
         sourceId: 'source-id',
         fillColor:
-            const Color(0xFFF57C00).value, // Orange filling for selected plots
-        fillOpacity: 0.3, // Filling opacity
+            const Color(0xFFF57C00).value, // Orange fill for selected plots
+        fillOpacity: 0.3, // Fill opacity
         filter: [
           'in',
           'id',
@@ -1102,7 +1102,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   // Add method to handle search bar visibility
   void _showSearchBar() {
     if (_isSearchBarVisible) {
-      // Si ya está visible, lo ocultamos con animación
+      // If search bar is visible, hide it with animation
       _searchBarAnimationController.reverse().then((_) {
         setState(() {
           _isSearchBarVisible = false;
@@ -1114,7 +1114,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         });
       });
     } else {
-      // Si está oculto, lo mostramos con animación
+      // If hidden, show it with animation
       setState(() {
         _isSearchBarVisible = true;
         _isSearchBarActive = false;
@@ -1131,7 +1131,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   void _startSearchBarTimer() {
     _searchBarTimer?.cancel();
 
-    // Solo iniciar el timer si el SearchBar no está activo
+    // Only start timer if SearchBar is not active
     if (!_isSearchBarActive) {
       _searchBarTimer = Timer(const Duration(seconds: 5), () {
         if (mounted && !_isSearchBarActive) {
@@ -1232,7 +1232,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
                 child: GestureDetector(
                   onTapDown: (_) {
                     _searchBarTimer
-                        ?.cancel(); // Cancelar el timer inmediatamente al tocar
+                        ?.cancel(); // Cancel timer immediately when touched
                     setState(() {
                       _isSearchBarActive = true;
                     });
