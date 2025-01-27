@@ -4,7 +4,6 @@ import 'package:photo_manager/photo_manager.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/services.dart'; // For MethodChannel
 import 'package:camera/camera.dart'; // Import for CameraDescription
-import 'package:objectbox/objectbox.dart';
 import 'media_viewer_screen.dart';
 import '../model/photo_model.dart';
 import '../model/media_model.dart';  // Import Media class
@@ -29,7 +28,7 @@ class GalleryScreenState extends State<GalleryScreen> {
   final Logger log = Logger('GalleryScreen'); // Add Logger instance
   AssetEntity? _lastAsset; // Variable to store the last media asset
   AssetEntity? _selectedAsset; // Variable to store the selected media asset
-  Map<String, Media> _mediaCache = {}; // Cache de objetos Media
+  final Map<String, Media> _mediaCache = {}; // Cache de objetos Media
 
   // Método para obtener el objeto Media asociado a un AssetEntity
   Future<Media?> _getMediaForAsset(AssetEntity asset) async {

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:video_player/video_player.dart';
 import 'dart:async'; // For Timer
-import 'dart:typed_data';
 import 'package:photo_manager/photo_manager.dart'; // Import photo_manager
 import 'package:objectbox/objectbox.dart'; // Import ObjectBox
 import '../objectbox.g.dart'; // Import the generated ObjectBox code
@@ -10,7 +9,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mapbox;
 import 'package:geotypes/geotypes.dart' as geojson;
 import '../model/media_model.dart';
-import 'parcel_map_screen.dart';
 import 'package:logging/logging.dart'; // Add Logger import
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // Add dotenv import
 import 'package:flutter/services.dart'; // for rootBundle
