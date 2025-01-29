@@ -69,6 +69,12 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   // Add new state variable
   bool _isBottomSheetVisible = true;
 
+  // Add new state variable
+  final Map<String, List<double>> _parcelLocations = {};
+
+  // Add new state variable
+  Completer<void>? _fetchCompleter;
+
   @override
   void initState() {
     super.initState();
@@ -186,7 +192,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
 
     // Load satellite style and wait for complete loading
     _mapboxMap.loadStyleURI(mapbox.MapboxStyles.SATELLITE_STREETS).then((_) {
-      log.info('Estilo de Mapbox cargado y listo.');
+      log.info('Mapbox style loaded and ready.');
 
       // Initialize Map and add user location layer after loading
       _addUserLocationLayer();
@@ -200,7 +206,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       // Set up listeners if needed
       _mapboxMap.setOnMapMoveListener(_onMapMove);
     }).catchError((e) {
-      log.severe('Error al cargar el estilo: $e');
+      log.severe('Error loading style: $e');
     });
   }
 
@@ -430,6 +436,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
       _isFetching = true; // Set flag to true to indicate a request is ongoing
     });
 
+    _fetchCompleter = Completer<void>();
+
     // Obtain the current state of the camera, including zoom
     mapbox.CameraState cameraState = await _mapboxMap.getCameraState();
 
@@ -456,7 +464,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
               'data',
               newGeoJsonData,
             );
-            log.info("Source 'source-id' updated with new parcel data.");
+            log.info("'source-id' updated with new parcel data.");
           } else {
             // If source doesn't exist, create it and add necessary layers
             final geoJsonSource = mapbox.GeoJsonSource(
@@ -488,6 +496,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
               false; // Reset the flag after all operations are complete
         });
       }
+      _fetchCompleter?.complete();
     }
   }
 
@@ -671,6 +680,10 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         final cadastralReference = properties['cadastralReference'];
         final areaValue = properties['areaValue'];
         final parcelId = properties['id'];
+        final centroid = properties['centroid'];
+        if (centroid != null && centroid is List) {
+          _parcelLocations[parcelId] = [centroid[0], centroid[1]];
+        }
 
         if (cadastralReference != null &&
             areaValue != null &&
@@ -685,49 +698,8 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
                   '$cadastralReference - $areaValue m²';
             }
 
-            // Optimize layer updates
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              Future.delayed(const Duration(milliseconds: 16), () async {
-                if (!mounted) return;
-
-                try {
-                  // Remove existing layers if they exist
-                  if (await _mapboxMap.style
-                      .styleLayerExists('selected-parcel-line')) {
-                    await _mapboxMap.style
-                        .removeStyleLayer('selected-parcel-line');
-                  }
-                  if (await _mapboxMap.style
-                      .styleLayerExists('selected-parcel-fill')) {
-                    await _mapboxMap.style
-                        .removeStyleLayer('selected-parcel-fill');
-                  }
-
-                  // Add new layers immediately after removing previous ones
-                  await _mapboxMap.style.addLayer(
-                    mapbox.LineLayer(
-                      id: 'selected-parcel-line',
-                      sourceId: 'source-id',
-                      lineColor: const Color(0xFFF57C00).value,
-                      lineWidth: 2.0,
-                      filter: ['in', 'id', ..._selectedParcelIds],
-                    ),
-                  );
-
-                  await _mapboxMap.style.addLayer(
-                    mapbox.FillLayer(
-                      id: 'selected-parcel-fill',
-                      sourceId: 'source-id',
-                      fillColor: const Color(0xFFF57C00).value,
-                      fillOpacity: 0.3,
-                      filter: ['in', 'id', ..._selectedParcelIds],
-                    ),
-                  );
-                } catch (e) {
-                  log.severe('Error updating layers: $e');
-                }
-              });
-            });
+            // Update parcel highlights
+            _highlightSelectedParcels();
           });
         } else {
           log.warning('Parcel properties are incomplete.');
@@ -820,13 +792,25 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    numSelected > 1
-                        ? 'Registros Catastrales: $numSelected'
-                        : _selectedParcels.values.first,
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
+                  // Modificar esta sección para la referencia única
+                  if (numSelected == 1)
+                    InkWell(
+                      onTap: () => goToParcel(_selectedParcels.keys.first),
+                      child: Text(
+                        _selectedParcels.values.first.split(' - ').first,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF1976D2), // Azul Material Design
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  else
+                    Text(
+                      'Registros Catastrales: $numSelected',
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
                   if (numSelected > 1)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -865,13 +849,18 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
                       itemCount: _selectedParcels.length,
                       itemBuilder: (context, index) {
                         final entry = _selectedParcels.entries.toList()[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4.0),
-                          child: Text(
-                            entry.value,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.black,
+                        final parcelId = entry.key;
+                        final cadastralRef = entry.value.split(' - ').first;
+                        return InkWell(
+                          onTap: () => goToParcel(parcelId),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: Text(
+                              cadastralRef,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF1976D2), // Azul Material Design
+                              ),
                             ),
                           ),
                         );
@@ -1005,7 +994,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         ),
       );
       log.info(
-          '📍 Position obtained: ${position.latitude}, ${position.longitude}, precision: ${position.accuracy} metros');
+          '📍 Position obtained: ${position.latitude}, ${position.longitude}, precision: ${position.accuracy} meters');
 
       if (position.accuracy <= 10) {
         setState(() {
@@ -1017,26 +1006,26 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
             'Insufficient precision (${position.accuracy}m), the location is not updated');
       }
     } catch (e) {
-      log.severe('Error al actualizar la ubicación del usuario: $e');
+      log.severe('Error updating user location: $e');
     }
   }
 
   void _startLocationUpdates() {
     const locationSettings = geo.LocationSettings(
       accuracy: geo.LocationAccuracy.high,
-      distanceFilter: 0, // Recibir todas las actualizaciones
+      distanceFilter: 0, // Receive all position updates
     );
 
     _positionStreamSubscription =
         geo.Geolocator.getPositionStream(locationSettings: locationSettings)
             .listen((geo.Position position) {
       log.info(
-          'Posición: ${position.latitude}, ${position.longitude}, precisión: ${position.accuracy} metros');
+          'Position: ${position.latitude}, ${position.longitude}, precision: ${position.accuracy} meters');
       if (position.accuracy <= 10) {
         _updateUserLocationWithSmoothing(position);
       } else {
         log.warning(
-            'Precisión insuficiente (${position.accuracy}m), no se actualiza la ubicación');
+            'Insufficient precision (${position.accuracy}m), location not updated');
       }
     });
   }
@@ -1044,7 +1033,7 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
   void _updateUserLocationWithSmoothing(geo.Position newPosition) {
     _positionHistory.add(newPosition);
     if (_positionHistory.length > 5) {
-      _positionHistory.removeAt(0); // Mantener solo las últimas 5 lecturas
+      _positionHistory.removeAt(0); // Keep only the last 5 readings
     }
 
     double avgLatitude =
@@ -1167,6 +1156,86 @@ class ParcelMapScreenState extends State<ParcelMapScreen>
         _isBottomSheetVisible = false;
       });
     }
+  }
+
+  void goToParcel(String parcelId) async {
+    final location = _parcelLocations[parcelId];
+    if (location == null) return;
+
+    // Wait for current request to finish
+    if (_isFetching && _fetchCompleter != null) {
+      await _fetchCompleter!.future;
+    }
+
+    // Add the parcel to selected lists if not already selected
+    if (!_selectedParcelIds.contains(parcelId)) {
+      setState(() {
+        _selectedParcelIds.add(parcelId);
+        final parcelData = _selectedParcels[parcelId];
+        if (parcelData != null) {
+          // Assuming parcelData is in the format 'cadastralReference - areaValue m²'
+          _selectedParcels[parcelId] = parcelData;
+        }
+      });
+      _highlightSelectedParcels();
+    }
+
+    // Move the camera to the parcel's location
+    await _mapboxMap.flyTo(
+      mapbox.CameraOptions(
+        center: mapbox.Point(
+          coordinates: geojson.Position(location[0], location[1]),
+        ),
+        zoom: 18.0,
+      ),
+      mapbox.MapAnimationOptions(duration: 1000),
+    );
+
+    // Fetch parcel data for the new camera position
+    _fetchParcelData(location[1], location[0]); // nueva request tras volar la cámara
+
+    // Optionally, ensure the BottomSheet is visible after navigation
+    if (!_isBottomSheetVisible) {
+      setState(() {
+        _isBottomSheetVisible = true;
+        _isBottomSheetExpanded = true; // Optionally expand the BottomSheet
+      });
+    }
+  }
+
+  void _highlightSelectedParcel(String parcelId) async {
+    // Ensure the style is fully loaded
+    bool isStyleLoaded = await _mapboxMap.style.isStyleLoaded();
+    if (!isStyleLoaded) return;
+
+    // Add or update the highlight layer for the selected parcel
+    await _mapboxMap.style.addLayer(
+      mapbox.FillLayer(
+        id: 'highlight-selected-parcel',
+        sourceId: 'source-id',
+        fillColor: const Color(0x80F57C00).value, // Semi-transparent orange
+        fillOpacity: 0.3,
+        filter: [
+          'in',
+          'id',
+          parcelId,
+        ],
+      ),
+    );
+
+    await _mapboxMap.style.addLayer(
+      mapbox.LineLayer(
+        id: 'highlight-selected-parcel-line',
+        sourceId: 'source-id',
+        lineColor: const Color(0xFFFFA000).value, // Bright orange
+        lineWidth: 2.0,
+        filter: [
+          'in',
+          'id',
+          parcelId,
+        ],
+      ),
+    );
   }
 
   @override
