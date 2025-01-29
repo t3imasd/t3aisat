@@ -1,45 +1,12 @@
 # Descripciones de la app para el Google Play Console
 
-## Pruebas
-
-Descripción
-
-```plaintext
-<es-ES>
-¡Bienvenidos a la versión 1.0.1! 🎉
-
-Novedades:
-- Cámara para fotos y vídeos con metadatos automáticos.
-- Galería para ver y gestionar tus archivos.
-- Visualizador para compartir o eliminar fotos y vídeos.
-- Mapa de parcelas (solo disponible en España).
-
-Gracias por tus comentarios para mejorar.
-</es-ES>
-
-<en-US>
-Welcome to version 1.0.1! 🎉
-
-What's new:
-- Camera for photos and videos with automatic metadata.
-- Gallery to view and manage your files.
-- Viewer to share or delete photos and videos.
-- Parcel map (available only in Spain).
-
-Thanks for your feedback to help us improve.
-</en-US>
-
-```
-
-## Producción
-
-### Descripción breve (máx. 80 caracteres)
+## Descripción breve (máx. 80 caracteres)
 
 ```plaintext
 Captura fotos y vídeos geolocalizados y explora parcelas catastrales en España
 ```
 
-### Descripción completa (máx. 4000 caracteres)
+## Descripción completa (máx. 4000 caracteres)
 
 ```plaintext
 ¡Descubre T3 AI SAT, tu herramienta esencial para geolocalizar fotos y vídeos y explorar parcelas catastrales en España!
@@ -65,4 +32,29 @@ Combina tecnología avanzada con un diseño intuitivo para validar fácilmente l
 🚀 Empieza hoy mismo:
 
 ¡Descarga T3 AI SAT ahora y lleva tus proyectos al siguiente nivel con geolocalización precisa y tecnología avanzada!
+```
+
+## Notas de las versiones
+
+### Versión 1.0.8
+
+```plaintext
+<es-ES>
+¡Navegación inteligente en mapas de parcelas! 🗺️
+
+🌟 Novedad clave:
+- Toque sobre referencias catastrales para centrar automáticamente el mapa en la parcela
+
+🚀 Mejoras:
+- Localización instantánea sin búsqueda manual
+- Visualización optimizada al cambiar entre parcelas
+- Interacción más fluida con el mapa
+
+💡 Beneficios:
+- Consulta rápida de límites entre parcelas
+- Validación precisa de ubicaciones
+- Trabajo de campo optimizado
+
+¡Actualiza para mayor eficiencia! ⚡
+</es-ES>
 ```
