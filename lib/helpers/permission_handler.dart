@@ -437,7 +437,7 @@ class PermissionHelper {
       case Permission.camera:
         return 'Captura fotos o videos geolocalizados para documentar tus proyectos.';
       case Permission.microphone:
-        return 'Graba notas de voz durante la captura de videos.';
+        return 'El acceso al micrófono te permite grabar notas de voz durante la captura de videos, facilitando la documentación detallada de inspecciones, peritajes o validaciones en campo.';
       case Permission.photos:
       case Permission.videos:
       case Permission.storage:
